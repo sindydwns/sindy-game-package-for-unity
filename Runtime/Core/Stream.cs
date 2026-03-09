@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Sindy.Foundation
+namespace Sindy.Core
 {
     public class Stream<T> : IStream<T>, IDisposable
     {

@@ -1,6 +1,6 @@
 using System;
 
-namespace Sindy.Foundation
+namespace Sindy.Core
 {
     public static class StreamExtensions
     {
