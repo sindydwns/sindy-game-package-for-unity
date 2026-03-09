@@ -1,6 +1,7 @@
 using Xunit;
+using Sindy.Core;
 
-namespace Sindy.Core
+namespace Sindy.Core.Tests
 {
     public class StreamTests
     {
