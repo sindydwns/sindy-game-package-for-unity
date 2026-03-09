@@ -18,7 +18,6 @@ obj/
 # Auto-generated Visual Studio / Rider files
 .vs/
 .idea/
-*.csproj
 *.sln
 *.suo
 *.tmp
