@@ -8,6 +8,10 @@
 [Uu]ser[Ss]ettings/
 MemoryCaptures/
 
+# .NET build folders
+bin/
+obj/
+
 # Addressables
 [Aa]ssets/[Aa]ddressable[Aa]ssets[Dd]ata/*/*.bin*
 
