@@ -12,10 +12,8 @@ namespace Sindy.Reactive
         private readonly object _lock = new object();
         private readonly IEqualityComparer<T> _equalityComparer;
 
-        public State(T initialValue) : this(initialValue, EqualityComparer<T>.Default)
-        {
-        }
-
+        public State() : this(default) { }
+        public State(T initialValue) : this(initialValue, EqualityComparer<T>.Default) { }
         public State(T initialValue, IEqualityComparer<T> equalityComparer)
         {
             _value = initialValue;
