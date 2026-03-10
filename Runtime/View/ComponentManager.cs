@@ -1,0 +1,41 @@
+using UnityEngine;
+using System.Collections.Generic;
+using System;
+using Sindy.Common;
+
+namespace Sindy.View
+{
+    public class ComponentManager : Singleton<ComponentManager>
+    {
+        [SerializeField] private List<RectTransform> parentRects;
+        [SerializeField] private PrefabCollection prefabs;
+
+        private void BuildComponent(ComponentPreset model)
+        {
+            var layer = parentRects[Mathf.Clamp(model.Layer, 0, parentRects.Count - 1)];
+            model.Build(layer);
+        }
+
+        public static void Open(ComponentPreset preset)
+        {
+            Instance.BuildComponent(preset);
+        }
+
+        public static void Open(string panelName, object data = null, int layer = 0)
+        {
+            var prefab = Instance.prefabs.GetPrefab<SindyComponent>(panelName);
+            if (prefab == null)
+            {
+                throw new Exception($"ComponentEvent '{panelName}' not found in any ComponentManager.");
+            }
+            var preset = new ComponentPreset(prefab, data, layer);
+            Instance.BuildComponent(preset);
+        }
+
+        public int GetComponentCount(int layer)
+        {
+            if (layer < 0 || layer >= parentRects.Count) return 0;
+            return parentRects[layer].childCount;
+        }
+    }
+}
