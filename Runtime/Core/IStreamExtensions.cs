@@ -5,22 +5,7 @@ namespace Sindy.Core
 {
     public static class IStreamExtensions
     {
-        public static IStream<U> Select<T, U>(this IStream<T> source, Func<T, U> selector)
-        {
-            return new SelectStream<T, U>(source, selector);
-        }
-
-        public static IStream<T> Where<T>(this IStream<T> source, Func<T, bool> predicate)
-        {
-            return new WhereStream<T>(source, predicate);
-        }
-
-        public static IStream<T> Switch<T>(this IStream<IStream<T>> source)
-        {
-            return new SwitchStream<T>(source);
-        }
-
-        // --- Select Implementation ---
+        public static IStream<U> Select<T, U>(this IStream<T> source, Func<T, U> selector) => new SelectStream<T, U>(source, selector);
         private class SelectStream<T, U> : IStream<U>
         {
             private readonly IStream<T> _source;
@@ -38,7 +23,7 @@ namespace Sindy.Core
             }
         }
 
-        // --- Where Implementation ---
+        public static IStream<T> Where<T>(this IStream<T> source, Func<T, bool> predicate) => new WhereStream<T>(source, predicate);
         private class WhereStream<T> : IStream<T>
         {
             private readonly IStream<T> _source;
@@ -62,7 +47,7 @@ namespace Sindy.Core
             }
         }
 
-        // --- Switch Implementation ---
+        public static IStream<T> Switch<T>(this IStream<IStream<T>> source) => new SwitchStream<T>(source);
         private class SwitchStream<T> : IStream<T>
         {
             private readonly IStream<IStream<T>> _source;
