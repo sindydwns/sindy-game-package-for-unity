@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace Sindy.Core
+namespace Sindy.Common
 {
     public interface ISerializable<KeyType, ValueType>
     {

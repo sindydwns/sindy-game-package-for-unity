@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace Sindy.Core
+namespace Sindy.Common
 {
     public class DisposeChain : IDisposeChain
     {

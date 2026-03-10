@@ -1,6 +1,6 @@
 using System;
 
-namespace Sindy.Core
+namespace Sindy.Common
 {
     public interface IDisposeChain : IDisposable
     {
