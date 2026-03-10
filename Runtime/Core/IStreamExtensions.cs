@@ -3,7 +3,7 @@ using Sindy.Common;
 
 namespace Sindy.Core
 {
-    public static class StreamExtensions
+    public static class IStreamExtensions
     {
         public static IStream<U> Select<T, U>(this IStream<T> source, Func<T, U> selector)
         {
