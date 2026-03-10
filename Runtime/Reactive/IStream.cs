@@ -1,6 +1,6 @@
 using System;
 
-namespace Sindy.Core
+namespace Sindy.Reactive
 {
     public interface IStream<T>
     {

@@ -1,7 +1,7 @@
 using System;
 using Sindy.Common;
 
-namespace Sindy.Core
+namespace Sindy.Reactive
 {
     public static class IStreamExtensions
     {
