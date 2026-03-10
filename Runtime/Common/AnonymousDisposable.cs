@@ -1,6 +1,6 @@
 using System;
 
-namespace Sindy.Core
+namespace Sindy.Common
 {
     internal class AnonymousDisposable : IDisposable
     {
@@ -13,11 +13,8 @@ namespace Sindy.Core
 
         public void Dispose()
         {
-            if (_dispose != null)
-            {
-                _dispose.Invoke();
-                _dispose = null;
-            }
+            _dispose?.Invoke();
+            _dispose = null;
         }
     }
 }

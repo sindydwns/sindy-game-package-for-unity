@@ -1,4 +1,5 @@
 using System;
+using Sindy.Common;
 
 namespace Sindy.Core
 {

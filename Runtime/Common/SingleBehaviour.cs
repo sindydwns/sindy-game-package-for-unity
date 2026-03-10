@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Sindy
+namespace Sindy.Common
 {
     /// <summary>
     /// Inherit from this base class to create a singleton.
