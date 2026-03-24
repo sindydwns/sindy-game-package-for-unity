@@ -1,16 +1,16 @@
-using Sindy.Reactive;
+using R3;
 
 namespace Sindy.View
 {
     public interface IPropModel { }
 
-    public interface IPropModel<T> : IViewModel, IStream<T>, IPropModel
+    public interface IPropModel<T> : IViewModel, IPropModel
     {
-        State<T> State { get; }
+        ReactiveProperty<T> Prop { get; }
         T Value
         {
-            get => State.Value;
-            set => State.Value = value;
+            get => Prop.Value;
+            set => Prop.Value = value;
         }
     }
 }

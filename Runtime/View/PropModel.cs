@@ -1,34 +1,34 @@
 using System;
 using Sindy.Common;
-using Sindy.Reactive;
+using R3;
 
 namespace Sindy.View
 {
     public class PropModel<T> : ViewModel, IPropModel<T>
     {
-        public State<T> State { get; private set; } = new();
+        public ReactiveProperty<T> Prop { get; private set; } = new();
         public T Value
         {
-            get => State.Value;
-            set => State.Value = value;
+            get => Prop.Value;
+            set => Prop.Value = value;
         }
         public PropModel() : base() { }
         public PropModel(T value) : this()
         {
-            State.Value = value;
+            Prop.Value = value;
         }
-        public PropModel(State<T> property) : this()
+        public PropModel(ReactiveProperty<T> property) : this()
         {
-            State.Value = property.Value;
-            property.Subscribe(State).AddTo(disposables);
+            Prop.Value = property.Value;
+            property.Subscribe(Prop).AddTo(disposables);
         }
 
         public override void Dispose()
         {
             base.Dispose();
-            State.Dispose();
+            Prop.Dispose();
         }
 
-        public IDisposable Subscribe(Action<T> onNext) => State.Subscribe(onNext);
+        public IDisposable Subscribe(Action<T> onNext) => Prop.Subscribe(onNext);
     }
 }
