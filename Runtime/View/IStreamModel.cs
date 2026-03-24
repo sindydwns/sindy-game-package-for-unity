@@ -6,6 +6,6 @@ namespace Sindy.View
 
     public interface IStreamModel<T> : IViewModel, IStreamModel
     {
-        ReactiveProperty<T> Stream { get; }
+        Subject<T> Stream { get; }
     }
 }
