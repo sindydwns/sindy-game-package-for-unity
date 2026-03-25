@@ -11,9 +11,9 @@ namespace Sindy.View
         public BoolPropModel(ReactiveProperty<bool> show) : base(show) { }
     }
 
-    public class BoolStreamModel : StreamModel<bool>
+    public class BoolSubjModel : SubjModel<bool>
     {
-        public Subject<bool> Bool => Stream;
+        public Subject<bool> Bool => Subj;
 
         public override void Dispose()
         {

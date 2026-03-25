@@ -3,8 +3,8 @@ using R3;
 
 public static class ObservableExtensions
 {
-    public static IDisposable Subscribe<T>(this Observable<T> stream, ReactiveProperty<T> state)
+    public static IDisposable Subscribe<T>(this Observable<T> source, ReactiveProperty<T> state)
     {
-        return stream.Subscribe(value => state.Value = value);
+        return source.Subscribe(value => state.Value = value);
     }
 }

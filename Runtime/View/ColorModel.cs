@@ -12,9 +12,9 @@ namespace Sindy.View.Model
         public ColorPropModel(ReactiveProperty<Color> color) : base(color) { }
     }
 
-    public class ColorStreamModel : StreamModel<Color>
+    public class ColorSubjModel : SubjModel<Color>
     {
-        public Subject<Color> Color => Stream;
+        public Subject<Color> Color => Subj;
 
         public override void Dispose()
         {

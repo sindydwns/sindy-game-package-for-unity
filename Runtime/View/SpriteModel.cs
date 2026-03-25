@@ -12,9 +12,9 @@ namespace Sindy.View.Model
         public SpritePropModel(ReactiveProperty<Sprite> sprite) : base(sprite) { }
     }
 
-    public class SpriteStreamModel : StreamModel<Sprite>
+    public class SpriteSubjModel : SubjModel<Sprite>
     {
-        public Subject<Sprite> Sprite => Stream;
+        public Subject<Sprite> Sprite => Subj;
 
         public override void Dispose()
         {

@@ -11,9 +11,9 @@ namespace Sindy.View.Model
         public StringPropModel(ReactiveProperty<string> text) : base(text) { }
     }
 
-    public class StringStreamModel : StreamModel<string>
+    public class StringSubjModel : SubjModel<string>
     {
-        public Subject<string> Text => Stream;
+        public Subject<string> Text => Subj;
 
         public override void Dispose()
         {
