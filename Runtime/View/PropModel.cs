@@ -12,6 +12,7 @@ namespace Sindy.View
             get => Prop.Value;
             set => Prop.Value = value;
         }
+
         public PropModel() : base() { }
         public PropModel(T value) : this()
         {

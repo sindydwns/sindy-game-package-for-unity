@@ -10,7 +10,7 @@ namespace Sindy.Test
     /// 
     /// prop1과 prop2는 ReactiveProperty로, CombineLatest를 통해 prop3에 구독되어 있습니다. prop1과 prop2가 Dispose될 때, prop3의 구독이 해제되어 더 이상 업데이트가 발생하지 않는지 확인하는 테스트입니다.
     /// </summary>
-    class TestCaseDisposible : Test
+    class TestCaseDisposible : TestCase
     {
         private readonly ReactiveProperty<int> prop0 = new();
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using R3;
 using Sindy.Common;
 
 namespace Sindy.View
@@ -9,12 +10,17 @@ namespace Sindy.View
     {
         protected readonly List<IDisposable> disposables = new();
         private readonly Dictionary<string, IViewModel> children = new();
+        public bool IsDisposed { get; private set; }
 
         public virtual void Dispose()
         {
             disposables.DisposeAll();
             disposables.Clear();
+            IsDisposed = true;
         }
+
+        protected void Dispose(Result _) => Dispose();
+        protected static void DoNothing<T>(T _) { }
 
         public virtual IViewModel this[string name]
         {
