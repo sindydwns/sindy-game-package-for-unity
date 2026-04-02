@@ -5,7 +5,7 @@ using Sindy.Common;
 
 namespace Sindy.View
 {
-    public class ComponentManager : Singleton<ComponentManager>
+    public class ComponentManager : SingletonBehaviour<ComponentManager>
     {
         [SerializeField] private List<RectTransform> parentRects;
         [SerializeField] private PrefabCollection prefabs;

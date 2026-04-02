@@ -17,5 +17,30 @@ namespace Sindy.Common
                 disposables.Add(disposable);
             }
         }
+
+        public static void DisposeAll(this IEnumerable<IDisposable> disposables)
+        {
+            if (disposables == null)
+            {
+                return;
+            }
+            foreach (var disposable in disposables)
+            {
+                disposable.Dispose();
+            }
+        }
+
+        public static void DisposeAllClear(this List<IDisposable> disposables)
+        {
+            if (disposables == null)
+            {
+                return;
+            }
+            foreach (var disposable in disposables)
+            {
+                disposable.Dispose();
+            }
+            disposables.Clear();
+        }
     }
 }
