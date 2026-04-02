@@ -1,6 +1,6 @@
 using R3;
 
-namespace Sindy.View
+namespace Sindy.View.Model
 {
     public class BoolPropModel : PropModel<bool>
     {
