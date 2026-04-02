@@ -8,7 +8,7 @@ namespace Sindy.View
     public class ComponentManager : SingletonBehaviour<ComponentManager>
     {
         [SerializeField] private List<RectTransform> parentRects;
-        [SerializeField] private PrefabCollection prefabs;
+        [SerializeField] private GameObjectCollection prefabs;
 
         private void BuildComponent(ComponentPreset model)
         {

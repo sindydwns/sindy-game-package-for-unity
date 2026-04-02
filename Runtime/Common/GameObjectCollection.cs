@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Sindy.Common
 {
-    public class PrefabCollection : MonoBehaviour
+    public class GameObjectCollection : MonoBehaviour
     {
         [SerializeField] private List<GameObject> prefabs = new();
 
