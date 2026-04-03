@@ -1,14 +1,13 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Interface;
-using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Sindy.RedDot
 {
     public class RedDotComponent : SindyComponent<IPropModel<int>>
     {
-        [SerializeField] private TextMeshProUGUI text;
+        [SerializeField] private MaskableGraphic text;
 
         protected override void Init(IPropModel<int> model)
         {
@@ -24,7 +23,7 @@ namespace Sindy.RedDot
             gameObject.SetActive(count > 0);
             if (text != null)
             {
-                text.text = count.ToString();
+                text.GetType().GetField("text").SetValue(text, count.ToString());
             }
         }
     }
