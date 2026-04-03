@@ -3,11 +3,11 @@ using UnityEngine;
 
 namespace Sindy.Common
 {
-    public class GameObjectCollection : MonoBehaviour
+    public class GameObjectCollection : MonoBehaviour, IGameObjectCollection
     {
         [SerializeField] private List<GameObject> prefabs = new();
 
-        public T GetPrefab<T>(string name) where T : Component
+        public T GetGameObject<T>(string name) where T : Object
         {
             foreach (var prefab in prefabs)
             {

@@ -23,7 +23,7 @@ namespace Sindy.View
 
         public static void Open(string panelName, object data = null, int layer = 0)
         {
-            var prefab = Instance.prefabs.GetPrefab<SindyComponent>(panelName);
+            var prefab = Instance.prefabs.GetGameObject<SindyComponent>(panelName);
             if (prefab == null)
             {
                 throw new Exception($"ComponentEvent '{panelName}' not found in any ComponentManager.");
