@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using R3;
 
 namespace Sindy.Reactive
 {
@@ -15,17 +16,20 @@ namespace Sindy.Reactive
     public class ReactiveList<T> : IReadOnlyReactiveList<T>
     {
         private readonly List<T> list = new();
+        public Subject<ChangeEvent> OnChange = new();
         public event Action<T> OnAdded;
         public event Action<T> OnRemoved;
         public void Add(T item)
         {
             list.Add(item);
             OnAdded?.Invoke(item);
+            OnChange.OnNext(new(ChangeType.Add, item));
         }
         public void Insert(int index, T item)
         {
             list.Insert(index, item);
             OnAdded?.Invoke(item);
+            OnChange.OnNext(new(ChangeType.Add, item));
         }
         public void Remove(T item)
         {
@@ -70,5 +74,23 @@ namespace Sindy.Reactive
         }
 
         public T this[int index] => list[index];
+
+        public enum ChangeType
+        {
+            Add,
+            Remove,
+        }
+
+        public readonly struct ChangeEvent
+        {
+            public ChangeType Type { get; }
+            public T Item { get; }
+
+            public ChangeEvent(ChangeType type, T item)
+            {
+                Type = type;
+                Item = item;
+            }
+        }
     }
 }

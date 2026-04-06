@@ -1,47 +1,62 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using R3;
+using Sindy.Common;
+using Sindy.Reactive;
 
 namespace Sindy.RedDot
 {
-    public class RedDotNode
+    public class RedDotNode : IDisposable
     {
-        protected RedDotNode parent;
-        protected List<RedDotNode> children;
-        public ReactiveProperty<int> CounterProp { get; private set; } = new();
-        public object userData;
-        public int Counter
+        public static RedDotNode Root { get; } = new RedDotNode(string.Empty);
+
+        /// <summary>
+        /// 노드의 단일 이름. 노드의 전체 경로는 Path 속성을 참조.
+        /// </summary>
+        public string Name { get; private set; }
+
+        /// <summary>
+        /// 노드의 전체 경로. 부모 노드의 이름과 현재 노드의 이름을 '.'으로 구분하여 구성.
+        /// </summary>
+        public string Path => _pathProp.Value;
+        private readonly ReactiveProperty<string> _pathProp = new();
+
+        protected ReactiveProperty<RedDotNode> parent = new();
+        protected ReactiveList<RedDotNode> children = new();
+        public ReadOnlyReactiveProperty<int> Count { get; private set; }
+        public object UserData { get; set; }
+
+        public RedDotNode(string name, RedDotNode parent = null, IEnumerable<RedDotNode> children = null)
         {
-            get => CounterProp.Value;
-            set
-            {
-                var delta = value - CounterProp.Value;
-                if (delta != 0)
-                {
-                    if (parent != null)
-                    {
-                        parent.Counter += delta;
-                    }
-                    CounterProp.Value += delta;
-                }
-            }
-        }
-        public IEnumerable<RedDotNode> Children => children;
+            Name = name;
+            this.parent.Value = parent;
+            this.parent.Subscribe(UpdatePath);
 
-        public string name;
-
-        public RedDotNode(string name, RedDotNode parent = null)
-        {
-            this.name = name;
-            this.parent = parent;
+            Count = this.children.OnChange
+                .Select(x => children.Count())
+                .Prepend(children?.Count() ?? 0)
+                .ToReadOnlyReactiveProperty();
+            this.children.OnChange
+                .Where(x => x.Type == ReactiveList<RedDotNode>.ChangeType.Remove)
+                .Subscribe(x => x.Item.parent.Value = null);
+            this.children.OnChange
+                .Where(x => x.Type == ReactiveList<RedDotNode>.ChangeType.Add)
+                .Subscribe(x => x.Item.parent.Value = this);
+            this.children.AddRange(children ?? Enumerable.Empty<RedDotNode>());
         }
 
+        private void UpdatePath() => _pathProp.Value = $"{parent.Value?.Path ?? string.Empty}.{Name}".TrimStart('.');
+
+        public static RedDotNode GetNodeAbs(string path) => Root.GetNode(path);
         public RedDotNode GetNode(string path)
         {
-            if (string.IsNullOrEmpty(path) || string.Equals(path, "."))
+            path = path.TrimStart('.');
+            if (string.IsNullOrEmpty(path))
             {
                 return this;
             }
-            var names = path.Split('.', System.StringSplitOptions.RemoveEmptyEntries);
+            var names = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
             return GetNode(names);
         }
 
@@ -49,7 +64,7 @@ namespace Sindy.RedDot
         {
             if (path == null)
             {
-                throw new System.ArgumentNullException(nameof(path));
+                throw new ArgumentNullException(nameof(path));
             }
             if (path.Length == 0)
             {
@@ -58,9 +73,7 @@ namespace Sindy.RedDot
             var node = this;
             foreach (var name in path)
             {
-                node.children ??= new List<RedDotNode>();
-
-                var child = node.children.Find(n => n.name.Equals(name));
+                var child = node.children.Find(n => n.Name.Equals(name));
                 if (child == null)
                 {
                     child = new RedDotNode(name, node);
@@ -74,7 +87,7 @@ namespace Sindy.RedDot
 
         public override string ToString()
         {
-            return $"{name}({Counter})";
+            return $"{Path}({Count})";
         }
 
         public void Clear()
@@ -86,7 +99,13 @@ namespace Sindy.RedDot
                     child.Clear();
                 }
             }
-            Counter = 0;
+        }
+
+        public void Dispose()
+        {
+            _pathProp.Dispose();
+            parent.Dispose();
+            children.DisposeAll();
         }
     }
 }
