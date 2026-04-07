@@ -2,14 +2,14 @@ using R3;
 using Sindy.Reactive;
 using Sindy.View;
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 namespace Sindy.RedDot
 {
     public class RedDotComponent : SindyComponent<RedDotModel>
     {
         [SerializeField] private GameObject dot;
-        [SerializeField] private MaskableGraphic text;
+        [SerializeField] private TextMeshProUGUI text;
         /// <summary>
         /// text가 표시 되지 않을 경우 dot의 크기를 조절하기 위한 스케일러.
         /// </summary>
@@ -18,18 +18,18 @@ namespace Sindy.RedDot
         /// model이 지정되지 않은 경우 RedDotNode.Root에서 이 경로로 노드를 찾아 구독.
         /// </summary>
         [SerializeField] private string defaultPath;
+        [SerializeField] private bool isLeaf = false;
 
         private readonly ReactiveProperty<Observable<int>> _countSource = new();
-        private IDisposable _permanentSubscription;
-        private bool _isDestroyed = false;
 
         private void Awake()
         {
             // RedDotBranch.CreateCountProp()과 동일한 Switch 패턴으로
             // _countSource가 바뀔 때마다 최신 Observable을 구독
-            _permanentSubscription = _countSource
+            _countSource
                 .Where(x => x != null)
                 .Switch()
+                .Where(_ => _countSource.Value != null)
                 .Subscribe(UpdateRedDot);
 
             SetDefaultSource();
@@ -39,6 +39,9 @@ namespace Sindy.RedDot
         {
             if (string.IsNullOrEmpty(defaultPath)) return;
             var node = RedDotNode.Root.GetNode(defaultPath);
+            node ??= isLeaf
+                ? RedDotNode.Root.EnsureLeaf(defaultPath)
+                : RedDotNode.Root.EnsureBranch(defaultPath);
             if (node != null)
             {
                 _countSource.Value = node.Count.AsObservable();
@@ -52,15 +55,11 @@ namespace Sindy.RedDot
 
         protected override void Clear(RedDotModel model)
         {
-            if (_isDestroyed) return;
-            _countSource.Value = null;
             SetDefaultSource();
         }
 
         private void OnDestroy()
         {
-            _isDestroyed = true;
-            _permanentSubscription?.Dispose();
             _countSource?.Dispose();
         }
 
@@ -80,12 +79,12 @@ namespace Sindy.RedDot
                 if (count < 2)
                 {
                     dot.transform.localScale = Vector3.one * scaler;
-                    text.GetType().GetField("text").SetValue(text, string.Empty);
+                    text.text = string.Empty;
                 }
                 else
                 {
                     dot.transform.localScale = Vector3.one;
-                    text.GetType().GetField("text").SetValue(text, count.ToString());
+                    text.text = count.ToString();
                 }
             }
         }
@@ -106,7 +105,8 @@ namespace Sindy.RedDot
             Node.Count.Subscribe(Prop).AddTo(disposables);
         }
 
-        public RedDotModel(string path) : this(RedDotNode.Root.GetNode(path))
+        public RedDotModel(string path, bool isLeaf = false)
+            : this(isLeaf ? RedDotNode.Root.EnsureLeaf(path) : RedDotNode.Root.EnsureBranch(path))
         {
         }
     }

@@ -1,7 +1,9 @@
 {
     "name": "Sindy",
     "rootNamespace": "Sindy",
-    "references": [],
+    "references": [
+        "Unity.TextMeshPro"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
