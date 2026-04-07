@@ -22,7 +22,7 @@ namespace Sindy.RedDot
         private readonly ReactiveProperty<string> _pathProp = new();
 
         public RedDotBranch Parent => _parent.Value;
-        private readonly ReactiveProperty<RedDotBranch> _parent;
+        private readonly ReactiveProperty<RedDotBranch> _parent = new();
 
         public ReadOnlyReactiveProperty<bool> IsActive { get; private set; }
 

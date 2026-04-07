@@ -3,13 +3,13 @@ using UnityEngine;
 
 namespace Sindy.Test
 {
-    public class TestViewModelComponent : MonoBehaviour
+    public class TestRedDotComponent : MonoBehaviour
     {
         private readonly List<TestCase> tests = new();
 
         void Start()
         {
-            tests.Add(new TestFormatNumberPropModel());
+            tests.Add(new TestRedDotDefaultWork());
 
             tests.ForEach(test => test.Run());
         }

@@ -9,31 +9,26 @@ namespace Sindy.RedDot
     public class RedDotBranch : RedDotNode, IDisposable
     {
         private readonly ReactiveList<RedDotNode> _children = new();
+        private readonly Dictionary<RedDotNode, IDisposable> _childSubscriptions = new();
 
         private readonly ReactiveProperty<int> _activeChildrenCount = new();
         private readonly ReactiveProperty<int> _totalCount = new();
-        private readonly ReactiveProperty<bool> _useActiveCount = new(true);
-
-        private readonly Dictionary<RedDotNode, IDisposable> _childSubscriptions = new();
+        public ReactiveProperty<bool> UseActiveCount { get; private set; } = new(true);
 
         public RedDotBranch(string name, RedDotBranch parent = null, IEnumerable<RedDotNode> children = null) : base(name, parent)
         {
-            // 추가 되거나 삭제될 때 _activeChildrenCount 관리
-            _children.OnChange
-                .Select(x => _children.Count(n => n.IsActive.CurrentValue))
-                .Prepend(_children.Count(n => n.IsActive.CurrentValue))
-                .Subscribe(_activeChildrenCount);
-
-            // 추가될 때 _totalCount 관리
+            // 추가될 때 count 관리
             _children.OnChange
                 .Where(x => x.Type == ReactiveList<RedDotNode>.ChangeType.Add)
                 .Select(x => x.Item)
                 .Subscribe(x =>
                 {
-                    _childSubscriptions[x] = x.Count.Subscribe(UpdateTotalCount);
+                    var dis1 = x.Count.Subscribe(UpdateTotalCount);
+                    var dis2 = x.IsActive.Subscribe(UpdateActiveChildrenCount);
+                    _childSubscriptions[x] = Disposable.Combine(dis1, dis2);
                 }).AddTo(_disposables);
 
-            // 삭제될 때 _totalCount 관리
+            // 삭제될 때 count 관리
             _children.OnChange
                 .Where(x => x.Type == ReactiveList<RedDotNode>.ChangeType.Remove)
                 .Select(x => x.Item)
@@ -45,6 +40,7 @@ namespace Sindy.RedDot
                         _childSubscriptions.Remove(x);
                     }
                     UpdateTotalCount();
+                    UpdateActiveChildrenCount();
                 });
 
             // 초기 자식 노드 추가
@@ -52,6 +48,11 @@ namespace Sindy.RedDot
             {
                 _children.Add(child);
             }
+        }
+
+        private void UpdateActiveChildrenCount()
+        {
+            _activeChildrenCount.Value = _children.Count(n => n.IsActive.CurrentValue);
         }
 
         private void UpdateTotalCount()
@@ -63,7 +64,7 @@ namespace Sindy.RedDot
 
         protected override ReadOnlyReactiveProperty<int> CreateCountProp()
         {
-            return _useActiveCount
+            return UseActiveCount
                 .Select(x => (x ? _activeChildrenCount : _totalCount).AsObservable())
                 .Switch()
                 .ToReadOnlyReactiveProperty();
@@ -96,6 +97,26 @@ namespace Sindy.RedDot
                 current = child;
             }
             return current;
+        }
+
+        public RedDotBranch GetBranch(string path)
+        {
+            var node = GetNode(path);
+            if (node is RedDotBranch branch)
+            {
+                return branch;
+            }
+            throw new InvalidOperationException($"Node at path '{path}' is not a branch.");
+        }
+
+        public RedDotLeaf GetLeaf(string path)
+        {
+            var node = GetNode(path);
+            if (node is RedDotLeaf leaf)
+            {
+                return leaf;
+            }
+            throw new InvalidOperationException($"Node at path '{path}' is not a leaf.");
         }
 
         public RedDotBranch EnsureBranch(string path)

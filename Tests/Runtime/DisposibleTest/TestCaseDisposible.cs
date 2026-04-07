@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using R3;
+using Sindy.Reactive;
 
 namespace Sindy.Test
 {
