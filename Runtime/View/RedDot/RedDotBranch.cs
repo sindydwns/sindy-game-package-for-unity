@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using R3;
@@ -6,7 +7,7 @@ using Sindy.Reactive;
 
 namespace Sindy.RedDot
 {
-    public class RedDotBranch : RedDotNode, IDisposable
+    public class RedDotBranch : RedDotNode, IEnumerable<RedDotNode>, IDisposable
     {
         private readonly ReactiveList<RedDotNode> _children = new();
         private readonly Dictionary<RedDotNode, IDisposable> _childSubscriptions = new();
@@ -186,6 +187,16 @@ namespace Sindy.RedDot
                 branch._children.Add(newLeaf);
                 return newLeaf;
             }
+        }
+
+        public IEnumerator<RedDotNode> GetEnumerator()
+        {
+            return _children.GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }
