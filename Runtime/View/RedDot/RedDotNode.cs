@@ -1,15 +1,14 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using R3;
 using Sindy.Common;
 using Sindy.Reactive;
 
 namespace Sindy.RedDot
 {
-    public class RedDotNode : IDisposable
+    public abstract class RedDotNode : IRedDotNode, IDisposable
     {
-        public static RedDotNode Root { get; } = new RedDotNode(string.Empty);
+        public static RedDotBranch Root { get; } = new(string.Empty);
 
         /// <summary>
         /// 노드의 단일 이름. 노드의 전체 경로는 Path 속성을 참조.
@@ -22,90 +21,45 @@ namespace Sindy.RedDot
         public string Path => _pathProp.Value;
         private readonly ReactiveProperty<string> _pathProp = new();
 
-        protected ReactiveProperty<RedDotNode> parent = new();
-        protected ReactiveList<RedDotNode> children = new();
+        public RedDotBranch Parent => _parent.Value;
+        private readonly ReactiveProperty<RedDotBranch> _parent;
+
+        public ReadOnlyReactiveProperty<bool> IsActive { get; private set; }
+
+        /// <summary>
+        /// 유효한 자식의 카운트 합산
+        /// </summary>
         public ReadOnlyReactiveProperty<int> Count { get; private set; }
         public object UserData { get; set; }
 
-        public RedDotNode(string name, RedDotNode parent = null, IEnumerable<RedDotNode> children = null)
-        {
-            Name = name;
-            this.parent.Value = parent;
-            this.parent.Subscribe(UpdatePath);
+        protected List<IDisposable> _disposables = new();
 
-            Count = this.children.OnChange
-                .Select(x => children.Count())
-                .Prepend(children?.Count() ?? 0)
-                .ToReadOnlyReactiveProperty();
-            this.children.OnChange
-                .Where(x => x.Type == ReactiveList<RedDotNode>.ChangeType.Remove)
-                .Subscribe(x => x.Item.parent.Value = null);
-            this.children.OnChange
-                .Where(x => x.Type == ReactiveList<RedDotNode>.ChangeType.Add)
-                .Subscribe(x => x.Item.parent.Value = this);
-            this.children.AddRange(children ?? Enumerable.Empty<RedDotNode>());
+        public RedDotNode(string name, RedDotBranch parent = null)
+        {
+            Name = name.Trim().Trim('.');
+            _parent.Value = parent;
+            _parent.Subscribe(UpdatePath);
+
+            Count = CreateCountProp();
+            IsActive = Count.Select(x => x > 0).ToReadOnlyReactiveProperty();
         }
 
-        private void UpdatePath() => _pathProp.Value = $"{parent.Value?.Path ?? string.Empty}.{Name}".TrimStart('.');
+        private void UpdatePath() => _pathProp.Value = $"{Parent?.Path ?? string.Empty}.{Name}".TrimStart('.');
 
-        public static RedDotNode GetNodeAbs(string path) => Root.GetNode(path);
-        public RedDotNode GetNode(string path)
-        {
-            path = path.TrimStart('.');
-            if (string.IsNullOrEmpty(path))
-            {
-                return this;
-            }
-            var names = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
-            return GetNode(names);
-        }
-
-        public RedDotNode GetNode(string[] path)
-        {
-            if (path == null)
-            {
-                throw new ArgumentNullException(nameof(path));
-            }
-            if (path.Length == 0)
-            {
-                return this;
-            }
-            var node = this;
-            foreach (var name in path)
-            {
-                var child = node.children.Find(n => n.Name.Equals(name));
-                if (child == null)
-                {
-                    child = new RedDotNode(name, node);
-                    node.children.Add(child);
-                }
-
-                node = child;
-            }
-            return node;
-        }
+        protected abstract ReadOnlyReactiveProperty<int> CreateCountProp();
 
         public override string ToString()
         {
-            return $"{Path}({Count})";
+            return $"{Path}({Count.CurrentValue})";
         }
 
-        public void Clear()
-        {
-            if (children != null)
-            {
-                foreach (var child in children)
-                {
-                    child.Clear();
-                }
-            }
-        }
+        public abstract void Clear();
 
         public void Dispose()
         {
             _pathProp.Dispose();
-            parent.Dispose();
-            children.DisposeAll();
+            _parent.Dispose();
+            _disposables.DisposeAllClear();
         }
     }
 }
