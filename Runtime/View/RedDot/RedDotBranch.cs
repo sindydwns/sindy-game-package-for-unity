@@ -41,13 +41,21 @@ namespace Sindy.RedDot
                     }
                     UpdateTotalCount();
                     UpdateActiveChildrenCount();
-                });
+                }).AddTo(_disposables);
 
             // 초기 자식 노드 추가
             foreach (var child in children ?? Array.Empty<RedDotNode>())
             {
                 _children.Add(child);
             }
+
+            Disposable.Create(() =>
+            {
+                foreach (var subscription in _childSubscriptions.Values)
+                {
+                    subscription.Dispose();
+                }
+            }).AddTo(_disposables);
         }
 
         private void UpdateActiveChildrenCount()
@@ -154,6 +162,10 @@ namespace Sindy.RedDot
         {
             path = path.TrimStart('.');
             var names = path.Split('.', StringSplitOptions.RemoveEmptyEntries);
+            if (names.Length == 0)
+            {
+                throw new ArgumentException("Path must contain at least one name.", nameof(path));
+            }
             var branch = EnsureBranch(names[..^1]);
             var leafName = names[^1];
             var existingNode = branch._children.Find(n => n.Name.Equals(leafName));

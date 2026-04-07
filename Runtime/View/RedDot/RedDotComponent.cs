@@ -63,7 +63,7 @@ namespace Sindy.RedDot
         public RedDotModel(RedDotNode node)
         {
             Node = node ?? RedDotNode.Root;
-            node.Count.Subscribe(Prop).AddTo(disposables);
+            Node.Count.Subscribe(Prop).AddTo(disposables);
         }
 
         public RedDotModel(string path) : this(RedDotNode.Root.GetNode(path))
