@@ -64,7 +64,7 @@ namespace Sindy.View
             }
             else
             {
-                children.Add(token, model);
+                children[token] = model;
             }
         }
 

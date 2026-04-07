@@ -125,7 +125,6 @@ namespace Sindy.Inven
                 return;
             }
             disposibles.Dispose();
-            disposibles.Clear();
             isComplete.Dispose();
 
             foreach (var tracker in missions)
@@ -193,13 +192,22 @@ namespace Sindy.Inven
             public ReadOnlyReactiveProperty<bool> IsComplete { get; private set; }
             private readonly IEntityStack stack;
             public long Goal => mission.amount;
+            private IDisposable stackSyncSubscription;
 
             public MissionTracker(Mission mission)
             {
                 this.mission = mission;
 
                 stack = mission.Stack;
-                Amount.Value = mission.startZero ? 0 : stack.Amount;
+                if (mission.syncronized)
+                {
+                    Amount.Value = stack.Amount;
+                    stackSyncSubscription = stack.OnChange.Subscribe(e => Amount.Value = e.NewAmount);
+                }
+                else
+                {
+                    Amount.Value = mission.startZero ? 0 : stack.Amount;
+                }
                 IsComplete = Amount
                     .Select(amount => amount >= Goal)
                     .ToReadOnlyReactiveProperty();
@@ -207,6 +215,7 @@ namespace Sindy.Inven
 
             public void Dispose()
             {
+                stackSyncSubscription?.Dispose();
                 Amount?.Dispose();
                 IsComplete?.Dispose();
             }

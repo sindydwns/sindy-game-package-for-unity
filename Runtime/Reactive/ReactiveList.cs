@@ -36,6 +36,7 @@ namespace Sindy.Reactive
             if (list.Remove(item))
             {
                 OnRemoved?.Invoke(item);
+                OnChange.OnNext(new(ChangeType.Remove, item));
             }
         }
         public bool Contains(T item) => list.Contains(item);

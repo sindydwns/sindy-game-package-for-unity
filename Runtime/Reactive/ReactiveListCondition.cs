@@ -48,9 +48,11 @@ namespace Sindy.Reactive
 
         private void OnRemoved(T t)
         {
-            var disposable = disposables[t].First();
-            disposable.Dispose();
-            disposables[t].Remove(disposable);
+            if (disposables.TryGetValue(t, out var compositeDisposable))
+            {
+                compositeDisposable.Dispose();
+                disposables.Remove(t);
+            }
             UpdateProperty();
         }
 
