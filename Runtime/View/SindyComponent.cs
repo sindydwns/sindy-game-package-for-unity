@@ -7,17 +7,15 @@ namespace Sindy.View
 {
     public class SindyComponent : MonoBehaviour
     {
+        public object Model { get; protected set; }
         public ComponentPreset Preset { get; set; }
         protected readonly List<IDisposable> disposables = new();
-        private readonly Dictionary<string, IDisposable> handles = new();
-        public object Model { get; protected set; }
+        private readonly SindyComponentNamedHandleStore handles = new();
+        private SindyComponentLinkState links;
+        internal SindyComponentLinkState LinkState => links ??= new(this);
+        private readonly SindyComponentDeferredActionQueue deferredActions = new();
         private bool isInitialized = false;
         public bool IsInitialized => isInitialized;
-        /// <summary>
-        /// 자신의 모델이 null이 되면 자식 컴포넌트들의 모델도 null이 되도록 설정한 컴포넌트들.
-        /// </summary>
-        private HashSet<SindyComponent> children;
-        private SindyComponent parent = null;
 
         protected static bool IsComponentPrefab(SindyComponent com) => string.IsNullOrEmpty(com.gameObject.scene.name);
         public bool IsPrefab => IsComponentPrefab(this);
@@ -28,6 +26,7 @@ namespace Sindy.View
             {
                 return this;
             }
+
             isInitialized = true;
             ClearModel();
             Model = model;
@@ -35,8 +34,10 @@ namespace Sindy.View
             {
                 Init(Model);
             }
+
             return this;
         }
+
         public void ReloadModel()
         {
             ClearModel();
@@ -45,20 +46,25 @@ namespace Sindy.View
                 Init(Model);
             }
         }
+
         private void ClearModel()
         {
-            if (Model == null) return;
-            Clear(Model);
-            ClearDisposables();
-            if (children != null)
+            if (Model != null)
             {
-                foreach (var child in children)
-                {
-                    child.SetModel(null);
-                }
+                Clear(Model);
             }
-            RemoveChildrenLink();
+
+            ClearDisposables();
+
+            foreach (var child in LinkState.GetChildrenSnapshot())
+            {
+                child.SetModel(null);
+            }
+
+            LinkState.ClearChildrenLinks();
+            LinkState.DetachFromParent();
         }
+
         protected virtual void Init(object model) { }
         protected virtual void Clear(object model) { }
 
@@ -68,11 +74,8 @@ namespace Sindy.View
             {
                 disposables[i].Dispose();
             }
+
             disposables.Clear();
-            foreach (var patch in handles.Values)
-            {
-                patch.Dispose();
-            }
             handles.Clear();
         }
 
@@ -82,7 +85,6 @@ namespace Sindy.View
             Model = null;
         }
 
-        private List<(Action action, float delay)> waitCoroutineActions = new();
         protected void WaitCoroutine(Action action, float delay = 0)
         {
             if (gameObject.activeSelf)
@@ -91,17 +93,16 @@ namespace Sindy.View
             }
             else
             {
-                waitCoroutineActions.Add((action, delay));
+                deferredActions.Enqueue(action, delay);
             }
         }
 
         protected void OnEnable()
         {
-            foreach (var (action, delay) in waitCoroutineActions)
+            foreach (var (action, delay) in deferredActions.Drain())
             {
                 StartCoroutine(WaitCoroutine_Cor(action, delay));
             }
-            waitCoroutineActions.Clear();
         }
 
         private IEnumerator WaitCoroutine_Cor(Action action, float delay = 0)
@@ -114,66 +115,17 @@ namespace Sindy.View
             {
                 yield return null;
             }
+
             action?.Invoke();
         }
 
         public void SetParent(SindyComponent parent)
         {
-            SetParentNull();
-            this.parent = parent;
-            if (parent != null)
-            {
-                this.parent.children ??= new();
-                this.parent.children.Add(this);
-            }
+            LinkState.AttachTo(parent);
         }
 
-        private SindyComponent SetParentNull()
-        {
-            if (parent != null)
-            {
-                parent.children.Remove(this);
-                parent = null;
-            }
-            return this;
-        }
-
-        private void RemoveChildrenLink()
-        {
-            if (children == null) return;
-            foreach (var child in children)
-            {
-                child.parent = null;
-            }
-            children.Clear();
-        }
-
-        public T AddHandle<T>(T patch, string name = default) where T : IDisposable
-        {
-            if (string.IsNullOrEmpty(name))
-            {
-                name = GeneratePatchName(patch);
-            }
-            if (handles.ContainsKey(name))
-            {
-                handles[name].Dispose();
-                disposables.Remove(handles[name]);
-                handles.Remove(name);
-            }
-            handles[name] = patch;
-            return patch;
-        }
-
-        public T GetHandle<T>(string name) where T : IDisposable
-        {
-            if (handles.TryGetValue(name, out var patch))
-            {
-                return (T)patch;
-            }
-            return default;
-        }
-
-        private string GeneratePatchName<T>(T disposable) where T : IDisposable => $"{typeof(T).Name}_{disposable.GetHashCode()}";
+        public T AddHandle<T>(T handle, string name = default) where T : IDisposable => handles.Add(handle, name);
+        public T GetHandle<T>(string name) where T : IDisposable => handles.Get<T>(name);
     }
 
     public abstract class SindyComponent<T> : SindyComponent where T : class
