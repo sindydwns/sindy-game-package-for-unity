@@ -21,20 +21,18 @@ namespace Sindy.View.Model
         }
     }
 
-    public class ListViewModel<T> : ViewModel where T : IViewModel
+    public class ListViewModel<T> : ListViewModel where T : IViewModel
     {
-        private readonly ReactiveProperty<IReadOnlyList<T>> items = new(Array.Empty<T>());
-        public ReadOnlyReactiveProperty<IReadOnlyList<T>> Items => items;
-
         public void SetItems(IReadOnlyList<T> list)
         {
-            items.Value = list ?? Array.Empty<T>();
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-            items.Dispose();
+            if (list == null)
+            {
+                base.SetItems(null);
+                return;
+            }
+            var converted = new IViewModel[list.Count];
+            for (int i = 0; i < list.Count; i++) converted[i] = list[i];
+            base.SetItems(converted);
         }
     }
 }

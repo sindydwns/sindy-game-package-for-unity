@@ -23,13 +23,9 @@ namespace Sindy.View.Components
             for (int i = 0; i < tabs.Count; i++)
             {
                 int capturedIndex = i;
-                void OnValueChanged(bool isOn)
-                {
-                    if (isOn) model.Value = capturedIndex;
-                }
-                tabs[i].onValueChanged.AddListener(OnValueChanged);
-                int closedIndex = capturedIndex;
-                disposables.Add(Disposable.Create(() => tabs[closedIndex].onValueChanged.RemoveListener(OnValueChanged)));
+                UnityEngine.Events.UnityAction<bool> handler = isOn => { if (isOn) model.Value = capturedIndex; };
+                tabs[i].onValueChanged.AddListener(handler);
+                disposables.Add(Disposable.Create(() => tabs[capturedIndex].onValueChanged.RemoveListener(handler)));
             }
         }
     }

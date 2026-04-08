@@ -7,6 +7,7 @@ namespace Sindy.View.Model
     {
         public ReactiveProperty<float> Remaining { get; } = new();
         public ReadOnlyReactiveProperty<bool> IsFinished { get; }
+        public bool IsPaused { get; private set; }
 
         public TimerModel(float duration)
         {
@@ -17,7 +18,7 @@ namespace Sindy.View.Model
             Observable.EveryUpdate()
                 .Subscribe(_ =>
                 {
-                    if (Remaining.Value > 0f)
+                    if (!IsPaused && Remaining.Value > 0f)
                         Remaining.Value = Mathf.Max(0f, Remaining.Value - Time.deltaTime);
                 })
                 .AddTo(disposables);
@@ -26,7 +27,11 @@ namespace Sindy.View.Model
         public void Reset(float duration)
         {
             Remaining.Value = duration;
+            IsPaused = false;
         }
+
+        public void Pause() => IsPaused = true;
+        public void Resume() => IsPaused = false;
 
         public override void Dispose()
         {

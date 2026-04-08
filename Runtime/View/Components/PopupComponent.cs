@@ -6,9 +6,10 @@ namespace Sindy.View.Components
     {
         [SerializeField] private GameObject root;
 
-        private void Awake()
+        protected override void OnEnable()
         {
-            if (root != null) root.SetActive(false);
+            base.OnEnable();
+            if (root != null && Model == null) root.SetActive(false);
         }
 
         protected override void Init(ViewModel model)
