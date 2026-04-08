@@ -78,11 +78,8 @@ namespace Sindy.View
 
         private void OnDestroy()
         {
-            if (Model != null)
-            {
-                Clear(Model);
-                Model = null;
-            }
+            ClearModel();
+            Model = null;
         }
 
         private List<(Action action, float delay)> waitCoroutineActions = new();
