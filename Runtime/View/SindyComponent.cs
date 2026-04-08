@@ -97,7 +97,7 @@ namespace Sindy.View
             }
         }
 
-        protected void OnEnable()
+        protected virtual void OnEnable()
         {
             foreach (var (action, delay) in deferredActions.Drain())
             {

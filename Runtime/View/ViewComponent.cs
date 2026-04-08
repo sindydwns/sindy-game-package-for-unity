@@ -17,14 +17,14 @@ namespace Sindy.View
         {
             foreach (var view in views)
             {
-                var component = model[view.name];
-                if (component is IViewModel childModel)
+                var childModel = model[view.name];
+                if (childModel != null)
                 {
                     view.component.SetModel(childModel).SetParent(this);
                 }
                 else
                 {
-                    Debug.LogWarning($"ViewComponent: Model for view '{view.name}' is not an IViewModel. it is {component?.GetType().Name ?? "null"}");
+                    Debug.LogWarning($"ViewComponent: Model for view '{view.name}' not found in ViewModel.");
                 }
             }
         }
@@ -42,7 +42,7 @@ namespace Sindy.View
 
 #if UNITY_EDITOR
         [CustomPropertyDrawer(typeof(ViewBehaviour))]
-        public class EntityAmountDrawer : PropertyDrawer
+        public class ViewBehaviourDrawer : PropertyDrawer
         {
             public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
             {

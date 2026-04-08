@@ -43,7 +43,7 @@ namespace Sindy.View
             }
             else
             {
-                return (T)children[token];
+                return children[token] is T typed ? typed : default;
             }
         }
 
@@ -64,7 +64,7 @@ namespace Sindy.View
             }
             else
             {
-                children.Add(token, model);
+                children[token] = model;
             }
         }
 
