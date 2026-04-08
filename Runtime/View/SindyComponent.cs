@@ -8,16 +8,16 @@ namespace Sindy.View
     public class SindyComponent : MonoBehaviour
     {
         public ComponentPreset Preset { get; set; }
-        protected List<IDisposable> disposables = new();
-        private Dictionary<string, IDisposable> patches = new();
+        protected readonly List<IDisposable> disposables = new();
+        private readonly Dictionary<string, IDisposable> handles = new();
         public object Model { get; protected set; }
         private bool isInitialized = false;
         public bool IsInitialized => isInitialized;
         /// <summary>
         /// 자신의 모델이 null이 되면 자식 컴포넌트들의 모델도 null이 되도록 설정한 컴포넌트들.
         /// </summary>
-        private HashSet<SindyComponent> linkChildren;
-        private SindyComponent linkParent = null;
+        private HashSet<SindyComponent> children;
+        private SindyComponent parent = null;
 
         protected static bool IsComponentPrefab(SindyComponent com) => string.IsNullOrEmpty(com.gameObject.scene.name);
         public bool IsPrefab => IsComponentPrefab(this);
@@ -50,9 +50,9 @@ namespace Sindy.View
             if (Model == null) return;
             Clear(Model);
             ClearDisposables();
-            if (linkChildren != null)
+            if (children != null)
             {
-                foreach (var child in linkChildren)
+                foreach (var child in children)
                 {
                     child.SetModel(null);
                 }
@@ -69,11 +69,11 @@ namespace Sindy.View
                 disposables[i].Dispose();
             }
             disposables.Clear();
-            foreach (var patch in patches.Values)
+            foreach (var patch in handles.Values)
             {
                 patch.Dispose();
             }
-            patches.Clear();
+            handles.Clear();
         }
 
         private void OnDestroy()
@@ -117,53 +117,56 @@ namespace Sindy.View
             action?.Invoke();
         }
 
-        public void AddTo(SindyComponent parent)
+        public void SetParent(SindyComponent parent)
         {
-            RemoveLink();
-            linkParent = parent;
-            linkParent.linkChildren ??= new();
-            linkParent.linkChildren.Add(this);
+            SetParentNull();
+            this.parent = parent;
+            if (parent != null)
+            {
+                this.parent.children ??= new();
+                this.parent.children.Add(this);
+            }
         }
 
-        public SindyComponent RemoveLink()
+        private SindyComponent SetParentNull()
         {
-            if (linkParent != null)
+            if (parent != null)
             {
-                linkParent.linkChildren.Remove(this);
-                linkParent = null;
+                parent.children.Remove(this);
+                parent = null;
             }
             return this;
         }
 
         private void RemoveChildrenLink()
         {
-            if (linkChildren == null) return;
-            foreach (var child in linkChildren)
+            if (children == null) return;
+            foreach (var child in children)
             {
-                child.linkParent = null;
+                child.parent = null;
             }
-            linkChildren.Clear();
+            children.Clear();
         }
 
-        public T AddPatch<T>(T patch, string name = default) where T : IDisposable
+        public T AddHandle<T>(T patch, string name = default) where T : IDisposable
         {
             if (string.IsNullOrEmpty(name))
             {
                 name = GeneratePatchName(patch);
             }
-            if (patches.ContainsKey(name))
+            if (handles.ContainsKey(name))
             {
-                patches[name].Dispose();
-                disposables.Remove(patches[name]);
-                patches.Remove(name);
+                handles[name].Dispose();
+                disposables.Remove(handles[name]);
+                handles.Remove(name);
             }
-            patches[name] = patch;
+            handles[name] = patch;
             return patch;
         }
 
-        public T GetPatch<T>(string name) where T : IDisposable
+        public T GetHandle<T>(string name) where T : IDisposable
         {
-            if (patches.TryGetValue(name, out var patch))
+            if (handles.TryGetValue(name, out var patch))
             {
                 return (T)patch;
             }
@@ -201,7 +204,7 @@ namespace Sindy.View
         protected abstract void Init(T model);
         protected override void Init(object model) => Init(model as T);
 
-        protected abstract void Clear(T model);
+        protected virtual void Clear(T model) { }
         protected override void Clear(object model) => Clear(model as T);
     }
 }
