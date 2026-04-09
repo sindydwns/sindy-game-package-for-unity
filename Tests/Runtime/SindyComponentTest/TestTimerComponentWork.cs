@@ -7,11 +7,12 @@ namespace Sindy.Test
 {
     /// <summary>
     /// TimerLabelComponent — TimerModel 카운트다운이 TMP_Text에 반영되는지 확인
-    /// Start() 직후 자동으로 타이머가 시작됨
+    /// TimerModel은 생성 즉시 EveryUpdate 구독을 시작하므로 반드시 명시적으로 Dispose해야 합니다.
     /// </summary>
     class TestTimerComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private TimerModel model;
 
         public TestTimerComponentWork(SindyComponent component)
         {
@@ -20,25 +21,24 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var timer = new TimerModel(10f);
+            model = new TimerModel(10f);
 
-            timer.Remaining
+            model.Remaining
                 .Subscribe(v => Debug.Log($"[Timer] remaining = {v:F1}s"))
                 .AddTo(disposables);
 
-            timer.IsFinished
+            model.IsFinished
                 .Where(finished => finished)
                 .Subscribe(_ => Debug.Log("[Timer] finished!"))
                 .AddTo(disposables);
 
-            component.SetModel(timer);
+            component.SetModel(model);
+        }
 
-            // Pause / Resume 확인
-            // timer.Pause();
-            // timer.Resume();
-
-            // 재시작 확인
-            // timer.Reset(5f);
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

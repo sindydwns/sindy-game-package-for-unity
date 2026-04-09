@@ -7,13 +7,12 @@ namespace Sindy.Test
 {
     /// <summary>
     /// IconComponent — SpritePropModel.Sprite 변경 시 Image에 반영되는지 확인
-    /// Sprite는 런타임 에셋 로드가 필요하므로 null → null 전환으로 구독 흐름만 검증
-    /// 실제 Sprite 반영은 에디터에서 에셋을 Resources에 넣고 확인할 것
     /// </summary>
     class TestIconComponentWork : TestCase
     {
         private readonly SindyComponent component;
         private readonly Sprite testIcon;
+        private SpritePropModel model;
 
         public TestIconComponentWork(SindyComponent component, Sprite testIcon)
         {
@@ -23,23 +22,26 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var icon = new SpritePropModel();
+            model = new SpritePropModel();
+            model.Sprite.Subscribe(v => Debug.Log($"[Icon] sprite = {(v != null ? v.name : "null")}")).AddTo(disposables);
 
-            icon.Sprite
-                .Subscribe(v => Debug.Log($"[Icon] sprite = {(v != null ? v.name : "null")}"))
-                .AddTo(disposables);
-
-            component.SetModel(icon);
+            component.SetModel(model);
 
             if (testIcon != null)
             {
-                icon.Value = testIcon;
-                Debug.Log("[Icon] Sprite testIcon and applied.");
+                model.Value = testIcon;
+                Debug.Log("[Icon] Sprite testIcon applied.");
             }
             else
             {
-                Debug.Log("[Icon] No test sprite found at Resources/Icons/test_icon — skipping assignment.");
+                Debug.Log("[Icon] No test sprite assigned — skipping assignment.");
             }
+        }
+
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

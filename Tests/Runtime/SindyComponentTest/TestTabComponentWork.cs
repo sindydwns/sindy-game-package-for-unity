@@ -14,6 +14,7 @@ namespace Sindy.Test
     class TestTabComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private IntPropModel model;
 
         public TestTabComponentWork(SindyComponent component)
         {
@@ -22,20 +23,20 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var tab = new IntPropModel(0);
+            model = new IntPropModel(0);
+            model.Number.Subscribe(v => Debug.Log($"[Tab] selectedIndex = {v}")).AddTo(disposables);
 
-            tab.Number
-                .Subscribe(v => Debug.Log($"[Tab] selectedIndex = {v}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(tab);
+            model.Value = 1;
+            model.Value = 2;
+            model.Value = 0;
+        }
 
-            // 모델 → UI 방향 확인
-            tab.Value = 1;
-            tab.Value = 2;
-            tab.Value = 0;
-
-            // UI → 모델 방향은 씬에서 Toggle을 직접 클릭하여 콘솔 로그로 확인
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

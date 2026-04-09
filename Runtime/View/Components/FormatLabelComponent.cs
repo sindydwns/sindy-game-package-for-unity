@@ -24,7 +24,7 @@ namespace Sindy.View.Components
     /// </summary>
     public class FormatLabelModel : PropModel<string>
     {
-        public R3.ReactiveProperty<string> Text => Prop;
+        public ReactiveProperty<string> Text => Prop;
 
         public FormatLabelModel() { }
         public FormatLabelModel(string text) : base(text) { }

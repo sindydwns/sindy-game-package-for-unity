@@ -12,6 +12,7 @@ namespace Sindy.Test
     class TestPageComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private IntPropModel model;
 
         public TestPageComponentWork(SindyComponent component)
         {
@@ -20,17 +21,20 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var page = new IntPropModel(0);
+            model = new IntPropModel(0);
+            model.Number.Subscribe(v => Debug.Log($"[Page] currentPage = {v}")).AddTo(disposables);
 
-            page.Number
-                .Subscribe(v => Debug.Log($"[Page] currentPage = {v}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(page);
+            model.Value = 1;
+            model.Value = 2;
+            model.Value = 0;
+        }
 
-            page.Value = 1;
-            page.Value = 2;
-            page.Value = 0;
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

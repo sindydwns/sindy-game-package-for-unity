@@ -13,6 +13,7 @@ namespace Sindy.Test
     class TestToggleComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private BoolPropModel model;
 
         public TestToggleComponentWork(SindyComponent component)
         {
@@ -21,19 +22,19 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var toggle = new BoolPropModel(false);
+            model = new BoolPropModel(false);
+            model.Show.Subscribe(v => Debug.Log($"[Toggle] isOn = {v}")).AddTo(disposables);
 
-            toggle.Show
-                .Subscribe(v => Debug.Log($"[Toggle] isOn = {v}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(toggle);
+            model.Value = true;
+            model.Value = false;
+        }
 
-            // 모델 → UI 방향 확인
-            toggle.Value = true;
-            toggle.Value = false;
-
-            // UI → 모델 방향은 씬에서 Toggle을 직접 클릭하여 콘솔 로그로 확인
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

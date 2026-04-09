@@ -18,6 +18,6 @@ namespace Sindy.View.Components
     public class IconModel : SpritePropModel
     {
         public IconModel() { }
-        public IconModel(UnityEngine.Sprite sprite) : base(sprite) { }
+        public IconModel(Sprite sprite) : base(sprite) { }
     }
 }

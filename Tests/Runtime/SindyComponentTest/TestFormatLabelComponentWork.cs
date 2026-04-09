@@ -11,6 +11,7 @@ namespace Sindy.Test
     class TestFormatLabelComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private FormatNumberPropModel<int> model;
 
         public TestFormatLabelComponentWork(SindyComponent component)
         {
@@ -19,17 +20,19 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var count = new FormatNumberPropModel<int>(0);
+            model = new FormatNumberPropModel<int>(0);
+            model.Text.Subscribe(v => Debug.Log($"[FormatLabel] formatted = \"{v}\"")).AddTo(disposables);
 
-            count.Text
-                .Subscribe(v => Debug.Log($"[FormatLabel] formatted = \"{v}\""))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(count);
+            model.Source.Value = 1000;
+            model.Source.Value = 9999999;
+        }
 
-            // 포맷팅 확인: int는 기본적으로 1000 단위 콤마 표시
-            count.Source.Value = 1000;
-            count.Source.Value = 9999999;
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

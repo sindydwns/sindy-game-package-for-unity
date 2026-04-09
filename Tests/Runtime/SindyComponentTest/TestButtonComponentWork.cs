@@ -7,6 +7,7 @@ namespace Sindy.Test
     class TestButtonComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private SubjModel<Unit> model;
 
         public TestButtonComponentWork(SindyComponent component) : base()
         {
@@ -15,10 +16,16 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var onClick = new SubjModel<Unit>();
-            onClick.Subj.Subscribe(x => Debug.Log("Button clicked")).AddTo(disposables);
+            model = new SubjModel<Unit>();
+            model.Subj.Subscribe(x => Debug.Log("Button clicked")).AddTo(disposables);
 
-            component.SetModel(onClick);
+            component.SetModel(model);
+        }
+
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

@@ -13,6 +13,7 @@ namespace Sindy.Test
     class TestListComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private ListViewModel model;
 
         public TestListComponentWork(SindyComponent component)
         {
@@ -21,30 +22,30 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var list = new ListViewModel();
+            model = new ListViewModel();
+            model.Items.Subscribe(items => Debug.Log($"[List] itemCount = {items.Count}")).AddTo(disposables);
 
-            list.Items
-                .Subscribe(items => Debug.Log($"[List] itemCount = {items.Count}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(list);
-
-            // 아이템 3개로 시작
-            list.SetItems(new List<IViewModel>
+            model.SetItems(new List<IViewModel>
             {
                 new StringPropModel("Item A"),
                 new StringPropModel("Item B"),
                 new StringPropModel("Item C"),
             });
 
-            // 아이템 1개로 축소 — 나머지 풀 항목이 비활성화되는지 확인
-            list.SetItems(new List<IViewModel>
+            model.SetItems(new List<IViewModel>
             {
                 new StringPropModel("Item A (reduced)"),
             });
 
-            // 빈 목록
-            list.SetItems(null);
+            model.SetItems(null);
+        }
+
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

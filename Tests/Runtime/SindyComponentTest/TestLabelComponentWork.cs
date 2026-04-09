@@ -11,6 +11,7 @@ namespace Sindy.Test
     class TestLabelComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private StringPropModel model;
 
         public TestLabelComponentWork(SindyComponent component)
         {
@@ -19,17 +20,19 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var label = new StringPropModel("Hello, World!");
+            model = new StringPropModel("Hello, World!");
+            model.Text.Subscribe(v => Debug.Log($"[Label] text = \"{v}\"")).AddTo(disposables);
 
-            label.Text
-                .Subscribe(v => Debug.Log($"[Label] text = \"{v}\""))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(label);
+            model.Value = "Changed Text";
+            model.Value = "Final Text";
+        }
 
-            // 값 변경 — 컴포넌트에 즉시 반영되는지 콘솔에서 확인
-            label.Value = "Changed Text";
-            label.Value = "Final Text";
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

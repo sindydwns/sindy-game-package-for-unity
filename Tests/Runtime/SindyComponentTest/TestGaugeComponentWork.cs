@@ -6,12 +6,13 @@ using UnityEngine;
 namespace Sindy.Test
 {
     /// <summary>
-    /// GaugeComponent — FloatPropModel.Number 변경 시 Slider/Image fillAmount에 반영되는지 확인
+    /// GaugeComponent — FloatPropModel.Number 변경 시 fillAmount에 반영되는지 확인
     /// 값은 0~1 범위로 Clamp됨
     /// </summary>
     class TestGaugeComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private FloatPropModel model;
 
         public TestGaugeComponentWork(SindyComponent component)
         {
@@ -20,20 +21,23 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var gauge = new FloatPropModel(1f);
+            model = new FloatPropModel(1f);
+            model.Number.Subscribe(v => Debug.Log($"[Gauge] value = {v:F2}")).AddTo(disposables);
 
-            gauge.Number
-                .Subscribe(v => Debug.Log($"[Gauge] value = {v:F2}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(gauge);
+            model.Value = 0.75f;
+            model.Value = 0.5f;
+            model.Value = 0f;
+            model.Value = 1.5f;  // Clamp01 → 1.0 으로 표시되어야 함
+            model.Value = -0.1f; // Clamp01 → 0.0 으로 표시되어야 함
+            model.Value = 0.5f;
+        }
 
-            gauge.Value = 0.75f;
-            gauge.Value = 0.5f;
-            gauge.Value = 0f;
-            gauge.Value = 1.5f;  // Clamp01 → 1.0 으로 표시되어야 함
-            gauge.Value = -0.1f; // Clamp01 → 0.0 으로 표시되어야 함
-            gauge.Value = 0.5f;
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

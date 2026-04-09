@@ -11,6 +11,7 @@ namespace Sindy.Test
     class TestVisibilityComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private BoolPropModel model;
 
         public TestVisibilityComponentWork(SindyComponent component)
         {
@@ -19,16 +20,19 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var visibility = new BoolPropModel(true);
+            model = new BoolPropModel(true);
+            model.Show.Subscribe(v => Debug.Log($"[Visibility] visible = {v}")).AddTo(disposables);
 
-            visibility.Show
-                .Subscribe(v => Debug.Log($"[Visibility] visible = {v}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(visibility);
+            model.Value = false;
+            model.Value = true;
+        }
 
-            visibility.Value = false;
-            visibility.Value = true;
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

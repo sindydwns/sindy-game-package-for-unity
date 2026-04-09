@@ -18,6 +18,6 @@ namespace Sindy.View.Components
     public class ColorModel : ColorPropModel
     {
         public ColorModel() { }
-        public ColorModel(UnityEngine.Color color) : base(color) { }
+        public ColorModel(Color color) : base(color) { }
     }
 }

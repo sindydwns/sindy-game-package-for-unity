@@ -13,6 +13,7 @@ namespace Sindy.Test
     class TestPopupComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private ViewModel model;
 
         public TestPopupComponentWork(SindyComponent component)
         {
@@ -21,28 +22,27 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var model = new ViewModel();
+            model = new ViewModel();
             var title = new StringPropModel("팝업 타이틀");
-
-            title.Text
-                .Subscribe(v => Debug.Log($"[Popup] title = \"{v}\""))
-                .AddTo(disposables);
-
+            title.Text.Subscribe(v => Debug.Log($"[Popup] title = \"{v}\"")).AddTo(disposables);
             model["title"] = title;
 
-            // 열기
             Debug.Log("[Popup] Opening...");
             component.SetModel(model);
 
             title.Value = "타이틀 변경됨";
 
-            // 닫기 — root가 비활성화되어야 함
             Debug.Log("[Popup] Closing...");
             component.SetModel(null);
 
-            // 다시 열기
             Debug.Log("[Popup] Reopening...");
             component.SetModel(model);
+        }
+
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }

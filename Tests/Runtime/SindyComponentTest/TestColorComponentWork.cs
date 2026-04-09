@@ -11,6 +11,7 @@ namespace Sindy.Test
     class TestColorComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private ColorPropModel model;
 
         public TestColorComponentWork(SindyComponent component)
         {
@@ -19,16 +20,19 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            var color = new ColorPropModel(Color.white);
+            model = new ColorPropModel(Color.white);
+            model.Color.Subscribe(v => Debug.Log($"[Color] color = {v}")).AddTo(disposables);
 
-            color.Color
-                .Subscribe(v => Debug.Log($"[Color] color = {v}"))
-                .AddTo(disposables);
+            component.SetModel(model);
 
-            component.SetModel(color);
+            model.Value = Color.red;
+            model.Value = new Color(0.2f, 0.8f, 0.4f);
+        }
 
-            color.Value = Color.red;
-            color.Value = new Color(0.2f, 0.8f, 0.4f);
+        protected override void Cleanup()
+        {
+            component?.SetModel(null);
+            model?.Dispose();
         }
     }
 }
