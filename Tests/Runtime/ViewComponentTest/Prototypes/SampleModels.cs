@@ -9,6 +9,11 @@ namespace Sindy.Test
     // 공통
     // ═══════════════════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// 범용 팝업 루트 모델. Patch()로 자식 모델을 주입받아 사용한다.
+    /// </summary>
+    public class PopupModel : ViewModel { }
+
     public class CloseButtonModel : ViewModel
     {
         public ButtonModel Close { get; } = new();

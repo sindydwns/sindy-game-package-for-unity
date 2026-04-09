@@ -1,0 +1,19 @@
+{
+    "name": "Sindy.Tests.Editor",
+    "rootNamespace": "Sindy.Test.Editor",
+    "references": [
+        "Sindy",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
