@@ -11,6 +11,13 @@ namespace Sindy.View.Components
         [SerializeField] private Transform container;
 
         private readonly List<SindyComponent> pool = new();
+        private bool isDestroying;
+
+        protected override void OnDestroy()
+        {
+            isDestroying = true;
+            base.OnDestroy();
+        }
 
         protected override void Init(ListViewModel model)
         {
@@ -19,6 +26,12 @@ namespace Sindy.View.Components
 
         protected override void Clear(ListViewModel model)
         {
+            if (isDestroying)
+            {
+                pool.Clear();
+                return;
+            }
+
             foreach (var item in pool)
             {
                 if (item != null) Destroy(item.gameObject);

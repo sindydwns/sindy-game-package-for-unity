@@ -6,17 +6,16 @@ namespace Sindy.Test
 {
     public class TestSindyComponent : MonoBehaviour
     {
-        [Header("Core")]
-        [SerializeField] private SindyComponent buttonComponent;
-
         [Header("Display")]
         [SerializeField] private SindyComponent labelComponent;
         [SerializeField] private SindyComponent formatLabelComponent;
         [SerializeField] private SindyComponent colorComponent;
         [SerializeField] private SindyComponent gaugeComponent;
         [SerializeField] private SindyComponent iconComponent;
+        [SerializeField] private Sprite testIcon;
 
         [Header("Control")]
+        [SerializeField] private SindyComponent buttonComponent;
         [SerializeField] private SindyComponent toggleComponent;
         [SerializeField] private SindyComponent tabComponent;
         [SerializeField] private SindyComponent pageComponent;
@@ -36,7 +35,7 @@ namespace Sindy.Test
             TryAdd(formatLabelComponent, c => new TestFormatLabelComponentWork(c));
             TryAdd(colorComponent, c => new TestColorComponentWork(c));
             TryAdd(gaugeComponent, c => new TestGaugeComponentWork(c));
-            TryAdd(iconComponent, c => new TestIconComponentWork(c));
+            TryAdd(iconComponent, c => new TestIconComponentWork(c, testIcon));
             TryAdd(toggleComponent, c => new TestToggleComponentWork(c));
             TryAdd(tabComponent, c => new TestTabComponentWork(c));
             TryAdd(pageComponent, c => new TestPageComponentWork(c));

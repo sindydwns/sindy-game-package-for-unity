@@ -13,10 +13,12 @@ namespace Sindy.Test
     class TestIconComponentWork : TestCase
     {
         private readonly SindyComponent component;
+        private readonly Sprite testIcon;
 
-        public TestIconComponentWork(SindyComponent component)
+        public TestIconComponentWork(SindyComponent component, Sprite testIcon)
         {
             this.component = component;
+            this.testIcon = testIcon;
         }
 
         public override void Run()
@@ -29,12 +31,10 @@ namespace Sindy.Test
 
             component.SetModel(icon);
 
-            // 에셋이 있는 경우: icon.Value = Resources.Load<Sprite>("Icons/item_sword");
-            var loaded = Resources.Load<Sprite>("Icons/test_icon");
-            if (loaded != null)
+            if (testIcon != null)
             {
-                icon.Value = loaded;
-                Debug.Log("[Icon] Sprite loaded and applied.");
+                icon.Value = testIcon;
+                Debug.Log("[Icon] Sprite testIcon and applied.");
             }
             else
             {

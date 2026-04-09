@@ -33,6 +33,7 @@ namespace Sindy.Test
             gauge.Value = 0f;
             gauge.Value = 1.5f;  // Clamp01 → 1.0 으로 표시되어야 함
             gauge.Value = -0.1f; // Clamp01 → 0.0 으로 표시되어야 함
+            gauge.Value = 0.5f;
         }
     }
 }

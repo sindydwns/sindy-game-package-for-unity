@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Sindy.Common;
 using UnityEngine;
 
 namespace Sindy.View
@@ -70,16 +71,11 @@ namespace Sindy.View
 
         protected void ClearDisposables()
         {
-            for (int i = disposables.Count - 1; i >= 0; i--)
-            {
-                disposables[i].Dispose();
-            }
-
-            disposables.Clear();
+            disposables.DisposeAllClear();
             handles.Clear();
         }
 
-        private void OnDestroy()
+        protected virtual void OnDestroy()
         {
             ClearModel();
             Model = null;
