@@ -1,12 +1,13 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
+using Sindy.View.Components;
 using UnityEngine;
 
 namespace Sindy.Test
 {
     /// <summary>
-    /// FormatLabelComponent — FormatNumberPropModel<int>의 포맷된 문자열이 TMP_Text에 반영되는지 확인
+    /// LabelComponent — FormatNumberPropModel&lt;int&gt;의 포맷된 문자열이 TMP_Text에 반영되는지 확인
+    /// FormatNumberPropModel은 PropModel&lt;string&gt;을 상속하므로 LabelComponent에 직접 전달 가능
     /// </summary>
     class TestFormatLabelComponentWork : TestCase
     {

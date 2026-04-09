@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
+using Sindy.View.Components;
 using UnityEngine;
 
 namespace Sindy.Test

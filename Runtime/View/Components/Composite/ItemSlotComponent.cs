@@ -1,12 +1,39 @@
 using Sindy.RedDot;
+using Sindy.View;
 using UnityEngine;
 
 namespace Sindy.View.Components.Composite
 {
+    public class ItemSlotModel : ViewModel
+    {
+        public PropModel<Sprite> Icon { get; } = new();
+        public FormatNumberPropModel<int> Count { get; } = new(0);
+        public RedDotModel RedDot { get; }
+
+        public ItemSlotModel(string redDotPath = null)
+        {
+            RedDot = string.IsNullOrEmpty(redDotPath)
+                ? new RedDotModel((RedDotNode)null)
+                : new RedDotModel(redDotPath);
+
+            this["icon"] = Icon;
+            this["count"] = Count;
+            this["redDot"] = RedDot;
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            Icon.Dispose();
+            Count.Dispose();
+            RedDot.Dispose();
+        }
+    }
+
     public class ItemSlotComponent : SindyComponent<ItemSlotModel>
     {
         [SerializeField] private IconComponent icon;
-        [SerializeField] private FormatLabelComponent count;
+        [SerializeField] private LabelComponent count;
         [SerializeField] private RedDotComponent redDot;
 
         protected override void Init(ItemSlotModel model)

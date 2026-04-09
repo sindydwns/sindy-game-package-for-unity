@@ -24,7 +24,7 @@ namespace Sindy.Test
         [Header("Composite")]
         [SerializeField] private SindyComponent listComponent;
         [SerializeField] private SindyComponent popupComponent;
-        [SerializeField] private SindyComponent timerComponent;
+        [SerializeField] private SindyComponent timerLabelComponent;
 
         private readonly List<TestCase> tests = new();
 
@@ -42,7 +42,7 @@ namespace Sindy.Test
             TryAdd(visibilityComponent, c => new TestVisibilityComponentWork(c));
             TryAdd(listComponent, c => new TestListComponentWork(c));
             TryAdd(popupComponent, c => new TestPopupComponentWork(c));
-            TryAdd(timerComponent, c => new TestTimerComponentWork(c));
+            TryAdd(timerLabelComponent, c => new TestTimerComponentWork(c));
 
             tests.ForEach(test => test.Run());
         }
@@ -55,9 +55,7 @@ namespace Sindy.Test
         private void TryAdd(SindyComponent component, System.Func<SindyComponent, TestCase> factory)
         {
             if (component != null)
-            {
                 tests.Add(factory(component));
-            }
         }
     }
 }

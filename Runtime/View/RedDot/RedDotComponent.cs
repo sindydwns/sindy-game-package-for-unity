@@ -9,7 +9,7 @@ namespace Sindy.RedDot
     public class RedDotComponent : SindyComponent<RedDotModel>
     {
         [SerializeField] private GameObject dot;
-        [SerializeField] private TextMeshProUGUI text;
+        [SerializeField] private TMP_Text text;
         /// <summary>
         /// text가 표시 되지 않을 경우 dot의 크기를 조절하기 위한 스케일러.
         /// </summary>

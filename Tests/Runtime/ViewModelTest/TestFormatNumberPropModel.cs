@@ -1,7 +1,7 @@
 using System;
 using R3;
 using Sindy.Reactive;
-using Sindy.View.Model;
+using Sindy.View.Components;
 using UnityEngine.Assertions;
 
 namespace Sindy.Test
