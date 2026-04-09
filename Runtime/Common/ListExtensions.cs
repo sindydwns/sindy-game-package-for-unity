@@ -7,11 +7,10 @@ namespace Sindy.Common
     {
         public static void DisposeAll(this List<IDisposable> disposables)
         {
-            foreach (var disposable in disposables)
+            for (var i = disposables.Count - 1; i >= 0; i--)
             {
-                disposable.Dispose();
+                disposables[i].Dispose();
             }
-
             disposables.Clear();
         }
     }

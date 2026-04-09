@@ -58,8 +58,9 @@ namespace Sindy.RedDot
             SetDefaultSource();
         }
 
-        private void OnDestroy()
+        protected override void OnDestroy()
         {
+            base.OnDestroy();
             _countSource?.Dispose();
         }
 
