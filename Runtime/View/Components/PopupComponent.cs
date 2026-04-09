@@ -23,4 +23,6 @@ namespace Sindy.View.Components
             if (root != null) root.SetActive(false);
         }
     }
+
+    public class PopupModel : ViewModel { }
 }

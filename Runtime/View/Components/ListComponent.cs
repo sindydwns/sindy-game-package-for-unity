@@ -5,6 +5,8 @@ using R3;
 
 namespace Sindy.View.Components
 {
+    public class ListModel : ListViewModel { }
+
     public class ListComponent : SindyComponent<ListViewModel>
     {
         [SerializeField] private SindyComponent prefab;

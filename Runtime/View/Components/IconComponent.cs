@@ -14,4 +14,10 @@ namespace Sindy.View.Components
             model.Sprite.Subscribe(v => image.sprite = v).AddTo(disposables);
         }
     }
+
+    public class IconModel : SpritePropModel
+    {
+        public IconModel() { }
+        public IconModel(UnityEngine.Sprite sprite) : base(sprite) { }
+    }
 }

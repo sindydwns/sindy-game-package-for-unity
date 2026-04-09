@@ -20,4 +20,10 @@ namespace Sindy.View.Components
             disposables.Add(Disposable.Create(() => toggle.onValueChanged.RemoveListener(OnValueChanged)));
         }
     }
+
+    public class ToggleModel : BoolPropModel
+    {
+        public ToggleModel() { }
+        public ToggleModel(bool isOn) : base(isOn) { }
+    }
 }

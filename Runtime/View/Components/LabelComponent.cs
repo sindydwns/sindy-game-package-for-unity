@@ -14,4 +14,10 @@ namespace Sindy.View.Components
             model.Text.Subscribe(v => label.text = v).AddTo(disposables);
         }
     }
+
+    public class LabelModel : StringPropModel
+    {
+        public LabelModel() { }
+        public LabelModel(string text) : base(text) { }
+    }
 }

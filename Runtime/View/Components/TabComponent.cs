@@ -29,4 +29,10 @@ namespace Sindy.View.Components
             }
         }
     }
+
+    public class TabModel : IntPropModel
+    {
+        public TabModel() { }
+        public TabModel(int selectedIndex) : base(selectedIndex) { }
+    }
 }

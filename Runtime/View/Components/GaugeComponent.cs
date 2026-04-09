@@ -14,4 +14,10 @@ namespace Sindy.View.Components
             model.Number.Subscribe(v => fill.fillAmount = Mathf.Clamp01(v)).AddTo(disposables);
         }
     }
+
+    public class GaugeModel : FloatPropModel
+    {
+        public GaugeModel() { }
+        public GaugeModel(float value) : base(value) { }
+    }
 }

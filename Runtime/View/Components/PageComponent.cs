@@ -20,4 +20,10 @@ namespace Sindy.View.Components
                 pages[i].SetActive(i == index);
         }
     }
+
+    public class PageModel : IntPropModel
+    {
+        public PageModel() { }
+        public PageModel(int pageIndex) : base(pageIndex) { }
+    }
 }

@@ -21,4 +21,9 @@ namespace Sindy.View.Components
                 .AddTo(disposables);
         }
     }
+
+    public class TimerLabelModel : TimerModel
+    {
+        public TimerLabelModel(float duration) : base(duration) { }
+    }
 }

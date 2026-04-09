@@ -17,4 +17,16 @@ namespace Sindy.View.Components
             model.Prop.Subscribe(v => label.text = v).AddTo(disposables);
         }
     }
+
+    /// <summary>
+    /// FormatLabelComponent 전용 모델.
+    /// FormatNumberPropModel<T>를 사용할 경우 직접 전달도 가능합니다.
+    /// </summary>
+    public class FormatLabelModel : PropModel<string>
+    {
+        public R3.ReactiveProperty<string> Text => Prop;
+
+        public FormatLabelModel() { }
+        public FormatLabelModel(string text) : base(text) { }
+    }
 }

@@ -14,4 +14,10 @@ namespace Sindy.View.Components
             model.Color.Subscribe(v => target.color = v).AddTo(disposables);
         }
     }
+
+    public class ColorModel : ColorPropModel
+    {
+        public ColorModel() { }
+        public ColorModel(UnityEngine.Color color) : base(color) { }
+    }
 }

@@ -17,4 +17,10 @@ namespace Sindy.View.Components
             model.Show.Subscribe(v => obj.SetActive(v)).AddTo(disposables);
         }
     }
+
+    public class VisibilityModel : BoolPropModel
+    {
+        public VisibilityModel() { }
+        public VisibilityModel(bool visible) : base(visible) { }
+    }
 }

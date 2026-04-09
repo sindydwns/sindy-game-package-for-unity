@@ -15,4 +15,8 @@ namespace Sindy.View.Components
             disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClick)));
         }
     }
+
+    public class ButtonModel : SubjModel<Unit>
+    {
+    }
 }
