@@ -29,7 +29,6 @@ namespace Sindy.RedDot
             _countSource
                 .Where(x => x != null)
                 .Switch()
-                .Where(_ => _countSource.Value != null)
                 .Subscribe(UpdateRedDot);
 
             SetDefaultSource();

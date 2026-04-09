@@ -60,6 +60,9 @@ namespace Sindy.RedDot
             _pathProp.Dispose();
             _parent.Dispose();
             _disposables.DisposeAllClear();
+
+            Count.Dispose();
+            IsActive.Dispose();
         }
     }
 }

@@ -26,7 +26,7 @@ namespace Sindy.View
             var prefab = Instance.prefabs.GetGameObject<SindyComponent>(panelName);
             if (prefab == null)
             {
-                throw new Exception($"ComponentEvent '{panelName}' not found in any ComponentManager.");
+                throw new Exception($"Component '{panelName}' not found in ComponentManager prefabs.");
             }
             var preset = new ComponentPreset(prefab, data, layer);
             Instance.BuildComponent(preset);
