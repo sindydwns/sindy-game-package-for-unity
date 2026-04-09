@@ -91,14 +91,12 @@ namespace Sindy.RedDot
         }
     }
 
-    public class RedDotModel : ViewModel, IPropModel<int>
+    public class RedDotModel : PropModel<int>
     {
         /// <summary>
         /// Node가 null인 경우 RedDotNode.Root를 사용
         /// </summary>
         public RedDotNode Node { get; private set; }
-
-        public ReactiveProperty<int> Prop { get; private set; } = new();
 
         public RedDotModel(RedDotNode node)
         {

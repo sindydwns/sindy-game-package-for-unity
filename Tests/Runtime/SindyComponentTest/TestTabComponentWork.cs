@@ -1,6 +1,5 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
@@ -14,7 +13,7 @@ namespace Sindy.Test
     class TestTabComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private IntPropModel model;
+        private PropModel<int> model;
 
         public TestTabComponentWork(SindyComponent component)
         {
@@ -23,8 +22,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new IntPropModel(0);
-            model.Number.Subscribe(v => Debug.Log($"[Tab] selectedIndex = {v}")).AddTo(disposables);
+            model = new PropModel<int>(0);
+            model.Subscribe(v => Debug.Log($"[Tab] selectedIndex = {v}")).AddTo(disposables);
 
             component.SetModel(model);
 

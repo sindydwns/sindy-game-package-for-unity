@@ -1,17 +1,16 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
 {
     /// <summary>
-    /// VisibilityComponent — BoolPropModel.Show 변경 시 GameObject 활성/비활성에 반영되는지 확인
+    /// VisibilityComponent — PropModel<bool> 변경 시 GameObject 활성/비활성에 반영되는지 확인
     /// </summary>
     class TestVisibilityComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private BoolPropModel model;
+        private PropModel<bool> model;
 
         public TestVisibilityComponentWork(SindyComponent component)
         {
@@ -20,8 +19,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new BoolPropModel(true);
-            model.Show.Subscribe(v => Debug.Log($"[Visibility] visible = {v}")).AddTo(disposables);
+            model = new PropModel<bool>(true);
+            model.Subscribe(v => Debug.Log($"[Visibility] visible = {v}")).AddTo(disposables);
 
             component.SetModel(model);
 

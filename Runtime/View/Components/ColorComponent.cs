@@ -1,21 +1,20 @@
-using Sindy.View.Model;
 using UnityEngine;
 using UnityEngine.UI;
 using R3;
 
 namespace Sindy.View.Components
 {
-    public class ColorComponent : SindyComponent<ColorPropModel>
+    public class ColorComponent : SindyComponent<PropModel<Color>>
     {
         [SerializeField] private Graphic target;
 
-        protected override void Init(ColorPropModel model)
+        protected override void Init(PropModel<Color> model)
         {
-            model.Color.Subscribe(v => target.color = v).AddTo(disposables);
+            model.Subscribe(v => target.color = v).AddTo(disposables);
         }
     }
 
-    public class ColorModel : ColorPropModel
+    public class ColorModel : PropModel<Color>
     {
         public ColorModel() { }
         public ColorModel(Color color) : base(color) { }

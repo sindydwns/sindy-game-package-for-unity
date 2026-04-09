@@ -1,6 +1,5 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
@@ -13,7 +12,7 @@ namespace Sindy.Test
     class TestToggleComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private BoolPropModel model;
+        private PropModel<bool> model;
 
         public TestToggleComponentWork(SindyComponent component)
         {
@@ -22,8 +21,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new BoolPropModel(false);
-            model.Show.Subscribe(v => Debug.Log($"[Toggle] isOn = {v}")).AddTo(disposables);
+            model = new PropModel<bool>(false);
+            model.Subscribe(v => Debug.Log($"[Toggle] isOn = {v}")).AddTo(disposables);
 
             component.SetModel(model);
 

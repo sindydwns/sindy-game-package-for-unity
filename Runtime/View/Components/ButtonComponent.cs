@@ -10,7 +10,7 @@ namespace Sindy.View.Components
 
         protected override void Init(SubjModel<Unit> model)
         {
-            void OnClick() => model.Subj.OnNext(Unit.Default);
+            void OnClick() => model.OnNext(Unit.Default);
             button.onClick.AddListener(OnClick);
             disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClick)));
         }

@@ -1,11 +1,12 @@
 using Sindy.RedDot;
 using Sindy.View.Model;
+using UnityEngine;
 
 namespace Sindy.View.Components.Composite
 {
     public class ItemSlotModel : ViewModel
     {
-        public SpritePropModel Icon { get; } = new();
+        public PropModel<Sprite> Icon { get; } = new();
         public FormatNumberPropModel<int> Count { get; } = new(0);
         public RedDotModel RedDot { get; }
 

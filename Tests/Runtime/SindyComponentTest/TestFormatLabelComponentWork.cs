@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Sindy.Test
 {
     /// <summary>
-    /// FormatLabelComponent — FormatNumberPropModel&lt;int&gt;의 포맷된 문자열이 TMP_Text에 반영되는지 확인
+    /// FormatLabelComponent — FormatNumberPropModel<int>의 포맷된 문자열이 TMP_Text에 반영되는지 확인
     /// </summary>
     class TestFormatLabelComponentWork : TestCase
     {

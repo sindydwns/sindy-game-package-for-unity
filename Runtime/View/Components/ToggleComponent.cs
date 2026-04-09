@@ -1,27 +1,26 @@
 using R3;
-using Sindy.View.Model;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Sindy.View.Components
 {
-    public class ToggleComponent : SindyComponent<BoolPropModel>
+    public class ToggleComponent : SindyComponent<PropModel<bool>>
     {
         [SerializeField] private Toggle toggle;
 
-        protected override void Init(BoolPropModel model)
+        protected override void Init(PropModel<bool> model)
         {
-            model.Show
+            model
                 .Subscribe(v => toggle.SetIsOnWithoutNotify(v))
                 .AddTo(disposables);
 
-            void OnValueChanged(bool v) => model.Show.Value = v;
+            void OnValueChanged(bool v) => model.Value = v;
             toggle.onValueChanged.AddListener(OnValueChanged);
             disposables.Add(Disposable.Create(() => toggle.onValueChanged.RemoveListener(OnValueChanged)));
         }
     }
 
-    public class ToggleModel : BoolPropModel
+    public class ToggleModel : PropModel<bool>
     {
         public ToggleModel() { }
         public ToggleModel(bool isOn) : base(isOn) { }

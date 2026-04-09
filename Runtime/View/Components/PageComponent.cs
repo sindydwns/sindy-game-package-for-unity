@@ -1,15 +1,14 @@
 using System.Collections.Generic;
-using Sindy.View.Model;
 using UnityEngine;
 using R3;
 
 namespace Sindy.View.Components
 {
-    public class PageComponent : SindyComponent<IntPropModel>
+    public class PageComponent : SindyComponent<PropModel<int>>
     {
         [SerializeField] private List<GameObject> pages;
 
-        protected override void Init(IntPropModel model)
+        protected override void Init(PropModel<int> model)
         {
             model.Prop.Subscribe(Refresh).AddTo(disposables);
         }
@@ -21,7 +20,7 @@ namespace Sindy.View.Components
         }
     }
 
-    public class PageModel : IntPropModel
+    public class PageModel : PropModel<int>
     {
         public PageModel() { }
         public PageModel(int pageIndex) : base(pageIndex) { }

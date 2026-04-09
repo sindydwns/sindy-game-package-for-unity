@@ -1,6 +1,5 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
@@ -23,8 +22,8 @@ namespace Sindy.Test
         public override void Run()
         {
             model = new ViewModel();
-            var title = new StringPropModel("팝업 타이틀");
-            title.Text.Subscribe(v => Debug.Log($"[Popup] title = \"{v}\"")).AddTo(disposables);
+            var title = new PropModel<string>("팝업 타이틀");
+            title.Subscribe(v => Debug.Log($"[Popup] title = \"{v}\"")).AddTo(disposables);
             model["title"] = title;
 
             Debug.Log("[Popup] Opening...");

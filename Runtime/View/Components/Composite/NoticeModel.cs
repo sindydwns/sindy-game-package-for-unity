@@ -1,12 +1,11 @@
 using R3;
-using Sindy.View.Model;
 
 namespace Sindy.View.Components.Composite
 {
     public class NoticeModel : ViewModel
     {
-        public StringPropModel Title { get; } = new();
-        public StringPropModel Content { get; } = new();
+        public PropModel<string> Title { get; } = new();
+        public PropModel<string> Content { get; } = new();
         public SubjModel<Unit> Confirm { get; } = new();
         public SubjModel<Unit> Cancel { get; } = new();
         public bool HasCancel { get; }

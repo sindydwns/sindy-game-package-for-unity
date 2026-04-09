@@ -1,21 +1,20 @@
-using Sindy.View.Model;
 using TMPro;
 using UnityEngine;
 using R3;
 
 namespace Sindy.View.Components
 {
-    public class LabelComponent : SindyComponent<StringPropModel>
+    public class LabelComponent : SindyComponent<PropModel<string>>
     {
         [SerializeField] private TMP_Text label;
 
-        protected override void Init(StringPropModel model)
+        protected override void Init(PropModel<string> model)
         {
-            model.Text.Subscribe(v => label.text = v).AddTo(disposables);
+            model.Subscribe(v => label.text = v).AddTo(disposables);
         }
     }
 
-    public class LabelModel : StringPropModel
+    public class LabelModel : PropModel<string>
     {
         public LabelModel() { }
         public LabelModel(string text) : base(text) { }

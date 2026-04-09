@@ -5,9 +5,10 @@ using Sindy.Reactive;
 
 namespace Sindy.View
 {
-    public class PropModel<T> : ViewModel, IPropModel<T>
+    public class PropModel<T> : ObservableModel<T>
     {
         public ReactiveProperty<T> Prop { get; private set; } = new();
+        public override Observable<T> Obs => Prop;
         public T Value
         {
             get => Prop.Value;

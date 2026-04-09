@@ -1,17 +1,16 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
 {
     /// <summary>
-    /// ColorComponent — ColorPropModel.Color 변경 시 Graphic 색상에 반영되는지 확인
+    /// ColorComponent — PropModel<Color> 변경 시 Graphic 색상에 반영되는지 확인
     /// </summary>
     class TestColorComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private ColorPropModel model;
+        private PropModel<Color> model;
 
         public TestColorComponentWork(SindyComponent component)
         {
@@ -20,8 +19,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new ColorPropModel(Color.white);
-            model.Color.Subscribe(v => Debug.Log($"[Color] color = {v}")).AddTo(disposables);
+            model = new PropModel<Color>(Color.white);
+            model.Subscribe(v => Debug.Log($"[Color] color = {v}")).AddTo(disposables);
 
             component.SetModel(model);
 

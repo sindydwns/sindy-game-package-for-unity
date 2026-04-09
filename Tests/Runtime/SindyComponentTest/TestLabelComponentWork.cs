@@ -1,17 +1,16 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
 {
     /// <summary>
-    /// LabelComponent — StringPropModel.Text 변경 시 TMP_Text에 반영되는지 확인
+    /// LabelComponent — PropModel<string> 변경 시 TMP_Text에 반영되는지 확인
     /// </summary>
     class TestLabelComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private StringPropModel model;
+        private PropModel<string> model;
 
         public TestLabelComponentWork(SindyComponent component)
         {
@@ -20,8 +19,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new StringPropModel("Hello, World!");
-            model.Text.Subscribe(v => Debug.Log($"[Label] text = \"{v}\"")).AddTo(disposables);
+            model = new PropModel<string>("Hello, World!");
+            model.Subscribe(v => Debug.Log($"[Label] text = \"{v}\"")).AddTo(disposables);
 
             component.SetModel(model);
 

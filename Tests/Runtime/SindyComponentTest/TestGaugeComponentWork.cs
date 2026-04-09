@@ -1,18 +1,17 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
 {
     /// <summary>
-    /// GaugeComponent — FloatPropModel.Number 변경 시 fillAmount에 반영되는지 확인
+    /// GaugeComponent — PropModel<float> 값 변경 시 fillAmount에 반영되는지 확인
     /// 값은 0~1 범위로 Clamp됨
     /// </summary>
     class TestGaugeComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private FloatPropModel model;
+        private PropModel<float> model;
 
         public TestGaugeComponentWork(SindyComponent component)
         {
@@ -21,8 +20,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new FloatPropModel(1f);
-            model.Number.Subscribe(v => Debug.Log($"[Gauge] value = {v:F2}")).AddTo(disposables);
+            model = new PropModel<float>(1f);
+            model.Subscribe(v => Debug.Log($"[Gauge] value = {v:F2}")).AddTo(disposables);
 
             component.SetModel(model);
 

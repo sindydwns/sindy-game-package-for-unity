@@ -1,18 +1,17 @@
 using R3;
 using Sindy.View;
-using Sindy.View.Model;
 using UnityEngine;
 
 namespace Sindy.Test
 {
     /// <summary>
-    /// IconComponent — SpritePropModel.Sprite 변경 시 Image에 반영되는지 확인
+    /// IconComponent — PropModel<Sprite> 변경 시 Image에 반영되는지 확인
     /// </summary>
     class TestIconComponentWork : TestCase
     {
         private readonly SindyComponent component;
         private readonly Sprite testIcon;
-        private SpritePropModel model;
+        private PropModel<Sprite> model;
 
         public TestIconComponentWork(SindyComponent component, Sprite testIcon)
         {
@@ -22,8 +21,8 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new SpritePropModel();
-            model.Sprite.Subscribe(v => Debug.Log($"[Icon] sprite = {(v != null ? v.name : "null")}")).AddTo(disposables);
+            model = new PropModel<Sprite>();
+            model.Subscribe(v => Debug.Log($"[Icon] sprite = {(v != null ? v.name : "null")}")).AddTo(disposables);
 
             component.SetModel(model);
 

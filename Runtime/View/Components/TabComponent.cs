@@ -1,16 +1,15 @@
 using System.Collections.Generic;
 using R3;
-using Sindy.View.Model;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Sindy.View.Components
 {
-    public class TabComponent : SindyComponent<IntPropModel>
+    public class TabComponent : SindyComponent<PropModel<int>>
     {
         [SerializeField] private List<Toggle> tabs;
 
-        protected override void Init(IntPropModel model)
+        protected override void Init(PropModel<int> model)
         {
             model.Prop
                 .Subscribe(index =>
@@ -30,7 +29,7 @@ namespace Sindy.View.Components
         }
     }
 
-    public class TabModel : IntPropModel
+    public class TabModel : PropModel<int>
     {
         public TabModel() { }
         public TabModel(int selectedIndex) : base(selectedIndex) { }

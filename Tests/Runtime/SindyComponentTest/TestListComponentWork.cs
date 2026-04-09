@@ -29,14 +29,14 @@ namespace Sindy.Test
 
             model.SetItems(new List<IViewModel>
             {
-                new StringPropModel("Item A"),
-                new StringPropModel("Item B"),
-                new StringPropModel("Item C"),
+                new PropModel<string>("Item A"),
+                new PropModel<string>("Item B"),
+                new PropModel<string>("Item C"),
             });
 
             model.SetItems(new List<IViewModel>
             {
-                new StringPropModel("Item A (reduced)"),
+                new PropModel<string>("Item A (reduced)"),
             });
 
             model.SetItems(null);
