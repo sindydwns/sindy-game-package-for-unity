@@ -37,5 +37,7 @@ namespace Sindy.View
             if (layer < 0 || layer >= parentRects.Count) return 0;
             return parentRects[layer].childCount;
         }
+
+        public static T GetPrefab<T>(string name) where T : UnityEngine.Object => Instance.prefabs.GetGameObject<T>(name);
     }
 }

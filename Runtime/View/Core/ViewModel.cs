@@ -24,11 +24,11 @@ namespace Sindy.View
 
         public virtual IViewModel this[string name]
         {
-            get => GetView<IViewModel>(name);
-            set => SetView(name, value);
+            get => GetChild<IViewModel>(name);
+            set => AddChild(name, value);
         }
 
-        public T GetView<T>(string name) where T : IViewModel
+        public T GetChild<T>(string name) where T : IViewModel
         {
             var tokens = name.Split(".", StringSplitOptions.RemoveEmptyEntries);
             var token = tokens.FirstOrDefault();
@@ -39,7 +39,7 @@ namespace Sindy.View
             if (tokens.Length > 1)
             {
                 var subName = string.Join(".", tokens.Skip(1));
-                return children[token].GetView<T>(subName);
+                return children[token].GetChild<T>(subName);
             }
             else
             {
@@ -47,7 +47,7 @@ namespace Sindy.View
             }
         }
 
-        public void SetView(string name, IViewModel model)
+        public ViewModel AddChild(string name, IViewModel model, bool disposeWithParent = true)
         {
             var tokens = name.Split(".", StringSplitOptions.RemoveEmptyEntries);
             var token = tokens.FirstOrDefault() ?? throw new ArgumentException("Invalid view name");
@@ -60,12 +60,17 @@ namespace Sindy.View
                     children.Add(token, child);
                 }
                 var subName = string.Join(".", tokens.Skip(1));
-                ((ViewModel)child).SetView(subName, model);
+                ((ViewModel)child).AddChild(subName, model, disposeWithParent);
             }
             else
             {
                 children[token] = model;
+                if (disposeWithParent)
+                {
+                    model.AddTo(this);
+                }
             }
+            return this;
         }
 
         public void AddTo(IDisposeChain disposable) => disposable.AddChild(this);

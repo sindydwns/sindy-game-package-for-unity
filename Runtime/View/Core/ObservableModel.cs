@@ -5,7 +5,7 @@ namespace Sindy.View
 {
     public interface IViewModel : IDisposeChain
     {
-        public T GetView<T>(string name) where T : IViewModel;
+        public T GetChild<T>(string name) where T : IViewModel;
     }
 
     public interface IObservableModel<T> : IViewModel
