@@ -10,57 +10,14 @@ namespace Sindy.Test
     ///
     /// 검증 항목:
     ///   Case1: 유효한 토큰 → 헤더에 자동 주입
-    ///   Case2: 만료된 토큰 → RefreshService 호출 → 갱신 토큰으로 재요청
+    ///   Case2: 만료된 토큰(401) → RefreshService 호출 → 갱신 토큰으로 재요청
     ///   Case3: 리프레시 실패 → 토큰 초기화 + Unauthorized 에러
     ///   Case4: TokenModel.IsExpired PropModel 상태 전환
     ///   Case5: ITokenStore 저장/불러오기 동작
     /// </summary>
     class TestTokenRefreshWork : TestCase
     {
-        // ── 테스트용 스텁 ─────────────────────────────────────────────────
-
-        /// <summary>Phase 3 TokenModel 스텁. 실제 구현 전 컴파일 가능한 최소 구현.</summary>
-        private class StubTokenModel : ViewModel
-        {
-            public PropModel<string> AccessToken  { get; } = new();
-            public PropModel<string> RefreshToken { get; } = new();
-            public PropModel<bool>   IsExpired    { get; } = new(false);
-            public bool HasToken => !string.IsNullOrEmpty(AccessToken.Value);
-
-            public void Update(string access, string refresh)
-            {
-                AccessToken.Value  = access;
-                RefreshToken.Value = refresh;
-                IsExpired.Value    = false;
-            }
-
-            public void ExpireNow() => IsExpired.Value = true;
-            public void Clear()
-            {
-                AccessToken.Value  = null;
-                RefreshToken.Value = null;
-                IsExpired.Value    = false;
-            }
-
-            public override void Dispose()
-            {
-                base.Dispose();
-                AccessToken.Dispose();
-                RefreshToken.Dispose();
-                IsExpired.Dispose();
-            }
-        }
-
-        private class TokenResponseDto
-        {
-            public string AccessToken  { get; set; }
-            public string RefreshToken { get; set; }
-            public int    ExpiresIn    { get; set; }
-        }
-
         private class ProfileDto { public string Name { get; set; } }
-
-        // ─────────────────────────────────────────────────────────────────
 
         public override void Run()
         {
@@ -75,68 +32,63 @@ namespace Sindy.Test
 
         private void Case1_ValidToken_HeaderInjected()
         {
-            var tokenModel = new StubTokenModel();
+            var tokenModel = new TokenModel();
             tokenModel.Update("valid_access_token", "refresh_token");
 
             var fake = new FakeHttpClient();
             fake.Returns(new ProfileDto { Name = "Sindy" });
 
-            // TODO Phase 3: AuthenticatedHttpClient 사용
-            // var authClient = new AuthenticatedHttpClient("https://api.test", tokenModel, refreshService);
-            // var api = new ApiModel<Unit, ProfileDto>(authClient, "/api/profile", HttpMethod.GET);
-            // api.Request.Send(Unit.Default);
-            //
-            // var sentRequest = fake.ReceivedRequests[0];
-            // Assert.IsTrue(sentRequest.Headers.ContainsKey("Authorization"));
-            // Assert.AreEqual("Bearer valid_access_token", sentRequest.Headers["Authorization"]);
+            var refreshService = new TokenRefreshService(fake, "/auth/refresh");
+            var authClient = new AuthenticatedHttpClient(fake, tokenModel, refreshService);
 
-            // Phase 3 미구현 — TokenModel 상태 검증
-            Assert.AreEqual(true,  tokenModel.HasToken);
-            Assert.AreEqual(false, tokenModel.IsExpired.Value);
-            Assert.AreEqual("valid_access_token", tokenModel.AccessToken.Value);
+            ProfileDto received = null;
+            authClient.Get<ProfileDto>("/api/profile")
+                .Subscribe(res => received = res.Data);
+
+            Assert.IsNotNull(received);
+            Assert.AreEqual("Sindy", received.Name);
+
+            // Authorization 헤더가 주입됐는지 확인
+            var sentRequest = fake.ReceivedRequests[0];
+            Assert.IsTrue(sentRequest.Headers.ContainsKey("Authorization"));
+            Assert.AreEqual("Bearer valid_access_token", sentRequest.Headers["Authorization"]);
 
             tokenModel.Dispose();
         }
 
-        // ── Case 2: 만료 토큰 → 리프레시 → 원래 요청 재전송 ────────────
+        // ── Case 2: 401 에러 → 리프레시 → 원래 요청 재전송 ────────────
 
         private void Case2_ExpiredToken_RefreshAndRetry()
         {
-            var tokenModel = new StubTokenModel();
+            var tokenModel = new TokenModel();
             tokenModel.Update("expired_token", "valid_refresh");
-            tokenModel.ExpireNow();
 
-            var fakeForRefresh  = new FakeHttpClient();
-            var fakeForProfile  = new FakeHttpClient();
+            // 요청+갱신 모두 같은 FakeHttpClient 사용
+            var fake = new FakeHttpClient();
 
-            fakeForRefresh.Returns(new TokenResponseDto
+            // 1번째: 401 Unauthorized
+            fake.Throws(HttpErrorKind.Unauthorized, statusCode: 401);
+            // 2번째: 리프레시 성공 응답
+            fake.Returns(new TokenResponseDto
             {
                 AccessToken  = "new_access_token",
                 RefreshToken = "new_refresh_token",
                 ExpiresIn    = 3600,
             });
-            fakeForProfile.Returns(new ProfileDto { Name = "Sindy" });
+            // 3번째: 재전송 성공
+            fake.Returns(new ProfileDto { Name = "Sindy" });
 
-            // TODO Phase 3:
-            // var refreshService = new TokenRefreshService(fakeForRefresh, "/auth/refresh");
-            // var authClient = new AuthenticatedHttpClient("https://api.test", tokenModel, refreshService);
-            // var api = new ApiModel<Unit, ProfileDto>(authClient, "/api/profile", HttpMethod.GET);
-            //
-            // api.Request.Send(Unit.Default);
-            //
-            // // 리프레시가 발생하고 TokenModel이 갱신됐는지 확인
-            // Assert.AreEqual("new_access_token", tokenModel.AccessToken.Value);
-            // Assert.AreEqual(false, tokenModel.IsExpired.Value);
-            // Assert.AreEqual(false, api.Response.HasError.Value);
+            var refreshService = new TokenRefreshService(fake, "/auth/refresh");
+            var authClient = new AuthenticatedHttpClient(fake, tokenModel, refreshService);
 
-            // Phase 3 미구현 — 리프레시 로직 직접 시뮬레이션
-            Assert.AreEqual(true, tokenModel.IsExpired.Value);
+            ProfileDto received = null;
+            authClient.Get<ProfileDto>("/api/profile")
+                .Subscribe(res => received = res.Data);
 
-            // 토큰 갱신 시뮬레이션
-            tokenModel.Update("new_access_token", "new_refresh_token");
-
+            // 리프레시가 발생하고 TokenModel이 갱신됐는지 확인
             Assert.AreEqual("new_access_token", tokenModel.AccessToken.Value);
-            Assert.AreEqual(false, tokenModel.IsExpired.Value);
+            Assert.AreEqual("new_refresh_token", tokenModel.RefreshToken.Value);
+            Assert.IsNotNull(received);
 
             tokenModel.Dispose();
         }
@@ -145,29 +97,38 @@ namespace Sindy.Test
 
         private void Case3_RefreshFails_TokenCleared()
         {
-            var tokenModel = new StubTokenModel();
+            var tokenModel = new TokenModel();
             tokenModel.Update("expired_token", "invalid_refresh");
-            tokenModel.ExpireNow();
 
-            // TODO Phase 3:
-            // var fakeRefresh = new FakeHttpClient();
-            // fakeRefresh.Throws(HttpErrorKind.Unauthorized, 401);
-            //
-            // var refreshService = new TokenRefreshService(fakeRefresh, "/auth/refresh");
-            // var authClient = new AuthenticatedHttpClient("https://api.test", tokenModel, refreshService);
-            // var api = new ApiModel<Unit, ProfileDto>(authClient, "/api/profile", HttpMethod.GET);
-            //
-            // api.Request.Send(Unit.Default);
-            //
-            // Assert.AreEqual(null, tokenModel.AccessToken.Value);   // 토큰 초기화
-            // Assert.AreEqual(false, tokenModel.HasToken);
-            // Assert.AreEqual(true, api.Response.HasError.Value);
-            // Assert.AreEqual(HttpErrorKind.Unauthorized, api.Response.Error.Value.Kind);
+            var fake = new FakeHttpClient();
 
-            // Phase 3 미구현 — Clear 동작만 확인
-            tokenModel.Clear();
+            // 1번째: 401 Unauthorized
+            fake.Throws(HttpErrorKind.Unauthorized, statusCode: 401);
+            // 2번째: 리프레시도 실패
+            fake.Throws(HttpErrorKind.Unauthorized, statusCode: 401);
 
-            Assert.AreEqual(null, tokenModel.AccessToken.Value);
+            var refreshService = new TokenRefreshService(fake, "/auth/refresh");
+            var authClient = new AuthenticatedHttpClient(fake, tokenModel, refreshService);
+
+            bool errored = false;
+            HttpErrorKind? errorKind = null;
+
+            authClient.Get<ProfileDto>("/api/profile")
+                .Subscribe(
+                    _ => { },
+                    result =>
+                    {
+                        if (result.IsFailure)
+                        {
+                            errored = true;
+                            errorKind = (result.Exception as HttpError)?.Kind;
+                        }
+                    }
+                );
+
+            Assert.AreEqual(true, errored);
+            Assert.AreEqual(HttpErrorKind.Unauthorized, errorKind);
+            Assert.AreEqual(null, tokenModel.AccessToken.Value);   // 토큰 초기화
             Assert.AreEqual(false, tokenModel.HasToken);
 
             tokenModel.Dispose();
@@ -177,7 +138,7 @@ namespace Sindy.Test
 
         private void Case4_TokenModelIsExpiredState()
         {
-            var tokenModel = new StubTokenModel();
+            var tokenModel = new TokenModel();
 
             var isExpiredHistory = new System.Collections.Generic.List<bool>();
             tokenModel.IsExpired.Subscribe(v => isExpiredHistory.Add(v)).AddTo(disposables);
@@ -204,39 +165,38 @@ namespace Sindy.Test
         }
 
         // ── Case 5: ITokenStore 저장/불러오기 ────────────────────────────
+        // PlayerPrefs는 에디터 테스트에서 사용하기 어려우므로 인메모리 스텁으로 검증합니다.
 
         private void Case5_TokenStore_SaveAndLoad()
         {
-            // TODO Phase 3: PlayerPrefsTokenStore 사용
-            // var store = new PlayerPrefsTokenStore();
-            // store.Clear();
-            //
-            // var loaded = store.Load();
-            // Assert.IsNull(loaded);  // 저장된 토큰 없음
-            //
-            // var tokenModel = new TokenModel();
-            // tokenModel.Update("access", "refresh", expiresIn: 3600);
-            // store.Save(tokenModel);
-            //
-            // var restored = store.Load();
-            // Assert.IsNotNull(restored);
-            // Assert.AreEqual("access", restored.AccessToken.Value);
-            //
-            // store.Clear();
-            // Assert.IsNull(store.Load());
+            var store = new InMemoryTokenStore();
 
-            // Phase 3 미구현 — StubTokenModel 저장/불러오기 시뮬레이션
-            var token = new StubTokenModel();
-            token.Update("access_123", "refresh_456");
+            // 비어있는 상태
+            Assert.IsNull(store.Load());
 
-            Assert.AreEqual("access_123", token.AccessToken.Value);
-            Assert.AreEqual("refresh_456", token.RefreshToken.Value);
+            // 저장
+            store.Save("access_123", "refresh_456");
 
-            token.Clear();
-            Assert.AreEqual(null, token.AccessToken.Value);
-            Assert.AreEqual(false, token.HasToken);
+            var loaded = store.Load();
+            Assert.IsNotNull(loaded);
+            Assert.AreEqual("access_123", loaded.AccessToken);
+            Assert.AreEqual("refresh_456", loaded.RefreshToken);
 
-            token.Dispose();
+            // 초기화
+            store.Clear();
+            Assert.IsNull(store.Load());
+        }
+
+        /// <summary>테스트용 인메모리 ITokenStore.</summary>
+        private class InMemoryTokenStore : ITokenStore
+        {
+            private TokenData stored;
+
+            public void Save(string accessToken, string refreshToken) =>
+                stored = new TokenData { AccessToken = accessToken, RefreshToken = refreshToken };
+
+            public TokenData Load() => stored;
+            public void Clear() => stored = null;
         }
     }
 }

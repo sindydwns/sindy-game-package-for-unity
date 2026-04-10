@@ -17,113 +17,36 @@ namespace Sindy.Test
     /// </summary>
     class TestOAuthFlowWork : TestCase
     {
-        // ── 스텁 클래스들 ──────────────────────────────────────────────────
+        // ── 스텁 OAuth 제공자 ─────────────────────────────────────────────
 
-        private class StubTokenModel : ViewModel
-        {
-            public PropModel<string> AccessToken  { get; } = new();
-            public PropModel<string> RefreshToken { get; } = new();
-            public bool HasToken => !string.IsNullOrEmpty(AccessToken.Value);
-
-            public void Update(string access, string refresh)
-            {
-                AccessToken.Value  = access;
-                RefreshToken.Value = refresh;
-            }
-
-            public void Clear()
-            {
-                AccessToken.Value  = null;
-                RefreshToken.Value = null;
-            }
-
-            public override void Dispose()
-            {
-                base.Dispose();
-                AccessToken.Dispose();
-                RefreshToken.Dispose();
-            }
-        }
-
-        /// <summary>IOAuthProvider 스텁. 미리 설정된 결과를 Observable로 반환합니다.</summary>
-        private class StubOAuthProvider
+        private class StubOAuthProvider : IOAuthProvider
         {
             public string ProviderName { get; }
-            private bool   shouldSucceed;
-            private string accessToken;
+            private readonly bool shouldSucceed;
+            private readonly string accessToken;
 
             public StubOAuthProvider(string name, bool shouldSucceed, string accessToken = "stub_access")
             {
-                ProviderName      = name;
+                ProviderName       = name;
                 this.shouldSucceed = shouldSucceed;
-                this.accessToken  = accessToken;
+                this.accessToken   = accessToken;
             }
 
-            public Observable<StubTokenModel> Login()
+            public Observable<TokenResponseDto> Login()
             {
                 if (!shouldSucceed)
-                    return Observable.Throw<StubTokenModel>(
+                    return Observable.Throw<TokenResponseDto>(
                         new HttpError(401, "Login failed", HttpErrorKind.Unauthorized));
 
-                var token = new StubTokenModel();
-                token.Update(accessToken, "stub_refresh");
-                return Observable.Return(token);
+                return Observable.Return(new TokenResponseDto
+                {
+                    AccessToken  = accessToken,
+                    RefreshToken = "stub_refresh",
+                    ExpiresIn    = 3600,
+                });
             }
 
             public Observable<Unit> Logout() => Observable.Return(Unit.Default);
-        }
-
-        /// <summary>AuthService 스텁 (Phase 4 미구현 전 테스트용).</summary>
-        private class StubAuthService : ViewModel
-        {
-            public PropModel<bool>   IsLoggedIn   { get; } = new(false);
-            public PropModel<bool>   IsLoading    { get; } = new(false);
-            public PropModel<string> ErrorMessage { get; } = new();
-            public SubjModel<Unit>   OnLoginSuccess { get; } = new();
-
-            private readonly StubTokenModel tokenModel;
-
-            public StubAuthService(StubTokenModel tokenModel)
-            {
-                this.tokenModel = tokenModel;
-            }
-
-            public Observable<Unit> LoginWith(StubOAuthProvider provider)
-            {
-                IsLoading.Value    = true;
-                ErrorMessage.Value = null;
-
-                return provider.Login()
-                    .Do(token =>
-                    {
-                        tokenModel.Update(token.AccessToken.Value, token.RefreshToken.Value);
-                        IsLoggedIn.Value = true;
-                        IsLoading.Value  = false;
-                        OnLoginSuccess.OnNext(Unit.Default);
-                    })
-                    .Select(_ => Unit.Default)
-                    .Catch<Unit, HttpError>(err =>
-                    {
-                        ErrorMessage.Value = err.Message;
-                        IsLoading.Value    = false;
-                        return Observable.Throw<Unit>(err);
-                    });
-            }
-
-            public void Logout()
-            {
-                tokenModel.Clear();
-                IsLoggedIn.Value = false;
-            }
-
-            public override void Dispose()
-            {
-                base.Dispose();
-                IsLoggedIn.Dispose();
-                IsLoading.Dispose();
-                ErrorMessage.Dispose();
-                OnLoginSuccess.Dispose();
-            }
         }
 
         // ─────────────────────────────────────────────────────────────────
@@ -141,8 +64,8 @@ namespace Sindy.Test
 
         private void Case1_ProviderLoginSuccess()
         {
-            var tokenModel  = new StubTokenModel();
-            var authService = new StubAuthService(tokenModel);
+            var tokenModel  = new TokenModel();
+            var authService = new AuthService(tokenModel);
             var provider    = new StubOAuthProvider("google", shouldSucceed: true, "google_access_token");
 
             authService.LoginWith(provider).Subscribe();
@@ -159,8 +82,8 @@ namespace Sindy.Test
 
         private void Case2_ProviderLoginFails()
         {
-            var tokenModel  = new StubTokenModel();
-            var authService = new StubAuthService(tokenModel);
+            var tokenModel  = new TokenModel();
+            var authService = new AuthService(tokenModel);
             var provider    = new StubOAuthProvider("google", shouldSucceed: false);
 
             bool errored = false;
@@ -181,23 +104,21 @@ namespace Sindy.Test
         }
 
         // ── Case 3: IsLoading 상태 전환 ──────────────────────────────────
-        // 로그인 시작 → IsLoading=true → 완료 후 false
 
         private void Case3_IsLoadingTransition()
         {
-            var tokenModel  = new StubTokenModel();
-            var authService = new StubAuthService(tokenModel);
+            var tokenModel  = new TokenModel();
+            var authService = new AuthService(tokenModel);
             var provider    = new StubOAuthProvider("apple", shouldSucceed: true);
 
             var loadingHistory = new System.Collections.Generic.List<bool>();
             authService.IsLoading.Subscribe(v => loadingHistory.Add(v)).AddTo(disposables);
 
-            // 로그인 (StubOAuthProvider는 동기적으로 즉시 완료)
             authService.LoginWith(provider).Subscribe();
 
             // false(초기) → true(로그인중) → false(완료)
             Assert.IsTrue(loadingHistory.Count >= 2);
-            Assert.AreEqual(false, authService.IsLoading.Value);  // 최종 상태
+            Assert.AreEqual(false, authService.IsLoading.Value);
 
             authService.Dispose();
             tokenModel.Dispose();
@@ -207,8 +128,8 @@ namespace Sindy.Test
 
         private void Case4_Logout()
         {
-            var tokenModel  = new StubTokenModel();
-            var authService = new StubAuthService(tokenModel);
+            var tokenModel  = new TokenModel();
+            var authService = new AuthService(tokenModel);
             var provider    = new StubOAuthProvider("google", shouldSucceed: true);
 
             authService.LoginWith(provider).Subscribe();
@@ -229,8 +150,8 @@ namespace Sindy.Test
 
         private void Case5_OnLoginSuccessEvent()
         {
-            var tokenModel  = new StubTokenModel();
-            var authService = new StubAuthService(tokenModel);
+            var tokenModel  = new TokenModel();
+            var authService = new AuthService(tokenModel);
             var provider    = new StubOAuthProvider("apple", shouldSucceed: true);
 
             bool successFired = false;
