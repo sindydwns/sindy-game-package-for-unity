@@ -67,7 +67,7 @@ namespace Sindy.Reactive
             return default;
         }
 
-        internal void AddRange(IEnumerable<T> options)
+        public void AddRange(IEnumerable<T> options)
         {
             foreach (var option in options)
             {
