@@ -14,9 +14,7 @@ namespace Sindy.View.Components
                 .Subscribe(v => toggle.SetIsOnWithoutNotify(v))
                 .AddTo(disposables);
 
-            void OnValueChanged(bool v) => model.Value = v;
-            toggle.onValueChanged.AddListener(OnValueChanged);
-            disposables.Add(Disposable.Create(() => toggle.onValueChanged.RemoveListener(OnValueChanged)));
+            BindUnityEvent<bool>(toggle.onValueChanged, v => model.Value = v);
         }
     }
 

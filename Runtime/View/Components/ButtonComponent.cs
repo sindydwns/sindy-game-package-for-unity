@@ -59,12 +59,6 @@ namespace Sindy.View.Components
                 interactable.Interactable.Subscribe(v => button.interactable = v).AddTo(disposables);
             }
 
-            var visibility = buttonModel?.Feature<VisibilityFeature>();
-            if (visibility != null)
-            {
-                visibility.Show.Subscribe(v => gameObject.SetActive(v)).AddTo(disposables);
-            }
-
             var highlight = buttonModel?.Feature<HighlightFeature>();
             if (highlight != null && highlightTarget != null)
             {
