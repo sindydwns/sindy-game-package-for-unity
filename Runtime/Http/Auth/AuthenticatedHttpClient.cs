@@ -43,7 +43,7 @@ namespace Sindy.Http
                     return refreshService.Refresh(tokenModel.RefreshToken.Value)
                         .Select(tokenRes =>
                         {
-                            tokenModel.Update(tokenRes.AccessToken, tokenRes.RefreshToken);
+                            tokenModel.Update(tokenRes.AccessToken, tokenRes.RefreshToken, tokenRes.ExpiresIn);
                             return tokenRes;
                         })
                         .SelectMany(_ =>

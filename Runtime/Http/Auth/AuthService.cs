@@ -39,7 +39,7 @@ namespace Sindy.Http
             return provider.Login()
                 .Do(tokenRes =>
                 {
-                    tokenModel.Update(tokenRes.AccessToken, tokenRes.RefreshToken);
+                    tokenModel.Update(tokenRes.AccessToken, tokenRes.RefreshToken, tokenRes.ExpiresIn);
                     IsLoggedIn.Value = true;
                     IsLoading.Value  = false;
                     OnLoginSuccess.OnNext(Unit.Default);
