@@ -56,18 +56,19 @@ namespace Sindy.Inven
         /// </summary>
         public Observable<IEntityStack> OnChangeStack => changeStackSubject;
 
-        [NonSerialized] private bool refresh = false;
+        [NonSerialized] private bool initialized = false;
         /// <summary>
-        /// InventoryVariable에 의해 생성된 Inventory의 초기화 문제가 있어서 추가
+        /// 역직렬화 후 EntityStack에 Inventory 참조를 주입하고 TotalAmount를 갱신합니다.
+        /// 여러 번 호출해도 최초 1회만 실행됩니다.
         /// </summary>
         public void RefreshInventory()
         {
-            if (refresh)
+            if (initialized)
             {
                 return;
             }
+            initialized = true;
             UpdateValues();
-            refresh = true;
         }
 
         public Inventory() { }

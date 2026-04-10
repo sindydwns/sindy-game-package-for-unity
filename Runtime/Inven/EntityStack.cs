@@ -18,18 +18,31 @@ namespace Sindy.Inven
         private ReactiveProperty<long> _amountProp;
         public Inventory Inventory { get => inventory; set => inventory = value; }
         public Entity Entity { get => entity; }
-        public long Amount
+
+        private ReactiveProperty<long> AmountProp
         {
             get
             {
-                _amountProp ??= new ReactiveProperty<long>(amount);
-                return _amountProp.Value;
+                if (_amountProp == null)
+                {
+                    _amountProp = new ReactiveProperty<long>(amount);
+                }
+                else if (_amountProp.Value != amount && amount != 0)
+                {
+                    // 역직렬화 후 필드와 ReactiveProperty 값이 불일치하면 필드 값으로 동기화
+                    _amountProp.Value = amount;
+                }
+                return _amountProp;
             }
+        }
+
+        public long Amount
+        {
+            get => AmountProp.Value;
             set
             {
                 amount = value;
-                _amountProp ??= new ReactiveProperty<long>(amount);
-                _amountProp.Value = value;
+                AmountProp.Value = value;
             }
         }
         private Observable<ChangeEvent> _onChange;
@@ -37,8 +50,7 @@ namespace Sindy.Inven
         {
             get
             {
-                _amountProp ??= new ReactiveProperty<long>(amount);
-                _onChange ??= _amountProp.Pairwise().Select(x => new ChangeEvent
+                _onChange ??= AmountProp.Pairwise().Select(x => new ChangeEvent
                 {
                     stack = this,
                     oldAmount = x.Previous,
