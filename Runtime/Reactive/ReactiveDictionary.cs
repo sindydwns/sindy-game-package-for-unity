@@ -10,6 +10,7 @@ namespace Sindy.Reactive
 
         public event Action<TKey, TValue> OnAdded;
         public event Action<TKey, TValue> OnRemoved;
+        public event Action<TKey, TValue, TValue> OnUpdated;
 
         public void Add(TKey key, TValue value)
         {
@@ -63,12 +64,16 @@ namespace Sindy.Reactive
             }
             set
             {
-                if (dictionary.ContainsKey(key))
+                if (dictionary.TryGetValue(key, out var oldValue))
                 {
-                    OnRemoved?.Invoke(key, dictionary[key]);
+                    dictionary[key] = value;
+                    OnUpdated?.Invoke(key, oldValue, value);
                 }
-                dictionary[key] = value;
-                OnAdded?.Invoke(key, value);
+                else
+                {
+                    dictionary[key] = value;
+                    OnAdded?.Invoke(key, value);
+                }
             }
         }
         public IEnumerator<KeyValuePair<TKey, TValue>> GetEnumerator() => dictionary.GetEnumerator();

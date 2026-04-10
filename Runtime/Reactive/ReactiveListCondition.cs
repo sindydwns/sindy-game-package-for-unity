@@ -18,7 +18,7 @@ namespace Sindy.Reactive
         public ReadOnlyReactiveProperty<bool> Any => any;
 
         private readonly IReadOnlyReactiveList<T> source;
-        private readonly Dictionary<T, CompositeDisposable> disposables = new();
+        private readonly Dictionary<T, List<IDisposable>> disposables = new();
         private readonly Func<T, ReadOnlyReactiveProperty<bool>> predicate;
 
         public ReactiveListCondition(
@@ -39,18 +39,26 @@ namespace Sindy.Reactive
         {
             var prop = predicate(t);
             var dis = prop.Subscribe(UpdateProperty);
-            if (disposables.ContainsKey(t) == false)
+            if (!disposables.TryGetValue(t, out var list))
             {
-                disposables[t] = new CompositeDisposable();
+                list = new List<IDisposable>();
+                disposables[t] = list;
             }
-            disposables[t].Add(dis);
+            list.Add(dis);
         }
 
         private void OnRemoved(T t)
         {
-            var disposable = disposables[t].First();
-            disposable.Dispose();
-            disposables[t].Remove(disposable);
+            if (disposables.TryGetValue(t, out var list) && list.Count > 0)
+            {
+                var last = list[list.Count - 1];
+                last.Dispose();
+                list.RemoveAt(list.Count - 1);
+                if (list.Count == 0)
+                {
+                    disposables.Remove(t);
+                }
+            }
             UpdateProperty();
         }
 
@@ -69,8 +77,12 @@ namespace Sindy.Reactive
             source.OnRemoved -= OnRemoved;
             foreach (var kv in disposables)
             {
-                kv.Value.Dispose();
+                foreach (var d in kv.Value)
+                {
+                    d.Dispose();
+                }
             }
+            disposables.Clear();
         }
     }
 }
