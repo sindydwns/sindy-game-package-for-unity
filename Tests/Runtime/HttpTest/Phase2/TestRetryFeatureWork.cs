@@ -9,10 +9,6 @@ namespace Sindy.Test
     /// <summary>
     /// Phase 2 — RetryFeature 재시도 동작 검증
     ///
-    /// RetryFeature는 Phase 2에서 구현됩니다.
-    /// 이 테스트는 RetryFeature의 기대 동작을 명세(Spec)로 작성했습니다.
-    /// Phase 2 구현 후 이 테스트를 실제 RetryFeature로 교체하세요.
-    ///
     /// 검증 항목:
     ///   Case1: 성공 응답에서는 재시도 없음
     ///   Case2: 재시도 가능 에러(Network)에서 maxRetry 횟수만큼 재시도
@@ -40,10 +36,8 @@ namespace Sindy.Test
             var fake = new FakeHttpClient();
             fake.Returns(new DataDto { Value = "ok" });
 
-            // TODO Phase 2: RetryFeature 실제 적용
-            // var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
-            //     .With(new RetryFeature(maxRetry: 3));
-            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET);
+            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
+                .With(new RetryFeature(maxRetry: 3));
 
             api.Request.Send(Unit.Default);
 
@@ -59,26 +53,18 @@ namespace Sindy.Test
         private void Case2_RetryOnNetworkError()
         {
             var fake = new FakeHttpClient();
-            fake.Throws(HttpErrorKind.Network);           // 1번째: 실패
-            fake.Throws(HttpErrorKind.Network);           // 2번째: 실패 (재시도)
-            fake.Returns(new DataDto { Value = "retried" }); // 3번째: 성공 (재시도)
+            fake.Throws(HttpErrorKind.Network);                  // 1번째: 실패
+            fake.Throws(HttpErrorKind.Network);                  // 2번째: 실패 (재시도)
+            fake.Returns(new DataDto { Value = "retried" });     // 3번째: 성공 (재시도)
 
-            // TODO Phase 2: 실제 RetryFeature로 교체
-            // var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
-            //     .With(new RetryFeature(maxRetry: 3, baseDelay: 0f));  // baseDelay=0: 테스트에서 즉시 재시도
-            //
-            // api.Request.Send(Unit.Default);
-            //
-            // Assert.AreEqual(3, fake.ReceivedRequests.Count);  // 총 3번 전송
-            // Assert.AreEqual(false, api.Response.HasError.Value);
-            // Assert.AreEqual("retried", api.Response.Data.Value.Value);
+            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
+                .With(new RetryFeature(maxRetry: 3, baseDelay: 0f));
 
-            // Phase 2 미구현 — 동작 명세만 문서화
-            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET);
             api.Request.Send(Unit.Default);
-            // RetryFeature 없이는 1번만 시도 후 에러
-            Assert.AreEqual(1, fake.ReceivedRequests.Count);
-            Assert.AreEqual(true, api.Response.HasError.Value);
+
+            Assert.AreEqual(3, fake.ReceivedRequests.Count);  // 총 3번 전송
+            Assert.AreEqual(false, api.Response.HasError.Value);
+            Assert.AreEqual("retried", api.Response.Data.Value.Value);
 
             api.Dispose();
         }
@@ -91,19 +77,13 @@ namespace Sindy.Test
             fake.Throws(HttpErrorKind.NotFound, statusCode: 404);
             fake.Returns(new DataDto { Value = "this should not be reached" });
 
-            // TODO Phase 2:
-            // var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
-            //     .With(new RetryFeature(maxRetry: 3));
-            //
-            // api.Request.Send(Unit.Default);
-            //
-            // Assert.AreEqual(1, fake.ReceivedRequests.Count);  // 404는 재시도 안 함
-            // Assert.AreEqual(HttpErrorKind.NotFound, api.Response.Error.Value.Kind);
+            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
+                .With(new RetryFeature(maxRetry: 3));
 
-            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET);
             api.Request.Send(Unit.Default);
+
+            Assert.AreEqual(1, fake.ReceivedRequests.Count);  // 404는 재시도 안 함
             Assert.AreEqual(HttpErrorKind.NotFound, api.Response.Error.Value.Kind);
-            Assert.AreEqual(1, fake.ReceivedRequests.Count);
 
             api.Dispose();
         }
@@ -118,20 +98,14 @@ namespace Sindy.Test
             fake.Throws(HttpErrorKind.Network);
             fake.Throws(HttpErrorKind.Network);  // maxRetry=3 초과
 
-            // TODO Phase 2:
-            // var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
-            //     .With(new RetryFeature(maxRetry: 3, baseDelay: 0f));
-            //
-            // api.Request.Send(Unit.Default);
-            //
-            // Assert.AreEqual(4, fake.ReceivedRequests.Count);  // 1 원본 + 3 재시도
-            // Assert.AreEqual(true, api.Response.HasError.Value);
-            // Assert.AreEqual(HttpErrorKind.Network, api.Response.Error.Value.Kind);
+            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
+                .With(new RetryFeature(maxRetry: 3, baseDelay: 0f));
 
-            // Phase 2 미구현 — 단순 에러 반환 확인
-            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET);
             api.Request.Send(Unit.Default);
+
+            Assert.AreEqual(4, fake.ReceivedRequests.Count);  // 1 원본 + 3 재시도
             Assert.AreEqual(true, api.Response.HasError.Value);
+            Assert.AreEqual(HttpErrorKind.Network, api.Response.Error.Value.Kind);
 
             api.Dispose();
         }
@@ -140,27 +114,23 @@ namespace Sindy.Test
 
         private void Case5_IsRetryingState()
         {
-            // TODO Phase 2:
-            // var fake = new FakeHttpClient();
-            // fake.Throws(HttpErrorKind.Network);
-            // fake.Returns(new DataDto { Value = "after_retry" });
-            //
-            // var retryFeature = new RetryFeature(maxRetry: 1, baseDelay: 0f);
-            // var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
-            //     .With(retryFeature);
-            //
-            // var isRetryingHistory = new List<bool>();
-            // retryFeature.IsRetrying.Subscribe(v => isRetryingHistory.Add(v)).AddTo(disposables);
-            //
-            // api.Request.Send(Unit.Default);
-            //
-            // // false → true(재시도중) → false(완료) 순서로 변경됨을 확인
-            // Assert.IsTrue(isRetryingHistory.Contains(true));
-            // Assert.AreEqual(false, retryFeature.IsRetrying.Value);  // 최종 상태 false
+            var fake = new FakeHttpClient();
+            fake.Throws(HttpErrorKind.Network);
+            fake.Returns(new DataDto { Value = "after_retry" });
 
-            // Phase 2 미구현 — 구조만 확인
-            var api = new ApiModel<Unit, DataDto>(new FakeHttpClient(), "/api/data", HttpMethod.GET);
-            Assert.AreEqual(false, api.IsDisposed);
+            var retryFeature = new RetryFeature(maxRetry: 1, baseDelay: 0f);
+            var api = new ApiModel<Unit, DataDto>(fake, "/api/data", HttpMethod.GET)
+                .With(retryFeature);
+
+            var isRetryingHistory = new List<bool>();
+            retryFeature.IsRetrying.Subscribe(v => isRetryingHistory.Add(v)).AddTo(disposables);
+
+            api.Request.Send(Unit.Default);
+
+            // false → true(재시도중) → false(완료) 순서로 변경됨을 확인
+            Assert.IsTrue(isRetryingHistory.Contains(true));
+            Assert.AreEqual(false, retryFeature.IsRetrying.Value);  // 최종 상태 false
+
             api.Dispose();
         }
     }

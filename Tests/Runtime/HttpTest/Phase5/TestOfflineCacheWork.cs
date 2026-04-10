@@ -24,59 +24,6 @@ namespace Sindy.Test
             public int    Score { get; set; }
         }
 
-        // ── 인메모리 캐시 스텁 ────────────────────────────────────────────
-        // Phase 5 구현 전 테스트용 최소 캐시 로직.
-        // 실제 OfflineCacheFeature는 PlayerPrefs에 저장합니다.
-
-        private class StubCache<T>
-        {
-            private T        stored;
-            private DateTime storedAt;
-            private bool     hasValue;
-            private readonly TimeSpan maxAge;
-
-            public PropModel<bool>   IsFromCache { get; } = new(false);
-            public PropModel<string> CachedAt    { get; } = new();
-
-            public StubCache(TimeSpan maxAge)
-            {
-                this.maxAge = maxAge;
-            }
-
-            public Observable<HttpResponse<T>> Apply(Observable<HttpResponse<T>> source)
-            {
-                return source
-                    .Do(res =>
-                    {
-                        stored   = res.Data;
-                        storedAt = DateTime.UtcNow;
-                        hasValue = true;
-                        IsFromCache.Value = false;
-                    })
-                    .Catch<HttpResponse<T>, HttpError>(err =>
-                    {
-                        if (err.Kind is not (HttpErrorKind.Network or HttpErrorKind.Timeout))
-                            return Observable.Throw<HttpResponse<T>>(err);
-
-                        if (!hasValue)
-                            return Observable.Throw<HttpResponse<T>>(err);
-
-                        if (DateTime.UtcNow - storedAt > maxAge)
-                            return Observable.Throw<HttpResponse<T>>(err);
-
-                        IsFromCache.Value = true;
-                        CachedAt.Value    = $"캐시 ({storedAt:HH:mm} 기준)";
-                        return Observable.Return(new HttpResponse<T>
-                        {
-                            StatusCode = 200,
-                            Data       = stored,
-                        });
-                    });
-            }
-        }
-
-        // ─────────────────────────────────────────────────────────────────
-
         public override void Run()
         {
             Case1_SuccessResponseCached();
@@ -91,19 +38,19 @@ namespace Sindy.Test
         private void Case1_SuccessResponseCached()
         {
             var fake  = new FakeHttpClient();
-            var cache = new StubCache<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
+            var cache = new OfflineCacheFeature<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
 
             fake.Returns(new RankingDto { Name = "Sindy", Score = 9999 });
 
-            var raw = fake.Get<RankingDto>("/api/ranking");
-            var withCache = cache.Apply(raw);
-
             RankingDto received = null;
-            withCache.Subscribe(res => received = res.Data);
+            cache.Apply(fake.Get<RankingDto>("/api/ranking"))
+                .Subscribe(res => received = res.Data);
 
             Assert.IsNotNull(received);
             Assert.AreEqual("Sindy", received.Name);
-            Assert.AreEqual(false, cache.IsFromCache.Value);  // 네트워크 응답
+            Assert.AreEqual(false, cache.IsFromCache.Value);
+
+            cache.Dispose();
         }
 
         // ── Case 2: 네트워크 에러 + 캐시 → 캐시 반환 ────────────────────
@@ -111,7 +58,7 @@ namespace Sindy.Test
         private void Case2_NetworkErrorWithCache()
         {
             var fake  = new FakeHttpClient();
-            var cache = new StubCache<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
+            var cache = new OfflineCacheFeature<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
 
             // 1번째: 성공 → 캐시 저장
             fake.Returns(new RankingDto { Name = "Cached", Score = 100 });
@@ -129,6 +76,8 @@ namespace Sindy.Test
             Assert.AreEqual("Cached", fromCache.Name);
             Assert.AreEqual(true, cache.IsFromCache.Value);
             Assert.IsNotNull(cache.CachedAt.Value);
+
+            cache.Dispose();
         }
 
         // ── Case 3: 네트워크 에러 + 캐시 없음 → 에러 전파 ───────────────
@@ -136,7 +85,7 @@ namespace Sindy.Test
         private void Case3_NetworkErrorNoCache()
         {
             var fake  = new FakeHttpClient();
-            var cache = new StubCache<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
+            var cache = new OfflineCacheFeature<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
 
             fake.Throws(HttpErrorKind.Network);
 
@@ -159,6 +108,8 @@ namespace Sindy.Test
             Assert.AreEqual(true, errored);
             Assert.AreEqual(HttpErrorKind.Network, errorKind);
             Assert.AreEqual(false, cache.IsFromCache.Value);
+
+            cache.Dispose();
         }
 
         // ── Case 4: 캐시 만료 → 에러 전파 ────────────────────────────────
@@ -166,8 +117,8 @@ namespace Sindy.Test
         private void Case4_ExpiredCache()
         {
             var fake  = new FakeHttpClient();
-            // maxAge=0으로 설정 → 저장 즉시 만료
-            var cache = new StubCache<RankingDto>(maxAge: TimeSpan.FromSeconds(-1));
+            // maxAge=-1초로 설정 → 저장 즉시 만료
+            var cache = new OfflineCacheFeature<RankingDto>(maxAge: TimeSpan.FromSeconds(-1));
 
             // 저장 (즉시 만료)
             fake.Returns(new RankingDto { Name = "Expired", Score = 1 });
@@ -184,14 +135,16 @@ namespace Sindy.Test
                 );
 
             Assert.AreEqual(true,  errored);
-            Assert.AreEqual(false, cache.IsFromCache.Value);  // 만료 캐시는 무시
+            Assert.AreEqual(false, cache.IsFromCache.Value);
+
+            cache.Dispose();
         }
 
         // ── Case 5: IsFromCache PropModel → UI 바인딩 ────────────────────
 
         private void Case5_IsFromCachePropModel()
         {
-            var cache = new StubCache<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
+            var cache = new OfflineCacheFeature<RankingDto>(maxAge: TimeSpan.FromMinutes(5));
 
             var isFromCacheHistory = new System.Collections.Generic.List<bool>();
             cache.IsFromCache.Subscribe(v => isFromCacheHistory.Add(v)).AddTo(disposables);
@@ -212,8 +165,7 @@ namespace Sindy.Test
             cache.Apply(fake2.Get<RankingDto>("/api/ranking")).Subscribe();
             Assert.AreEqual(true, cache.IsFromCache.Value);
 
-            cache.IsFromCache.Dispose();
-            cache.CachedAt.Dispose();
+            cache.Dispose();
         }
     }
 }

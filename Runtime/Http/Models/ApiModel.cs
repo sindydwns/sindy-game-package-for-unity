@@ -22,6 +22,12 @@ namespace Sindy.Http
         public ApiRequestModel<TReq>  Request  { get; }
         public ApiResponseModel<TRes> Response { get; }
 
+        public new ApiModel<TReq, TRes> With<T>(T feature) where T : ViewModelFeature
+        {
+            base.With(feature);
+            return this;
+        }
+
         public ApiModel(IHttpClient client, string url, HttpMethod method = HttpMethod.POST)
         {
             Request  = new ApiRequestModel<TReq>();
@@ -30,13 +36,13 @@ namespace Sindy.Http
             this["request"]  = Request;
             this["response"] = Response;
 
-            // 요청 발행 → 로딩 설정 → HTTP 전송 → 응답 갱신
+            // 요청 발행 → 로딩 설정 → HTTP 전송 (+ Feature 적용) → 응답 갱신
             // SelectMany 내부에서 에러를 잡아 Response.SetError()로 전달하고
             // Empty를 반환해 Subject 스트림이 끊기지 않도록 합니다.
             Request.Obs
                 .Do(_ => Response.SetLoading())
                 .SelectMany(body =>
-                    Send(client, url, method, body)
+                    ApplyFeatures(() => Send(client, url, method, body))
                         .Catch<HttpResponse<TRes>, Exception>(err =>
                         {
                             var httpErr = err as HttpError
@@ -47,6 +53,32 @@ namespace Sindy.Http
                 )
                 .Subscribe(res => Response.SetSuccess(res))
                 .AddTo(disposables);
+        }
+
+        /// <summary>
+        /// 등록된 Feature들을 파이프라인에 적용합니다.
+        /// RetryFeature: 팩토리를 재호출하여 재시도
+        /// TimeoutFeature: 응답 대기 제한 시간 적용
+        /// </summary>
+        private Observable<HttpResponse<TRes>> ApplyFeatures(
+            Func<Observable<HttpResponse<TRes>>> factory)
+        {
+            var retry   = Feature<RetryFeature>();
+            var timeout = Feature<TimeoutFeature>();
+
+            if (retry != null)
+            {
+                // RetryFeature가 팩토리를 감싸서 재시도 시 새 요청 생성
+                if (timeout != null)
+                    return retry.Apply(() => timeout.Apply(factory()));
+
+                return retry.Apply(factory);
+            }
+
+            if (timeout != null)
+                return timeout.Apply(factory());
+
+            return factory();
         }
 
         private static Observable<HttpResponse<TRes>> Send(
