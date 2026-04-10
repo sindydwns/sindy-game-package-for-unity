@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Sindy.View.Features;
+using UnityEngine;
 
 namespace Sindy.View
 {
@@ -20,6 +22,8 @@ namespace Sindy.View
 
         private readonly List<PatchInstruction> _patches = new();
         private PatchInstruction _pendingPatch; // Patch() 직후, WithModel() 전까지 살아있는 컨텍스트
+        private PatchInstruction _lastFlushedPatch; // WithModel() 직후, 다음 Patch() 전까지 레이아웃 대상
+        private LayoutFeature _rootLayout;
 
         private class PatchInstruction
         {
@@ -27,6 +31,7 @@ namespace Sindy.View
             public readonly string PrefabName;
             public Func<object> ModelFactory;
             public bool DisposeWithComponent;
+            public LayoutFeature Layout;
 
             public PatchInstruction(string path, string prefabName)
             {
@@ -75,12 +80,14 @@ namespace Sindy.View
                 _pendingPatch.ModelFactory = factory;
                 _pendingPatch.DisposeWithComponent = disposeWithComponent;
                 _patches.Add(_pendingPatch);
+                _lastFlushedPatch = _pendingPatch;
                 _pendingPatch = null;
             }
             else
             {
                 _rootModelFactory = factory;
                 _rootDisposeWithComponent = disposeWithComponent;
+                _lastFlushedPatch = null;
             }
         }
 
@@ -94,6 +101,7 @@ namespace Sindy.View
         {
             FlushPendingPatch();
             _pendingPatch = new PatchInstruction(path, prefabName);
+            _lastFlushedPatch = null;
             return this;
         }
 
@@ -102,6 +110,64 @@ namespace Sindy.View
             if (_pendingPatch == null) return;
             _patches.Add(_pendingPatch);
             _pendingPatch = null;
+        }
+
+        // ── 레이아웃 ───────────────────────────────────────────────────────────
+
+        /// <summary>직전 Build/Patch 대상의 외부 여백을 지정한다.</summary>
+        public ComponentBuilder Margin(float top = 0, float right = 0, float bottom = 0, float left = 0)
+        {
+            var f = GetOrCreateCurrentLayout();
+            f.MarginTop = top; f.MarginRight = right; f.MarginBottom = bottom; f.MarginLeft = left;
+            f.HasMargin = true;
+            return this;
+        }
+
+        /// <summary>직전 Build/Patch 대상을 컨테이너로 설정하고 자식 배치 방향과 간격을 지정한다.</summary>
+        public ComponentBuilder Layout(Direction direction, float spacing = 0)
+        {
+            var f = GetOrCreateCurrentLayout();
+            f.LayoutDirection = direction;
+            f.Spacing = spacing;
+            return this;
+        }
+
+        /// <summary>직전 Build/Patch 대상의 내부 여백을 지정한다. 단일 값이면 사방 동일 적용.</summary>
+        public ComponentBuilder Padding(float all)
+            => Padding(all, all, all, all);
+
+        /// <summary>직전 Build/Patch 대상의 내부 여백을 지정한다.</summary>
+        public ComponentBuilder Padding(float top = 0, float right = 0, float bottom = 0, float left = 0)
+        {
+            var f = GetOrCreateCurrentLayout();
+            f.PaddingTop = top; f.PaddingRight = right; f.PaddingBottom = bottom; f.PaddingLeft = left;
+            f.HasPadding = true;
+            return this;
+        }
+
+        /// <summary>직전 Build/Patch 대상의 자식 정렬 기준을 지정한다.</summary>
+        public ComponentBuilder Align(TextAnchor anchor)
+        {
+            GetOrCreateCurrentLayout().Alignment = anchor;
+            return this;
+        }
+
+        /// <summary>직전 Build/Patch 대상의 선호 크기를 지정한다. -1이면 미지정.</summary>
+        public ComponentBuilder Size(float width = -1, float height = -1)
+        {
+            var f = GetOrCreateCurrentLayout();
+            f.PreferredWidth = width;
+            f.PreferredHeight = height;
+            return this;
+        }
+
+        private LayoutFeature GetOrCreateCurrentLayout()
+        {
+            if (_pendingPatch != null)
+                return _pendingPatch.Layout ??= new LayoutFeature();
+            if (_lastFlushedPatch != null)
+                return _lastFlushedPatch.Layout ??= new LayoutFeature();
+            return _rootLayout ??= new LayoutFeature();
         }
 
         // ── 레이어 지정 ────────────────────────────────────────────────────────
@@ -133,11 +199,18 @@ namespace Sindy.View
 
             if (rootModel is ViewModel viewModel)
             {
+                if (_rootLayout != null)
+                    viewModel.With(_rootLayout);
+
                 foreach (var patch in _patches)
                 {
                     var patchModel = patch.ModelFactory?.Invoke();
                     if (patchModel is IViewModel vm)
+                    {
+                        if (patch.Layout != null && patchModel is ViewModel patchVM)
+                            patchVM.With(patch.Layout);
                         viewModel.AddChild(patch.Path, vm, patch.DisposeWithComponent);
+                    }
                 }
             }
 
@@ -162,6 +235,8 @@ namespace Sindy.View
             }
 
             _rootModelFactory = null;
+            _rootLayout = null;
+            _lastFlushedPatch = null;
             _patches.Clear();
         }
 

@@ -87,6 +87,12 @@ namespace Sindy.View
             {
                 visibility.Show.Subscribe(v => gameObject.SetActive(v)).AddTo(disposables);
             }
+
+            var layout = viewModel.Feature<LayoutFeature>();
+            if (layout != null)
+            {
+                layout.Apply(transform as RectTransform);
+            }
         }
 
         protected void ClearDisposables()

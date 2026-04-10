@@ -1,4 +1,6 @@
 using Sindy.View;
+using Sindy.View.Features;
+using UnityEngine;
 using UnityEngine.Assertions;
 
 namespace Sindy.Test
@@ -22,6 +24,11 @@ namespace Sindy.Test
             MultiplePatchesChained();
             OnLayerChaining();
             CancelClearsState();
+            LayoutOnRoot();
+            LayoutOnPatch();
+            MarginAfterWithModel();
+            LayoutFullChain();
+            CancelClearsLayout();
         }
 
         // Build() 호출 시 null이 아닌 빌더 인스턴스를 반환하는지 확인
@@ -200,6 +207,87 @@ namespace Sindy.Test
             builder.Cancel();
 
             // 두 번째 Cancel은 이미 정리된 상태이므로 예외 없이 통과
+            builder.Cancel();
+        }
+
+        // Build() 직후 Layout/Padding 등 루트에 레이아웃을 지정할 수 있는지 확인
+        private void LayoutOnRoot()
+        {
+            var model = new ViewModel();
+
+            var builder = ComponentBuilder.Build("root_prefab")
+                .WithModel(model)
+                .Layout(Direction.Vertical, spacing: 8)
+                .Padding(16);
+
+            Assert.IsNotNull(builder);
+            Assert.IsNotNull(model.Feature<LayoutFeature>());
+
+            builder.Cancel();
+        }
+
+        // Patch() 직후 (WithModel 전) 레이아웃을 지정할 수 있는지 확인
+        private void LayoutOnPatch()
+        {
+            var builder = ComponentBuilder.Build("root_prefab")
+                .WithModel(new ViewModel())
+                .Patch("body", "container")
+                .Layout(Direction.Horizontal, spacing: 12)
+                .Align(TextAnchor.MiddleCenter);
+
+            Assert.IsNotNull(builder);
+
+            builder.Cancel();
+        }
+
+        // WithModel() 이후에도 Margin/Size를 직전 Patch 대상에 지정할 수 있는지 확인
+        private void MarginAfterWithModel()
+        {
+            var patchModel = new PropModel<string>("label");
+
+            var builder = ComponentBuilder.Build("root_prefab")
+                .WithModel(new ViewModel())
+                .Patch("header.title", "label").WithModel(patchModel)
+                .Margin(bottom: 12)
+                .Size(width: 200);
+
+            Assert.IsNotNull(builder);
+
+            builder.Cancel();
+        }
+
+        // Layout, Margin, Padding, Align, Size를 조합한 복합 체이닝이 예외 없이 동작하는지 확인
+        private void LayoutFullChain()
+        {
+            var builder = ComponentBuilder.Build("popup")
+                .WithModel(new ViewModel())
+                .Layout(Direction.Vertical, spacing: 8)
+                .Padding(top: 16, right: 16, bottom: 16, left: 16)
+                .Patch("header", "label").WithModel(new PropModel<string>("title"))
+                .Margin(bottom: 12)
+                .Patch("body", "container")
+                .Layout(Direction.Horizontal, spacing: 4)
+                .Align(TextAnchor.MiddleLeft)
+                .Patch("body.item", "label").WithModel(new PropModel<string>("item"))
+                .Size(width: 100, height: 40)
+                .Patch("footer", "button").WithModel(new ViewModel());
+
+            Assert.IsNotNull(builder);
+
+            builder.Cancel();
+        }
+
+        // Cancel 시 레이아웃 상태도 정리되어 두 번째 Cancel에서 예외가 없는지 확인
+        private void CancelClearsLayout()
+        {
+            var builder = ComponentBuilder.Build("root_prefab")
+                .WithModel(new ViewModel())
+                .Layout(Direction.Vertical)
+                .Patch("child", "child_prefab")
+                .WithModel(new PropModel<string>("child"))
+                .Margin(top: 10);
+
+            builder.Cancel();
             builder.Cancel();
         }
     }
