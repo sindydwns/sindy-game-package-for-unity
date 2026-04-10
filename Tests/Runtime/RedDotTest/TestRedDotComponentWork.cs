@@ -8,6 +8,7 @@ namespace Sindy.Test
     class TestRedDotComponentWork : TestCase
     {
         private readonly SindyComponent _component;
+        private RedDotModel _model;
 
         public TestRedDotComponentWork(SindyComponent component) : base()
         {
@@ -34,7 +35,26 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            // _component.SetModel(new RedDotModel("inven.new_item.copper_bar", true));
+            _model = new RedDotModel("inven.new_item.copper_bar", true);
+            _component.SetModel(_model);
+
+            Assert.IsTrue(_component.IsInitialized);
+
+            // leaf 노드에 값 설정 후 모델에 반영되는지 확인
+            var leaf = RedDotNode.Root.GetLeaf("inven.new_item.copper_bar");
+            Assert.IsNotNull(leaf);
+
+            leaf.Count.Value = 3;
+            Assert.AreEqual(3, _model.Value);
+
+            leaf.Clear();
+            Assert.AreEqual(0, _model.Value);
+        }
+
+        protected override void Cleanup()
+        {
+            _component?.SetModel(null);
+            _model?.Dispose();
         }
     }
 }

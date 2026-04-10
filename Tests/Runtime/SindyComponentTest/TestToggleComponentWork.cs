@@ -1,6 +1,5 @@
-using R3;
 using Sindy.View;
-using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Sindy.Test
 {
@@ -22,12 +21,16 @@ namespace Sindy.Test
         public override void Run()
         {
             model = new PropModel<bool>(false);
-            model.Subscribe(v => Debug.Log($"[Toggle] isOn = {v}")).AddTo(disposables);
-
             component.SetModel(model);
 
+            Assert.IsTrue(component.IsInitialized);
+            Assert.AreEqual(false, model.Value);
+
             model.Value = true;
+            Assert.AreEqual(true, model.Value);
+
             model.Value = false;
+            Assert.AreEqual(false, model.Value);
         }
 
         protected override void Cleanup()

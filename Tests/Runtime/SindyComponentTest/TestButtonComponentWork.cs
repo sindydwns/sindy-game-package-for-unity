@@ -1,13 +1,16 @@
 using R3;
 using Sindy.View;
+using Sindy.View.Components;
+using Sindy.View.Features;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Sindy.Test
 {
     class TestButtonComponentWork : TestCase
     {
         private readonly SindyComponent component;
-        private SubjModel<Unit> model;
+        private ButtonModel model;
 
         public TestButtonComponentWork(SindyComponent component) : base()
         {
@@ -16,10 +19,22 @@ namespace Sindy.Test
 
         public override void Run()
         {
-            model = new SubjModel<Unit>();
-            model.Subj.Subscribe(x => Debug.Log("Button clicked")).AddTo(disposables);
+            model = new ButtonModel();
+            model.With(new InteractableFeature(true));
+
+            int clickCount = 0;
+            model.Subj.Subscribe(_ => clickCount++).AddTo(disposables);
 
             component.SetModel(model);
+            Assert.IsTrue(component.IsInitialized);
+
+            // interactable feature 동작 확인
+            var interactable = model.Feature<InteractableFeature>();
+            Assert.IsNotNull(interactable);
+            Assert.AreEqual(true, interactable.Interactable.Value);
+
+            interactable.Interactable.Value = false;
+            Assert.AreEqual(false, interactable.Interactable.Value);
         }
 
         protected override void Cleanup()
