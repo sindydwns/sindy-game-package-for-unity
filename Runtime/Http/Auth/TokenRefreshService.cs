@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using R3;
 
 namespace Sindy.Http
@@ -22,7 +23,7 @@ namespace Sindy.Http
         /// </summary>
         public Observable<TokenResponseDto> Refresh(string refreshToken)
         {
-            var body = $"{{\"refreshToken\":\"{refreshToken}\"}}";
+            var body = JsonConvert.SerializeObject(new { refreshToken });
             return client.Post<TokenResponseDto>(refreshUrl, body)
                 .Select(res => res.Data);
         }
