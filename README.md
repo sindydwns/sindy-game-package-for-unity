@@ -262,13 +262,84 @@ int value = maxHp.Value;
 
 ---
 
+## Http 모듈
+
+R3 Observable 기반의 HTTP 클라이언트 시스템. View 모듈의 ViewModel/Feature 패턴을 그대로 활용합니다.
+
+### ApiModel — REST 엔드포인트 ViewModel
+
+```csharp
+var api = new ApiModel<LoginReq, LoginRes>(client, "/api/login");
+
+// 요청 발행
+api.Request.Send(new LoginReq { Id = "user", Password = "pw" });
+
+// 응답 구독
+api.Response.Data.Subscribe(res => Debug.Log(res.Token)).AddTo(disposables);
+api.Response.IsLoading.Subscribe(v => spinner.SetActive(v));
+api.Response.Error.Subscribe(err => Debug.LogError(err.Message));
+```
+
+### Http Feature
+
+ApiModel에 `.With()`로 조합하여 횡단 관심사를 추가합니다.
+
+| Feature | 용도 | 주요 설정 |
+|---------|------|----------|
+| `RetryFeature` | 자동 재시도 (Network/Timeout만) | `maxRetry`, `baseDelay` (지수 백오프) |
+| `TimeoutFeature` | 요청 타임아웃 | `seconds` |
+| `OfflineCacheFeature<T>` | 오프라인 캐시 (유효시간 기반) | `maxAge` |
+
+```csharp
+var api = new ApiModel<Unit, DataDto>(client, "/api/data", HttpMethod.GET)
+    .With(new RetryFeature(maxRetry: 3, baseDelay: 1f))
+    .With(new TimeoutFeature(seconds: 10f));
+```
+
+### Auth — 인증 시스템
+
+```csharp
+// OAuth 로그인
+var auth = new AuthService(tokenModel);
+auth.LoginWith(googleProvider).Subscribe();
+auth.IsLoggedIn.Subscribe(v => loginButton.SetActive(!v));
+
+// 인증된 HTTP 클라이언트 — 토큰 자동 첨부 + 만료 시 자동 갱신
+var authClient = new AuthenticatedHttpClient(baseClient, tokenModel, refreshService);
+```
+
+- **TokenModel** — Access/Refresh 토큰 관리
+- **TokenRefreshService** — 401 응답 시 자동 토큰 갱신
+- **ITokenStore / PlayerPrefsTokenStore** — 토큰 영속 저장소
+
+### PaginatedApiModel — 페이지네이션
+
+```csharp
+var paged = new PaginatedApiModel<RankingDto>(client, "/api/ranking",
+    dto => { var vm = new ViewModel(); vm["name"] = new PropModel<string>(dto.Name); return vm; });
+
+paged.GoToPage(1);
+paged.CurrentPage.Subscribe(p => pageLabel.Value = $"{p}/{paged.TotalPages.Value}");
+paged.PrevButton  // ← 자동 비활성화 (1페이지)
+paged.NextButton  // ← 자동 비활성화 (마지막 페이지)
+```
+
+---
+
 ## 클래스 계층
 
 ```
 ViewModel
-└── ObservableModel<T>
-    ├── PropModel<T>  ← LabelModel, TimerModel, FormatNumberPropModel<T>
-    └── SubjModel<T>  ← ButtonModel
+├── ObservableModel<T>
+│   ├── PropModel<T>  ← LabelModel, TimerModel, FormatNumberPropModel<T>
+│   └── SubjModel<T>  ← ButtonModel
+├── ApiModel<TReq, TRes>
+├── PaginatedApiModel<TItem>
+├── AuthService
+└── ViewModelFeature
+    ├── InteractableFeature, HoldFeature, VisibilityFeature, ...
+    ├── RetryFeature, TimeoutFeature, OfflineCacheFeature<T>
+    └── (사용자 정의 Feature)
 
 SindyComponent<T> (MonoBehaviour)
 ├── LabelComponent, ButtonComponent, GaugeComponent, IconComponent, ...
