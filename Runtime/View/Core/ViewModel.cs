@@ -6,10 +6,15 @@ using Sindy.Common;
 
 namespace Sindy.View
 {
+    public abstract class ViewModelFeature : ViewModel
+    {
+    }
+
     public class ViewModel : IViewModel
     {
         protected readonly List<IDisposable> disposables = new();
         private readonly Dictionary<string, IViewModel> children = new();
+        private Dictionary<Type, ViewModelFeature> features;
         public bool IsDisposed { get; private set; }
 
         public virtual void Dispose()
@@ -17,6 +22,21 @@ namespace Sindy.View
             disposables.DisposeAll();
             disposables.Clear();
             IsDisposed = true;
+        }
+
+        public ViewModel With<T>(T feature) where T : ViewModelFeature
+        {
+            features ??= new();
+            features[typeof(T)] = feature;
+            feature.AddTo(this);
+            return this;
+        }
+
+        public T Feature<T>() where T : ViewModelFeature
+        {
+            if (features != null && features.TryGetValue(typeof(T), out var f))
+                return (T)f;
+            return default;
         }
 
         protected void Dispose(Result _) => Dispose();

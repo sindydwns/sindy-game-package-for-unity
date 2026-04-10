@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Sindy.Common;
+using Sindy.View.Features;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -23,14 +24,45 @@ namespace Sindy.View.Components
 
         protected override void Init(SubjModel<Unit> model)
         {
-            void OnClick() => model.OnNext(Unit.Default);
-            button.onClick.AddListener(OnClick);
-            disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClick)));
+            var hold = (model as ButtonModel)?.Feature<HoldFeature>();
+
+            if (hold != null)
+            {
+                void OnClickOrHold()
+                {
+                    if (button.IsHolding)
+                        hold.OnHold.OnNext(button.RepeatTimes);
+                    else
+                        model.OnNext(Unit.Default);
+                }
+                button.onClick.AddListener(OnClickOrHold);
+                disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClickOrHold)));
+
+                hold.AllowHold.Subscribe(v => button.AllowHold = v).AddTo(disposables);
+                hold.KeepHold.Subscribe(v => { if (!v && button.IsHolding) button.Cancel(); }).AddTo(disposables);
+            }
+            else
+            {
+                void OnClick() => model.OnNext(Unit.Default);
+                button.onClick.AddListener(OnClick);
+                disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClick)));
+            }
+
+            var interactable = (model as ButtonModel)?.Feature<InteractableFeature>();
+            if (interactable != null)
+            {
+                interactable.Interactable.Subscribe(v => button.interactable = v).AddTo(disposables);
+            }
         }
     }
 
     public class ButtonModel : SubjModel<Unit>
     {
+        public new ButtonModel With<T>(T feature) where T : ViewModelFeature
+        {
+            base.With(feature);
+            return this;
+        }
     }
 
     public class HoldButton : Button, ICancelable
