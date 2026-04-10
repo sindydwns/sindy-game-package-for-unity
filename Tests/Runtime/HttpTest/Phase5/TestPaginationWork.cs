@@ -21,99 +21,11 @@ namespace Sindy.Test
     /// </summary>
     class TestPaginationWork : TestCase
     {
-        // ── DTO ──────────────────────────────────────────────────────────
-
         private class RankingDto
         {
             public string Name { get; set; }
             public int Rank { get; set; }
         }
-
-        private class PagedResponse<T>
-        {
-            public List<T> Items { get; set; } = new();
-            public int Page { get; set; }
-            public int TotalPages { get; set; }
-        }
-
-        // ── PaginatedApiModel 스텁 ────────────────────────────────────────
-        // Phase 5 미구현 전 최소 구현으로 테스트 명세를 작성합니다.
-
-        private class StubPaginatedModel : ViewModel
-        {
-            public PropModel<int> CurrentPage { get; } = new(1);
-            public PropModel<int> TotalPages { get; } = new(1);
-            public PropModel<List<IViewModel>> Items { get; } = new(new List<IViewModel>());
-            public PropModel<bool> IsLoading { get; } = new(false);
-
-            public ButtonModel PrevButton { get; } = new();
-            public ButtonModel NextButton { get; } = new();
-
-            private readonly IHttpClient client;
-            private readonly string baseUrl;
-
-            public StubPaginatedModel(IHttpClient client, string baseUrl)
-            {
-                this.client = client;
-                this.baseUrl = baseUrl;
-
-                PrevButton.With(new InteractableFeature(false));
-                NextButton.With(new InteractableFeature(false));
-
-                // 버튼 활성화 상태 연동
-                Observable.CombineLatest(CurrentPage.Obs, TotalPages.Obs, (cur, total) => cur > 1)
-                    .Subscribe(v => PrevButton.Feature<InteractableFeature>().Interactable.Value = v)
-                    .AddTo(disposables);
-
-                Observable.CombineLatest(CurrentPage.Obs, TotalPages.Obs, (cur, total) => cur < total)
-                    .Subscribe(v => NextButton.Feature<InteractableFeature>().Interactable.Value = v)
-                    .AddTo(disposables);
-
-                PrevButton.Obs.Subscribe(_ => GoToPage(CurrentPage.Value - 1)).AddTo(disposables);
-                NextButton.Obs.Subscribe(_ => GoToPage(CurrentPage.Value + 1)).AddTo(disposables);
-            }
-
-            public void GoToPage(int page)
-            {
-                if (page < 1 || page > TotalPages.Value) return;
-
-                IsLoading.Value = true;
-                var url = $"{baseUrl}?page={page}";
-
-                client.Get<PagedResponse<RankingDto>>(url)
-                    .Subscribe(res =>
-                    {
-                        CurrentPage.Value = res.Data.Page;
-                        TotalPages.Value = res.Data.TotalPages;
-                        Items.Value = BuildViewModels(res.Data.Items);
-                        IsLoading.Value = false;
-                    },
-                    err => IsLoading.Value = false)
-                    .AddTo(disposables);
-            }
-
-            private static List<IViewModel> BuildViewModels(List<RankingDto> items)
-            {
-                var result = new List<IViewModel>();
-                foreach (var dto in items)
-                {
-                    var vm = new ViewModel();
-                    vm["name"] = new PropModel<string>(dto.Name);
-                    vm["rank"] = new PropModel<int>(dto.Rank);
-                    result.Add(vm);
-                }
-                return result;
-            }
-
-            public override void Dispose()
-            {
-                base.Dispose();
-                CurrentPage.Dispose(); TotalPages.Dispose(); Items.Dispose(); IsLoading.Dispose();
-                PrevButton.Dispose(); NextButton.Dispose();
-            }
-        }
-
-        // ─────────────────────────────────────────────────────────────────
 
         public override void Run()
         {
@@ -123,6 +35,17 @@ namespace Sindy.Test
             Case4_PrevButtonDisabledOnPage1();
             Case5_NextButtonDisabledOnLastPage();
             Case6_ItemsPropModel();
+        }
+
+        private PaginatedApiModel<RankingDto> CreatePaginatedModel(IHttpClient client)
+        {
+            return new PaginatedApiModel<RankingDto>(client, "/api/ranking", dto =>
+            {
+                var vm = new ViewModel();
+                vm["name"] = new PropModel<string>(dto.Name);
+                vm["rank"] = new PropModel<int>(dto.Rank);
+                return vm;
+            });
         }
 
         // ── Case 1: 초기 로드 → 1페이지 요청 ─────────────────────────────
@@ -137,7 +60,7 @@ namespace Sindy.Test
                 TotalPages = 3,
             });
 
-            var paged = new StubPaginatedModel(fake, "/api/ranking");
+            var paged = CreatePaginatedModel(fake);
             paged.GoToPage(1);
 
             Assert.AreEqual(1, fake.ReceivedRequests.Count);
@@ -167,7 +90,7 @@ namespace Sindy.Test
                 TotalPages = 3,
             });
 
-            var paged = new StubPaginatedModel(fake, "/api/ranking");
+            var paged = CreatePaginatedModel(fake);
             paged.GoToPage(1);
 
             Assert.AreEqual(1, paged.CurrentPage.Value);
@@ -190,8 +113,8 @@ namespace Sindy.Test
             fake.Returns(new PagedResponse<RankingDto> { Items = new(), Page = 2, TotalPages = 3 });
             fake.Returns(new PagedResponse<RankingDto> { Items = new(), Page = 1, TotalPages = 3 });
 
-            var paged = new StubPaginatedModel(fake, "/api/ranking");
-            paged.GoToPage(2);  // 2페이지로 직접 이동
+            var paged = CreatePaginatedModel(fake);
+            paged.GoToPage(2);
 
             Assert.AreEqual(2, paged.CurrentPage.Value);
             Assert.AreEqual(true, paged.PrevButton.Feature<InteractableFeature>().Interactable.Value);
@@ -211,7 +134,7 @@ namespace Sindy.Test
             var fake = new FakeHttpClient();
             fake.Returns(new PagedResponse<RankingDto> { Items = new(), Page = 1, TotalPages = 5 });
 
-            var paged = new StubPaginatedModel(fake, "/api/ranking");
+            var paged = CreatePaginatedModel(fake);
             paged.GoToPage(1);
 
             Assert.AreEqual(false, paged.PrevButton.Feature<InteractableFeature>().Interactable.Value);
@@ -227,7 +150,7 @@ namespace Sindy.Test
             var fake = new FakeHttpClient();
             fake.Returns(new PagedResponse<RankingDto> { Items = new(), Page = 5, TotalPages = 5 });
 
-            var paged = new StubPaginatedModel(fake, "/api/ranking");
+            var paged = CreatePaginatedModel(fake);
             paged.GoToPage(5);
 
             Assert.AreEqual(true, paged.PrevButton.Feature<InteractableFeature>().Interactable.Value);
@@ -253,7 +176,7 @@ namespace Sindy.Test
                 TotalPages = 2,
             });
 
-            var paged = new StubPaginatedModel(fake, "/api/ranking");
+            var paged = CreatePaginatedModel(fake);
 
             // PropModel<List<IViewModel>>을 외부에서 구독 (ListComponent 시뮬레이션)
             int observedCount = 0;
