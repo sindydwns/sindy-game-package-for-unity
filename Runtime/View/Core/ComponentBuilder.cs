@@ -155,14 +155,23 @@ namespace Sindy.View
         {
             FlushPendingPatch();
 
-            if (_rootDisposeWithComponent)
-                (_rootModelFactory?.Invoke() as IDisposable)?.Dispose();
-
+            DisposeIfOwned(_rootModelFactory, _rootDisposeWithComponent);
             foreach (var patch in _patches)
             {
-                if (patch.DisposeWithComponent)
-                    (patch.ModelFactory?.Invoke() as IDisposable)?.Dispose();
+                DisposeIfOwned(patch.ModelFactory, patch.DisposeWithComponent);
             }
+
+            _rootModelFactory = null;
+            _patches.Clear();
+        }
+
+        private static void DisposeIfOwned(Func<object> factory, bool disposeWithComponent)
+        {
+            if (!disposeWithComponent || factory == null) return;
+            // factory가 캡쳐한 인스턴스를 참조하는 클로저인 경우에만 Dispose.
+            // 인스턴스 기반 WithModel()은 () => model 클로저로 저장되어 있으므로
+            // Invoke()가 이미 생성된 동일 인스턴스를 반환한다.
+            (factory.Invoke() as IDisposable)?.Dispose();
         }
     }
 }
