@@ -19,13 +19,16 @@ namespace Sindy.Http
 
         private readonly int maxRetry;
         private readonly float baseDelay;
+        private readonly bool retryOnServerError;
 
         /// <param name="maxRetry">최대 재시도 횟수 (원본 요청 제외)</param>
         /// <param name="baseDelay">재시도 기본 지연 시간(초). 지수 백오프 적용: baseDelay * 2^attempt</param>
-        public RetryFeature(int maxRetry = 3, float baseDelay = 1f)
+        /// <param name="retryOnServerError">true이면 5xx ServerError도 재시도합니다</param>
+        public RetryFeature(int maxRetry = 3, float baseDelay = 1f, bool retryOnServerError = false)
         {
-            this.maxRetry  = maxRetry;
-            this.baseDelay = baseDelay;
+            this.maxRetry           = maxRetry;
+            this.baseDelay          = baseDelay;
+            this.retryOnServerError = retryOnServerError;
             IsRetrying.AddTo(this);
         }
 
@@ -70,10 +73,15 @@ namespace Sindy.Http
                 });
         }
 
-        private static bool IsRetryable(Exception err)
+        private bool IsRetryable(Exception err)
         {
             if (err is HttpError httpErr)
-                return httpErr.Kind is HttpErrorKind.Network or HttpErrorKind.Timeout;
+            {
+                if (httpErr.Kind is HttpErrorKind.Network or HttpErrorKind.Timeout)
+                    return true;
+                if (retryOnServerError && httpErr.Kind is HttpErrorKind.ServerError)
+                    return true;
+            }
 
             return false;
         }
