@@ -77,6 +77,7 @@ namespace Sindy.View
                 {
                     child = new ViewModel();
                     children.Add(token, child);
+                    ((IDisposeChain)child).AddTo(this);
                 }
                 var subName = string.Join(".", tokens.Skip(1));
                 ((ViewModel)child).AddChild(subName, model, disposeWithParent);
