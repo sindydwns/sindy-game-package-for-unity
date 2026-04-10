@@ -135,7 +135,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.TotalAmount);
         }
 
-        // 존재하지 않는 Entity ID가 포함된 문자열을 Deserialize하면 LogError가 발생하고 나머지만 복원되는지 확인
+        // 존재하지 않는 Entity ID가 포함된 문자열을 Deserialize하면 예외가 발생하는지 확인
         private void DeserializeMissingEntity()
         {
             var gold = CreateEntity(1, "gold");
@@ -144,31 +144,19 @@ namespace Sindy.Test
                 { 1, gold }
             };
 
-            // Debug.LogError가 예상되므로 캡처하여 검증
-            string capturedError = null;
-            Application.logMessageReceived += CaptureError;
-
             var inv = new Inventory();
-            inv.Deserialize("1:100,999:50", dict);
-
-            Application.logMessageReceived -= CaptureError;
-
-            // 누락된 ID에 대한 LogError가 발생했는지 확인
-            Assert.IsNotNull(capturedError);
-            Assert.IsTrue(capturedError.Contains("999"));
-
-            // 존재하는 gold만 정상 복원되었는지 확인
-            Assert.AreEqual(100, inv.GetAmount(gold));
-            Assert.AreEqual(100, inv.TotalAmount);
-            Debug.Log("[TestInventorySerialize] DeserializeMissingEntity: passed — missing ID 999 error caught and handled correctly");
-
-            void CaptureError(string message, string stackTrace, LogType type)
+            try
             {
-                if (type == LogType.Error && message.Contains("not found in items dictionary"))
-                {
-                    capturedError = message;
-                }
+                inv.Deserialize("1:100,999:50", dict);
+                Assert.IsTrue(false, "Expected KeyNotFoundException was not thrown.");
             }
+            catch (KeyNotFoundException e)
+            {
+                Assert.IsTrue(e.Message.Contains("999"));
+            }
+
+            // 예외 발생 전까지 파싱된 gold는 정상 복원되었는지 확인
+            Assert.AreEqual(100, inv.GetAmount(gold));
         }
 
         // 직렬화 문자열을 생성자에 전달하여 인벤토리를 초기화할 수 있는지 확인

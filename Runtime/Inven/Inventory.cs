@@ -517,7 +517,7 @@ namespace Sindy.Inven
                 }
                 else
                 {
-                    Debug.LogError($"Item with ID {id} not found in items dictionary.");
+                    throw new KeyNotFoundException($"Item with ID {id} not found in items dictionary.");
                 }
             }
             UpdateValues();
