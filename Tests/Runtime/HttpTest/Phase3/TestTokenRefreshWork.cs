@@ -158,8 +158,9 @@ namespace Sindy.Test
             tokenModel.Update("new_access", "new_refresh");
             Assert.AreEqual(false, tokenModel.IsExpired.Value);
 
-            // 구독 이력: false(초기) → false(업데이트) → true(만료) → false(갱신)
-            Assert.AreEqual(4, isExpiredHistory.Count);
+            // 구독 이력: false(초기) → true(만료) → false(갱신)
+            // R3 ReactiveProperty는 같은 값 설정 시 emit하지 않으므로 Update()의 false→false는 생략됨
+            Assert.AreEqual(3, isExpiredHistory.Count);
 
             tokenModel.Dispose();
         }

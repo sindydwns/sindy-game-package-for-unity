@@ -41,6 +41,7 @@ namespace Sindy.Http
         private Observable<T> Attempt<T>(Func<Observable<T>> factory, int attempt)
         {
             return factory()
+                .Do(_ => IsRetrying.Value = false)
                 .Catch<T, Exception>(err =>
                 {
                     if (!IsRetryable(err) || attempt >= maxRetry)
