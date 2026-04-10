@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace Sindy.Common
 {
@@ -13,8 +14,7 @@ namespace Sindy.Common
 
         public void Dispose()
         {
-            _dispose?.Invoke();
-            _dispose = null;
+            Interlocked.Exchange(ref _dispose, null)?.Invoke();
         }
     }
 }
