@@ -87,6 +87,23 @@ namespace Sindy.RedDot
             }
         }
 
+        /// <summary>
+        /// 모든 자식 노드를 제거하고 상태를 초기값으로 되돌립니다.
+        /// static Root의 테스트 간 격리에 사용됩니다.
+        /// </summary>
+        public void Reset()
+        {
+            foreach (var subscription in _childSubscriptions.Values)
+            {
+                subscription.Dispose();
+            }
+            _childSubscriptions.Clear();
+            _children.Clear();
+            _activeChildrenCount.Value = 0;
+            _totalCount.Value = 0;
+            UseActiveCount.Value = true;
+        }
+
         public RedDotNode GetNode(string path)
         {
             path = path.TrimStart('.');

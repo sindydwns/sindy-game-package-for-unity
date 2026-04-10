@@ -8,7 +8,9 @@ namespace Sindy.Test
 
         public override void Run()
         {
+            RedDotNode.Root.Reset();
             Case1();
+            RedDotNode.Root.Reset();
             Case2();
         }
 
