@@ -19,8 +19,7 @@ namespace Sindy.View
 
         public virtual void Dispose()
         {
-            disposables.DisposeAll();
-            disposables.Clear();
+            disposables.DisposeAllClear();
             IsDisposed = true;
         }
 

@@ -36,9 +36,9 @@ namespace Sindy.Common
             {
                 return;
             }
-            foreach (var disposable in disposables)
+            for (var i = disposables.Count - 1; i >= 0; i--)
             {
-                disposable.Dispose();
+                disposables[i].Dispose();
             }
             disposables.Clear();
         }
