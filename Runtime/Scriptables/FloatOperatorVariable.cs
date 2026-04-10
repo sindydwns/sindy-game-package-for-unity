@@ -35,9 +35,10 @@ namespace Sindy.Scriptables
             {
                 return;
             }
-            float res = 0;
-            foreach (var @operator in operators)
+            float res = operators[0].operand.Value;
+            for (int i = 1; i < operators.Count; i++)
             {
+                var @operator = operators[i];
                 switch (@operator.operatorType)
                 {
                     case Type.Add:
@@ -50,7 +51,7 @@ namespace Sindy.Scriptables
                         res *= @operator.operand.Value;
                         break;
                     case Type.Divide:
-                        res = @operator.operand.Value == 0 ? float.MaxValue : res / @operator.operand.Value;
+                        res = @operator.operand.Value == 0 ? 0f : res / @operator.operand.Value;
                         break;
                     default:
                         throw new InvalidOperationException("Unknown operation type.");
