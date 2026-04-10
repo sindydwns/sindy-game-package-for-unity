@@ -40,6 +40,7 @@ namespace Sindy.Test
             return entity;
         }
 
+        // 기본 Add로 Entity가 정상 추가되는지 확인
         private void AddBasic()
         {
             var inv = new Inventory();
@@ -51,6 +52,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, inv.StackCount);
         }
 
+        // 서로 다른 Entity 여러 개를 Add하면 각각 독립 스택으로 추가되는지 확인
         private void AddMultipleEntities()
         {
             var inv = new Inventory();
@@ -65,6 +67,7 @@ namespace Sindy.Test
             Assert.AreEqual(2, inv.StackCount);
         }
 
+        // 같은 Entity를 여러 번 Add하면 수량이 누적되는지 확인
         private void AddDuplicateAccumulates()
         {
             var inv = new Inventory();
@@ -77,6 +80,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, inv.StackCount);
         }
 
+        // 0 또는 음수 수량으로 Add 시 무시되는지 확인
         private void AddZeroOrNegativeIgnored()
         {
             var inv = new Inventory();
@@ -89,6 +93,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.StackCount);
         }
 
+        // null Entity로 Add 시 무시되는지 확인
         private void AddNullIgnored()
         {
             var inv = new Inventory();
@@ -99,6 +104,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.StackCount);
         }
 
+        // 기본 Remove로 수량이 차감되고 실제 제거량을 반환하는지 확인
         private void RemoveBasic()
         {
             var inv = new Inventory();
@@ -111,6 +117,7 @@ namespace Sindy.Test
             Assert.AreEqual(70, inv.GetAmount(gold));
         }
 
+        // 보유량보다 많이 Remove 요청 시 보유량만큼만 제거하고 실제 제거량을 반환하는지 확인
         private void RemoveReturnsActualRemoved()
         {
             var inv = new Inventory();
@@ -123,6 +130,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.GetAmount(gold));
         }
 
+        // 보유량 초과 Remove 시 수량이 0이 되고 스택이 삭제되는지 확인
         private void RemoveMoreThanExists()
         {
             var inv = new Inventory();
@@ -135,6 +143,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.StackCount);
         }
 
+        // 0 수량으로 Remove 시 무시되는지 확인
         private void RemoveZeroOrNegativeIgnored()
         {
             var inv = new Inventory();
@@ -147,6 +156,7 @@ namespace Sindy.Test
             Assert.AreEqual(50, inv.GetAmount(gold));
         }
 
+        // Set으로 수량을 직접 설정할 수 있는지 확인
         private void SetBasic()
         {
             var inv = new Inventory();
@@ -157,6 +167,7 @@ namespace Sindy.Test
             Assert.AreEqual(200, inv.GetAmount(gold));
         }
 
+        // Set(0)으로 설정하면 스택이 삭제되는지 확인
         private void SetToZeroRemovesStack()
         {
             var inv = new Inventory();
@@ -169,6 +180,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.StackCount);
         }
 
+        // 존재하지 않는 Entity의 GetAmount가 0을 반환하는지 확인
         private void GetAmountReturnsZeroForMissing()
         {
             var inv = new Inventory();
@@ -177,6 +189,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.GetAmount(gold));
         }
 
+        // Contains(Entity)로 Entity 보유 여부를 판별하는지 확인
         private void ContainsEntity()
         {
             var inv = new Inventory();
@@ -188,6 +201,7 @@ namespace Sindy.Test
             Assert.IsFalse(inv.Contains(wood));
         }
 
+        // Contains(EntityAmount)로 필요 수량 충족 여부를 판별하는지 확인
         private void ContainsStack()
         {
             var inv = new Inventory();
@@ -201,6 +215,7 @@ namespace Sindy.Test
             Assert.IsFalse(inv.Contains(tooMuch));
         }
 
+        // Contains(Inventory)로 필요 인벤토리의 모든 항목 충족 여부를 판별하는지 확인
         private void ContainsInventory()
         {
             var inv = new Inventory();
@@ -220,6 +235,7 @@ namespace Sindy.Test
             Assert.IsFalse(inv.Contains(tooMuch));
         }
 
+        // Clear 후 총량/스택수/개별 수량이 모두 0인지 확인
         private void ClearResetsAll()
         {
             var inv = new Inventory();
@@ -235,6 +251,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, inv.GetAmount(gold));
         }
 
+        // Add/Remove/Set에 따라 TotalAmount가 올바르게 추적되는지 확인
         private void TotalAmountTracked()
         {
             var inv = new Inventory();
@@ -252,6 +269,7 @@ namespace Sindy.Test
             Assert.AreEqual(70, inv.TotalAmount);
         }
 
+        // Add/Remove에 따라 StackCount가 올바르게 추적되는지 확인
         private void StackCountTracked()
         {
             var inv = new Inventory();
@@ -268,6 +286,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, inv.StackCount);
         }
 
+        // Foreach로 모든 스택을 순회하며 수량을 합산할 수 있는지 확인
         private void ForeachIteratesAll()
         {
             var inv = new Inventory();

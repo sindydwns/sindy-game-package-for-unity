@@ -31,6 +31,7 @@ namespace Sindy.Test
             return entity;
         }
 
+        // 두 인벤토리의 교집합에서 공통 Entity의 최솟값만 포함되는지 확인
         private void IntersectBasic()
         {
             var gold = CreateEntity(1, "gold");
@@ -53,6 +54,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, result.StackCount);
         }
 
+        // 겹치는 Entity가 없는 경우 교집합이 빈 인벤토리인지 확인
         private void IntersectNoOverlap()
         {
             var gold = CreateEntity(1, "gold");
@@ -70,6 +72,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, result.StackCount);
         }
 
+        // 빈 인벤토리와의 교집합이 빈 인벤토리인지 확인
         private void IntersectEmpty()
         {
             var gold = CreateEntity(1, "gold");
@@ -86,6 +89,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, result.TotalAmount);
         }
 
+        // 기존 Inventory를 result로 전달하여 교집합 결과를 받을 수 있는지 확인
         private void IntersectWithResult()
         {
             var gold = CreateEntity(1, "gold");
@@ -102,6 +106,7 @@ namespace Sindy.Test
             Assert.AreEqual(70, result.GetAmount(gold));
         }
 
+        // IntersectFirst로 교집합의 첫 번째 Entity와 최솟값을 반환하는지 확인
         private void IntersectFirstBasic()
         {
             var gold = CreateEntity(1, "gold");
@@ -121,6 +126,7 @@ namespace Sindy.Test
             Assert.AreEqual(30, first.Amount);
         }
 
+        // 겹치는 Entity가 없으면 IntersectFirst가 null Entity를 반환하는지 확인
         private void IntersectFirstNoOverlap()
         {
             var gold = CreateEntity(1, "gold");
@@ -138,6 +144,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, first.Amount);
         }
 
+        // Entity 배열을 전달하여 IntersectFirst가 동작하는지 확인
         private void IntersectFirstWithEntityList()
         {
             var gold = CreateEntity(1, "gold");
@@ -154,6 +161,7 @@ namespace Sindy.Test
             Assert.AreEqual(50, first.Amount);
         }
 
+        // 두 인벤토리의 차집합에서 차감 후 남은 수량만 포함되는지 확인
         private void SubtractBasic()
         {
             var gold = CreateEntity(1, "gold");
@@ -174,6 +182,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, result.StackCount);
         }
 
+        // 겹치지 않는 Entity는 원본 그대로 유지되는지 확인
         private void SubtractNoOverlap()
         {
             var gold = CreateEntity(1, "gold");
@@ -190,6 +199,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, result.GetAmount(gold));
         }
 
+        // 빈 인벤토리와의 차집합이 원본과 동일한지 확인
         private void SubtractEmpty()
         {
             var gold = CreateEntity(1, "gold");

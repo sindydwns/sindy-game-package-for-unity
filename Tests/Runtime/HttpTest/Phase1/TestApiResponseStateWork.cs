@@ -27,8 +27,7 @@ namespace Sindy.Test
             Case5_PropModelSubscription();
         }
 
-        // ── Case 1: 초기 상태 ────────────────────────────────────────────
-
+        // ApiResponseModel 초기 상태가 IsLoading=false, HasError=false, Data=null인지 확인
         private void Case1_InitialState()
         {
             var response = new ApiResponseModel<ItemDto>();
@@ -43,8 +42,7 @@ namespace Sindy.Test
             Assert.AreEqual(true, response.IsDisposed);
         }
 
-        // ── Case 2: 요청 중 IsLoading=true, 완료 후 false ───────────────
-
+        // 요청 중 IsLoading=true, 완료 후 false로 전환되는지 확인
         private void Case2_LoadingTransition()
         {
             var fake = new FakeHttpClient();
@@ -76,8 +74,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 3: 에러 후 성공 요청 → Error/HasError 초기화 ────────────
-
+        // 에러 후 성공 요청 시 Error/HasError가 초기화되는지 확인
         private void Case3_ErrorClearedOnSuccess()
         {
             var fake = new FakeHttpClient();
@@ -100,9 +97,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 4: 성공 후 에러 → Data는 이전 값 유지 ──────────────────
-        // (에러가 발생해도 Data를 null로 초기화하지 않아야 합니다)
-
+        // 에러 발생 시 이전 Data가 보존되는지 확인
         private void Case4_DataPreservedOnError()
         {
             var fake = new FakeHttpClient();
@@ -123,8 +118,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 5: PropModel 구독이 올바르게 동작하는지 ─────────────────
-
+        // Response의 Data/IsLoading PropModel 구독이 올바르게 동작하는지 확인
         private void Case5_PropModelSubscription()
         {
             var fake = new FakeHttpClient();

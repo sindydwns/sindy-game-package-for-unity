@@ -31,8 +31,7 @@ namespace Sindy.Test
             Case5_DisposeCleanup();
         }
 
-        // ── Case 1: 요청 URL / Method 검증 ──────────────────────────────
-
+        // GET 요청이 올바른 URL과 Method로 전송되는지 확인
         private void Case1_RequestUrl()
         {
             var fake = new FakeHttpClient();
@@ -49,8 +48,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 2: 성공 응답 → Response.Data 반영 ──────────────────────
-
+        // GET 성공 응답이 Response.Data에 반영되는지 확인
         private void Case2_SuccessResponseData()
         {
             var fake = new FakeHttpClient();
@@ -75,8 +73,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 3: 에러 응답 → Response.Error / HasError 반영 ──────────
-
+        // 에러 응답이 Response.Error와 HasError에 반영되는지 확인
         private void Case3_ErrorResponse()
         {
             var fake = new FakeHttpClient();
@@ -95,8 +92,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 4: 연속 요청 → 각 응답이 독립 처리 ─────────────────────
-
+        // 연속 요청 시 각 응답이 독립적으로 처리되는지 확인
         private void Case4_SequentialRequests()
         {
             var fake = new FakeHttpClient();
@@ -120,8 +116,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 5: Dispose 후 구독이 정리되는지 ────────────────────────
-
+        // Dispose 후 자신과 자식 모델(Request, Response)이 모두 정리되는지 확인
         private void Case5_DisposeCleanup()
         {
             var fake = new FakeHttpClient();

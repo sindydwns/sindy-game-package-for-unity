@@ -60,8 +60,7 @@ namespace Sindy.Test
             Case5_OnLoginSuccessEvent();
         }
 
-        // ── Case 1: 로그인 성공 → TokenModel 갱신 ────────────────────────
-
+        // OAuth 로그인 성공 시 TokenModel이 갱신되고 IsLoggedIn=true인지 확인
         private void Case1_ProviderLoginSuccess()
         {
             var tokenModel  = new TokenModel();
@@ -78,8 +77,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 2: 로그인 실패 → 에러 전파 ──────────────────────────────
-
+        // OAuth 로그인 실패 시 에러가 전파되고 IsLoggedIn=false인지 확인
         private void Case2_ProviderLoginFails()
         {
             var tokenModel  = new TokenModel();
@@ -103,8 +101,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 3: IsLoading 상태 전환 ──────────────────────────────────
-
+        // 로그인 중 IsLoading이 true→false로 전환되는지 확인
         private void Case3_IsLoadingTransition()
         {
             var tokenModel  = new TokenModel();
@@ -124,8 +121,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 4: 로그아웃 → 토큰 초기화 + IsLoggedIn=false ───────────
-
+        // 로그아웃 시 토큰이 초기화되고 IsLoggedIn=false인지 확인
         private void Case4_Logout()
         {
             var tokenModel  = new TokenModel();
@@ -146,8 +142,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 5: 로그인 성공 → OnLoginSuccess 이벤트 발행 ────────────
-
+        // 로그인 성공 시 OnLoginSuccess 이벤트가 발행되는지 확인
         private void Case5_OnLoginSuccessEvent()
         {
             var tokenModel  = new TokenModel();

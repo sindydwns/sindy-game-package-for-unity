@@ -25,8 +25,7 @@ namespace Sindy.Test
             Case4_DurationPropModel();
         }
 
-        // ── Case 1: 타임아웃 내 정상 응답 ───────────────────────────────
-
+        // 타임아웃 내 정상 응답이 올바르게 처리되는지 확인
         private void Case1_ResponseWithinTimeout()
         {
             var fake = new FakeHttpClient();
@@ -43,10 +42,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 2: 지연 응답 + TimeoutFeature → IsLoading 유지 ─────────
-        // 동기 테스트에서 실제 타임아웃 발동은 검증 불가 (Observable.Timeout은 Scheduler 기반).
-        // 여기서는 TimeoutFeature가 적용된 상태에서 지연 응답 시 IsLoading 유지를 확인합니다.
-
+        // 지연 응답 중 IsLoading이 유지되고 응답 후 해제되는지 확인
         private void Case2_TimeoutWithDeferredResponse()
         {
             var fake = new FakeHttpClient();
@@ -72,8 +68,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 3: TimeoutFeature Dispose 정리 ──────────────────────────
-
+        // TimeoutFeature Dispose 시 IsDisposed가 true로 설정되는지 확인
         private void Case3_DisposeCleanup()
         {
             var feature = new TimeoutFeature(seconds: 30f);
@@ -84,8 +79,7 @@ namespace Sindy.Test
             Assert.AreEqual(true, feature.IsDisposed);
         }
 
-        // ── Case 4: Duration PropModel 변경 ──────────────────────────────
-
+        // Duration PropModel 값을 변경할 수 있는지 확인
         private void Case4_DurationPropModel()
         {
             var feature = new TimeoutFeature(seconds: 10f);

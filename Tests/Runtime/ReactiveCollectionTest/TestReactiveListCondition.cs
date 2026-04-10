@@ -29,6 +29,7 @@ namespace Sindy.Test
             DisposeUnsubscribes();
         }
 
+        // 모든 아이템이 false인 초기 상태에서 All=false, Any=false인지 확인
         private void AllFalseInitially()
         {
             var list = new ReactiveList<Item>();
@@ -43,6 +44,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // 모든 아이템이 true가 되면 All=true, Any=true인지 확인
         private void AllTrueWhenAllReady()
         {
             var a = new Item();
@@ -62,6 +64,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // 하나만 true일 때 All=false, Any=true인지 확인
         private void AnyTrueWhenOneReady()
         {
             var a = new Item();
@@ -80,6 +83,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // 빈 리스트에서 Any=false인지 확인 (vacuous truth)
         private void AnyFalseWhenEmpty()
         {
             var list = new ReactiveList<Item>();
@@ -91,6 +95,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // 아이템 추가 시 조건이 자동 갱신되는지 확인
         private void UpdatesWhenItemAdded()
         {
             var list = new ReactiveList<Item>();
@@ -112,6 +117,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // 아이템 제거 시 조건이 자동 갱신되는지 확인
         private void UpdatesWhenItemRemoved()
         {
             var a = new Item { Ready = { Value = true } };
@@ -133,6 +139,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // 아이템의 프로퍼티 값이 변경될 때 조건이 자동 갱신되는지 확인
         private void UpdatesWhenItemPropertyChanges()
         {
             var a = new Item();
@@ -161,6 +168,7 @@ namespace Sindy.Test
             condition.Dispose();
         }
 
+        // Dispose 후 프로퍼티/리스트 변경이 무시되고 예외가 발생하지 않는지 확인
         private void DisposeUnsubscribes()
         {
             var a = new Item();

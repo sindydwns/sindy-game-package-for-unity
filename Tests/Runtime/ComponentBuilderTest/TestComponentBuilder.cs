@@ -24,6 +24,7 @@ namespace Sindy.Test
             CancelClearsState();
         }
 
+        // Build() 호출 시 null이 아닌 빌더 인스턴스를 반환하는지 확인
         private void BuildReturnsBuilder()
         {
             var builder = ComponentBuilder.Build("test_prefab");
@@ -31,6 +32,7 @@ namespace Sindy.Test
             Assert.IsNotNull(builder);
         }
 
+        // WithModel(인스턴스)로 모델을 설정하면 빌더에 등록되고 모델이 Dispose되지 않은 상태인지 확인
         private void WithModelInstanceSetsModel()
         {
             var model = new PropModel<string>("hello");
@@ -44,6 +46,7 @@ namespace Sindy.Test
             builder.Cancel();
         }
 
+        // WithModel(팩토리)로 등록 시 Cancel하면 팩토리가 호출되지 않는지 확인
         private void WithModelFactorySetsModel()
         {
             bool factoryCalled = false;
@@ -60,6 +63,7 @@ namespace Sindy.Test
             Assert.IsFalse(factoryCalled);
         }
 
+        // Patch()로 하위 프리팹을 등록하고 WithModel()로 모델을 연결하는 체이닝이 동작하는지 확인
         private void PatchChaining()
         {
             var rootModel = new ViewModel();
@@ -75,6 +79,7 @@ namespace Sindy.Test
             builder.Cancel();
         }
 
+        // Cancel 시 WithModel(인스턴스)로 등록된 모든 모델이 Dispose되는지 확인
         private void CancelDisposesOwnedModels()
         {
             var rootModel = new PropModel<string>("root");
@@ -92,6 +97,7 @@ namespace Sindy.Test
             Assert.IsTrue(patchModel.IsDisposed);
         }
 
+        // Cancel 시 팩토리 모델은 아직 생성되지 않았으므로 팩토리가 호출되지 않는지 확인
         private void CancelDoesNotDisposeFactoryModels()
         {
             bool factoryCalled = false;
@@ -109,6 +115,7 @@ namespace Sindy.Test
             Assert.IsFalse(factoryCalled);
         }
 
+        // 인스턴스 모델과 팩토리 모델이 혼합된 경우 Cancel 시 인스턴스만 Dispose되는지 확인
         private void CancelDisposesMixedModels()
         {
             var instanceModel = new PropModel<string>("instance");
@@ -130,6 +137,7 @@ namespace Sindy.Test
             Assert.IsFalse(factoryCalled);
         }
 
+        // Patch() 후 WithModel() 없이 다음 Patch()를 호출하면 이전 Patch가 모델 없이 flush되는지 확인
         private void PatchWithoutModelFlushed()
         {
             // Patch() 후 WithModel() 없이 다음 Patch()를 호출하면
@@ -147,6 +155,7 @@ namespace Sindy.Test
             Assert.IsTrue(model.IsDisposed);
         }
 
+        // 여러 Patch를 연속 체이닝하고 Cancel 시 모든 모델이 Dispose되는지 확인
         private void MultiplePatchesChained()
         {
             var m1 = new PropModel<string>("a");
@@ -166,6 +175,7 @@ namespace Sindy.Test
             Assert.IsTrue(m3.IsDisposed);
         }
 
+        // OnLayer()를 체이닝하여 레이어를 설정할 수 있는지 확인
         private void OnLayerChaining()
         {
             var builder = ComponentBuilder.Build("root_prefab")
@@ -177,6 +187,7 @@ namespace Sindy.Test
             builder.Cancel();
         }
 
+        // Cancel 후 두 번째 Cancel 호출 시 이미 정리된 상태에서 예외 없이 통과하는지 확인
         private void CancelClearsState()
         {
             var model = new PropModel<string>("test");

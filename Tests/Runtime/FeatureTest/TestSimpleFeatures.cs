@@ -25,6 +25,7 @@ namespace Sindy.Test
 
         // ── VisibilityFeature ──
 
+        // VisibilityFeature 기본 생성 시 Show가 true인지 확인
         private void VisibilityDefaultTrue()
         {
             var feature = new VisibilityFeature();
@@ -32,6 +33,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // VisibilityFeature의 Show 값을 토글할 수 있는지 확인
         private void VisibilityToggle()
         {
             var feature = new VisibilityFeature(false);
@@ -43,6 +45,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // VisibilityFeature의 Show를 구독하여 값 변경이 콜백으로 전달되는지 확인
         private void VisibilitySubscribe()
         {
             var feature = new VisibilityFeature(true);
@@ -57,6 +60,7 @@ namespace Sindy.Test
 
         // ── HighlightFeature ──
 
+        // HighlightFeature 기본 생성 시 Highlight가 false인지 확인
         private void HighlightDefaultFalse()
         {
             var feature = new HighlightFeature();
@@ -64,6 +68,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // HighlightFeature의 Highlight 값을 토글할 수 있는지 확인
         private void HighlightToggle()
         {
             var feature = new HighlightFeature(false);
@@ -77,6 +82,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // HighlightFeature의 Highlight를 구독하여 값 변경이 콜백으로 전달되는지 확인
         private void HighlightSubscribe()
         {
             var feature = new HighlightFeature();
@@ -91,6 +97,7 @@ namespace Sindy.Test
 
         // ── RaycastBlockFeature ──
 
+        // RaycastBlockFeature 기본 생성 시 IgnoreRaycast가 false인지 확인
         private void RaycastBlockDefaultFalse()
         {
             var feature = new RaycastBlockFeature();
@@ -98,6 +105,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // RaycastBlockFeature의 IgnoreRaycast 값을 토글할 수 있는지 확인
         private void RaycastBlockToggle()
         {
             var feature = new RaycastBlockFeature(false);
@@ -111,6 +119,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // RaycastBlockFeature의 IgnoreRaycast를 구독하여 값 변경이 콜백으로 전달되는지 확인
         private void RaycastBlockSubscribe()
         {
             var feature = new RaycastBlockFeature();
@@ -125,6 +134,7 @@ namespace Sindy.Test
 
         // ── 공통 Dispose ──
 
+        // 모든 Feature를 Dispose한 뒤 IsDisposed가 true로 설정되는지 확인
         private void AllDisposeCleanly()
         {
             var vis = new VisibilityFeature();

@@ -28,8 +28,7 @@ namespace Sindy.Test
             Case5_TokenStore_SaveAndLoad();
         }
 
-        // ── Case 1: 유효 토큰 → Authorization 헤더 자동 주입 ────────────
-
+        // 유효한 토큰이 Authorization 헤더에 자동 주입되는지 확인
         private void Case1_ValidToken_HeaderInjected()
         {
             var tokenModel = new TokenModel();
@@ -56,8 +55,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 2: 401 에러 → 리프레시 → 원래 요청 재전송 ────────────
-
+        // 만료 토큰(401) 시 리프레시 후 갱신된 토큰으로 재요청되는지 확인
         private void Case2_ExpiredToken_RefreshAndRetry()
         {
             var tokenModel = new TokenModel();
@@ -93,8 +91,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 3: 리프레시 실패 → 토큰 초기화 + 에러 ──────────────────
-
+        // 리프레시 실패 시 토큰이 초기화되고 Unauthorized 에러가 전파되는지 확인
         private void Case3_RefreshFails_TokenCleared()
         {
             var tokenModel = new TokenModel();
@@ -134,8 +131,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 4: TokenModel.IsExpired PropModel 상태 전환 ────────────
-
+        // TokenModel의 IsExpired 상태가 만료/갱신에 따라 올바르게 전환되는지 확인
         private void Case4_TokenModelIsExpiredState()
         {
             var tokenModel = new TokenModel();
@@ -165,9 +161,7 @@ namespace Sindy.Test
             tokenModel.Dispose();
         }
 
-        // ── Case 5: ITokenStore 저장/불러오기 ────────────────────────────
-        // PlayerPrefs는 에디터 테스트에서 사용하기 어려우므로 인메모리 스텁으로 검증합니다.
-
+        // InMemoryTokenStore의 Save/Load/Clear가 정상 동작하는지 확인
         private void Case5_TokenStore_SaveAndLoad()
         {
             var store = new InMemoryTokenStore();

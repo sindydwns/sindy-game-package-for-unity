@@ -48,8 +48,7 @@ namespace Sindy.Test
             });
         }
 
-        // ── Case 1: 초기 로드 → 1페이지 요청 ─────────────────────────────
-
+        // GoToPage(1) 호출 시 1페이지 요청이 올바른 URL로 전송되는지 확인
         private void Case1_InitialLoad()
         {
             var fake = new FakeHttpClient();
@@ -72,8 +71,7 @@ namespace Sindy.Test
             paged.Dispose();
         }
 
-        // ── Case 2: NextButton → 2페이지 요청 ────────────────────────────
-
+        // NextButton 클릭 시 다음 페이지가 요청되는지 확인
         private void Case2_NextButton()
         {
             var fake = new FakeHttpClient();
@@ -105,8 +103,7 @@ namespace Sindy.Test
             paged.Dispose();
         }
 
-        // ── Case 3: PrevButton → 이전 페이지 요청 ────────────────────────
-
+        // PrevButton 클릭 시 이전 페이지가 요청되는지 확인
         private void Case3_PrevButton()
         {
             var fake = new FakeHttpClient();
@@ -127,8 +124,7 @@ namespace Sindy.Test
             paged.Dispose();
         }
 
-        // ── Case 4: 1페이지에서 PrevButton 비활성화 ──────────────────────
-
+        // 1페이지에서 PrevButton이 비활성화되는지 확인
         private void Case4_PrevButtonDisabledOnPage1()
         {
             var fake = new FakeHttpClient();
@@ -143,8 +139,7 @@ namespace Sindy.Test
             paged.Dispose();
         }
 
-        // ── Case 5: 마지막 페이지에서 NextButton 비활성화 ────────────────
-
+        // 마지막 페이지에서 NextButton이 비활성화되는지 확인
         private void Case5_NextButtonDisabledOnLastPage()
         {
             var fake = new FakeHttpClient();
@@ -159,8 +154,7 @@ namespace Sindy.Test
             paged.Dispose();
         }
 
-        // ── Case 6: Items PropModel → ListComponent 바인딩 가능 ──────────
-
+        // Items PropModel의 ViewModel 리스트가 ListComponent와 바인딩 가능한지 확인
         private void Case6_ItemsPropModel()
         {
             var fake = new FakeHttpClient();

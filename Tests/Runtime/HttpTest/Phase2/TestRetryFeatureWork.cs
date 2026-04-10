@@ -29,8 +29,7 @@ namespace Sindy.Test
             Case5_IsRetryingState();
         }
 
-        // ── Case 1: 성공 시 재시도 없음 ─────────────────────────────────
-
+        // 성공 응답 시 재시도 없이 1회만 요청되는지 확인
         private void Case1_NoRetryOnSuccess()
         {
             var fake = new FakeHttpClient();
@@ -47,9 +46,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 2: 재시도 가능 에러 → maxRetry 횟수 재시도 ────────────
-        // Network 에러 2번 → 성공 1번 (maxRetry=3이면 최종 성공)
-
+        // Network 에러 발생 시 maxRetry 횟수만큼 재시도하여 성공하는지 확인
         private void Case2_RetryOnNetworkError()
         {
             var fake = new FakeHttpClient();
@@ -69,8 +66,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 3: 재시도 불가 에러(404) → 즉시 에러 ──────────────────
-
+        // 재시도 불가 에러(404) 시 즉시 에러를 반환하는지 확인
         private void Case3_NoRetryOnNonRetryableError()
         {
             var fake = new FakeHttpClient();
@@ -88,8 +84,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 4: maxRetry 초과 → 최종 에러 반환 ──────────────────────
-
+        // maxRetry 초과 시 최종 에러가 반환되는지 확인
         private void Case4_ExceedMaxRetry()
         {
             var fake = new FakeHttpClient();
@@ -110,8 +105,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 5: 재시도 중 IsRetrying PropModel 상태 ──────────────────
-
+        // 재시도 중 IsRetrying이 true가 되고 완료 후 false로 돌아오는지 확인
         private void Case5_IsRetryingState()
         {
             var fake = new FakeHttpClient();

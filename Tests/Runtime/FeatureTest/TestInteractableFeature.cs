@@ -19,6 +19,7 @@ namespace Sindy.Test
             DisposeCleansProp();
         }
 
+        // 기본 생성 시 Interactable이 true인지 확인
         private void DefaultIsTrue()
         {
             var feature = new InteractableFeature();
@@ -28,6 +29,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // 생성자에서 초기값을 false로 지정하면 반영되는지 확인
         private void CustomInitialValue()
         {
             var feature = new InteractableFeature(false);
@@ -37,6 +39,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // Interactable 값을 true↔false로 토글할 수 있는지 확인
         private void ToggleValue()
         {
             var feature = new InteractableFeature(true);
@@ -50,6 +53,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // Interactable을 구독하여 값 변경이 콜백으로 전달되는지 확인
         private void SubscribeToChanges()
         {
             var feature = new InteractableFeature(true);
@@ -63,6 +67,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // Dispose 후 IsDisposed가 true로 설정되는지 확인
         private void DisposeCleansProp()
         {
             var feature = new InteractableFeature();

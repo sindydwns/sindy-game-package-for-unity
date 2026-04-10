@@ -38,8 +38,7 @@ namespace Sindy.Test
             Case5_StreamAliveAfterError();
         }
 
-        // ── Case 1: 요청 바디가 JSON으로 직렬화되는지 ───────────────────
-
+        // POST 요청 바디가 JSON으로 직렬화되어 전송되는지 확인
         private void Case1_RequestBodySerialized()
         {
             var fake = new FakeHttpClient();
@@ -61,8 +60,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 2: POST 성공 응답 ───────────────────────────────────────
-
+        // POST 성공 응답이 Response.Data에 반영되는지 확인
         private void Case2_SuccessResponse()
         {
             var fake = new FakeHttpClient();
@@ -81,8 +79,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 3: 5xx 서버 에러 ────────────────────────────────────────
-
+        // 5xx 서버 에러가 Response.Error에 반영되는지 확인
         private void Case3_ServerError()
         {
             var fake = new FakeHttpClient();
@@ -100,8 +97,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 4: 401 Unauthorized 에러 종류 ──────────────────────────
-
+        // 401 에러가 Unauthorized 종류로 구분되는지 확인
         private void Case4_UnauthorizedError()
         {
             var fake = new FakeHttpClient();
@@ -118,9 +114,7 @@ namespace Sindy.Test
             api.Dispose();
         }
 
-        // ── Case 5: 에러 후 재요청 시 스트림 유지 ───────────────────────
-        // Subject(SubjModel) 기반이므로 에러 후에도 새 요청이 가능해야 합니다.
-
+        // 에러 후 재요청 시 Subject 스트림이 살아있어 정상 처리되는지 확인
         private void Case5_StreamAliveAfterError()
         {
             var fake = new FakeHttpClient();

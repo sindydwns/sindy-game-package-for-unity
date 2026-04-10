@@ -26,6 +26,7 @@ namespace Sindy.Test
             return entity;
         }
 
+        // Entity와 수량을 지정하여 src→dst로 이동하고 양쪽 수량이 올바른지 확인
         private void MoveToByEntityAndAmount()
         {
             var src = new Inventory();
@@ -40,6 +41,7 @@ namespace Sindy.Test
             Assert.AreEqual(40, dst.GetAmount(gold));
         }
 
+        // 이동 요청량이 보유량보다 많으면 보유량만큼만 이동되는지 확인
         private void MoveToPartialWhenInsufficient()
         {
             var src = new Inventory();
@@ -54,6 +56,7 @@ namespace Sindy.Test
             Assert.AreEqual(30, dst.GetAmount(gold));
         }
 
+        // EntityAmount 스택을 전달하여 이동이 동작하는지 확인
         private void MoveToByStack()
         {
             var src = new Inventory();
@@ -69,6 +72,7 @@ namespace Sindy.Test
             Assert.AreEqual(50, dst.GetAmount(gold));
         }
 
+        // Inventory를 비용으로 전달하여 여러 Entity를 한 번에 이동하는지 확인
         private void MoveToByInventory()
         {
             var src = new Inventory();
@@ -91,6 +95,7 @@ namespace Sindy.Test
             Assert.AreEqual(20, dst.GetAmount(wood));
         }
 
+        // 매개변수 없이 MoveTo 호출 시 전체 인벤토리가 이동되는지 확인
         private void MoveToAll()
         {
             var src = new Inventory();

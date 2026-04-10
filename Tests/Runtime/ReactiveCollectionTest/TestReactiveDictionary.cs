@@ -32,6 +32,7 @@ namespace Sindy.Test
             EnumerationWorks();
         }
 
+        // 기본 Add로 키-값 쌍이 정상 추가되는지 확인
         private void AddBasic()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -44,6 +45,7 @@ namespace Sindy.Test
             Assert.AreEqual(50, dict["mp"]);
         }
 
+        // 중복 키로 Add 시 ArgumentException이 발생하는지 확인
         private void AddDuplicateThrows()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -63,6 +65,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, dict["hp"]);
         }
 
+        // 존재하는 키를 Remove하면 정상 삭제되는지 확인
         private void RemoveExisting()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -74,6 +77,7 @@ namespace Sindy.Test
             Assert.IsFalse(dict.ContainsKey("hp"));
         }
 
+        // 존재하지 않는 키를 Remove 시 KeyNotFoundException이 발생하는지 확인
         private void RemoveNonExistingThrows()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -91,6 +95,7 @@ namespace Sindy.Test
             Assert.IsTrue(threw);
         }
 
+        // 인덱서로 값을 정상 조회할 수 있는지 확인
         private void IndexerGet()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -99,6 +104,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, dict["hp"]);
         }
 
+        // 존재하지 않는 키로 인덱서 접근 시 KeyNotFoundException이 발생하는지 확인
         private void IndexerGetMissingThrows()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -116,6 +122,7 @@ namespace Sindy.Test
             Assert.IsTrue(threw);
         }
 
+        // 인덱서로 새 키에 값을 설정하면 Add로 동작하고 OnAdded 이벤트가 발생하는지 확인
         private void IndexerSetAddsNew()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -130,6 +137,7 @@ namespace Sindy.Test
             Assert.AreEqual("hp", added[0]);
         }
 
+        // 인덱서로 기존 키의 값을 변경하면 OnUpdated 이벤트가 이전/새 값과 함께 발생하는지 확인
         private void IndexerSetUpdatesExisting()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -150,6 +158,7 @@ namespace Sindy.Test
             Assert.AreEqual(200, capturedNew);
         }
 
+        // TryGetValue로 존재하는 키를 조회하면 true와 올바른 값을 반환하는지 확인
         private void TryGetValueFound()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -161,6 +170,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, value);
         }
 
+        // TryGetValue로 존재하지 않는 키를 조회하면 false를 반환하는지 확인
         private void TryGetValueNotFound()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -171,6 +181,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, value);
         }
 
+        // TryGetValue<T> 제네릭 오버로드로 타입 일치 시 true, 불일치 시 false를 반환하는지 확인
         private void TryGetValueTyped()
         {
             var dict = new ReactiveDictionary<string, object>();
@@ -185,6 +196,7 @@ namespace Sindy.Test
             Assert.IsFalse(wrongType);
         }
 
+        // ContainsKey로 키 존재 여부를 올바르게 판별하는지 확인
         private void ContainsKeyCheck()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -194,6 +206,7 @@ namespace Sindy.Test
             Assert.IsFalse(dict.ContainsKey("mp"));
         }
 
+        // Add/Remove에 따라 Count가 올바르게 추적되는지 확인
         private void CountTracked()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -207,6 +220,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, dict.Count);
         }
 
+        // Keys와 Values 컬렉션이 올바른 항목을 포함하는지 확인
         private void KeysAndValues()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -224,6 +238,7 @@ namespace Sindy.Test
             Assert.IsTrue(values.Contains(50));
         }
 
+        // Add 시 OnAdded 이벤트가 올바른 키-값과 함께 발생하는지 확인
         private void OnAddedEventFires()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -241,6 +256,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, capturedValue);
         }
 
+        // Remove 시 OnRemoved 이벤트가 올바른 키-값과 함께 발생하는지 확인
         private void OnRemovedEventFires()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -260,6 +276,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, capturedValue);
         }
 
+        // 인덱서로 값 갱신 시 OnUpdated 이벤트가 이전/새 값과 함께 발생하는지 확인
         private void OnUpdatedEventFires()
         {
             var dict = new ReactiveDictionary<string, int>();
@@ -282,6 +299,7 @@ namespace Sindy.Test
             Assert.AreEqual(200, capturedNew);
         }
 
+        // foreach로 모든 키-값 쌍을 순회할 수 있는지 확인
         private void EnumerationWorks()
         {
             var dict = new ReactiveDictionary<string, int>();

@@ -20,6 +20,7 @@ namespace Sindy.Test
             DisposeDisposesSubject();
         }
 
+        // 기본 생성 시 AllowHold=true, KeepHold=false인지 확인
         private void DefaultValues()
         {
             var feature = new HoldFeature();
@@ -30,6 +31,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // OnHold 이벤트 발생 시 생성자에서 등록한 콜백이 호출되는지 확인
         private void OnHoldCallbackFires()
         {
             int callCount = 0;
@@ -43,6 +45,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // OnHold Subject를 구독하여 발행된 값들이 순서대로 수신되는지 확인
         private void OnHoldSubjectFires()
         {
             var feature = new HoldFeature();
@@ -61,6 +64,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // AllowHold 값을 false로 시작하여 true로 토글할 수 있는지 확인
         private void AllowHoldToggle()
         {
             var feature = new HoldFeature(allowHold: false);
@@ -73,6 +77,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // KeepHold를 true로 설정한 뒤 Release() 호출 시 false로 복귀하는지 확인
         private void KeepHoldAndRelease()
         {
             var feature = new HoldFeature();
@@ -86,6 +91,7 @@ namespace Sindy.Test
             feature.Dispose();
         }
 
+        // Dispose 시 Feature와 내부 OnHold Subject 모두 Dispose되는지 확인
         private void DisposeDisposesSubject()
         {
             var feature = new HoldFeature();

@@ -33,8 +33,7 @@ namespace Sindy.Test
             Case5_IsFromCachePropModel();
         }
 
-        // ── Case 1: 성공 응답 → 캐시 저장 ────────────────────────────────
-
+        // 성공 응답이 캐시에 저장되는지 확인
         private void Case1_SuccessResponseCached()
         {
             var fake  = new FakeHttpClient();
@@ -53,8 +52,7 @@ namespace Sindy.Test
             cache.Dispose();
         }
 
-        // ── Case 2: 네트워크 에러 + 캐시 → 캐시 반환 ────────────────────
-
+        // 네트워크 에러 시 캐시된 데이터가 반환되고 IsFromCache=true인지 확인
         private void Case2_NetworkErrorWithCache()
         {
             var fake  = new FakeHttpClient();
@@ -80,8 +78,7 @@ namespace Sindy.Test
             cache.Dispose();
         }
 
-        // ── Case 3: 네트워크 에러 + 캐시 없음 → 에러 전파 ───────────────
-
+        // 네트워크 에러 시 캐시가 없으면 에러가 전파되는지 확인
         private void Case3_NetworkErrorNoCache()
         {
             var fake  = new FakeHttpClient();
@@ -112,8 +109,7 @@ namespace Sindy.Test
             cache.Dispose();
         }
 
-        // ── Case 4: 캐시 만료 → 에러 전파 ────────────────────────────────
-
+        // 만료된 캐시가 무시되고 에러가 전파되는지 확인
         private void Case4_ExpiredCache()
         {
             var fake  = new FakeHttpClient();
@@ -140,8 +136,7 @@ namespace Sindy.Test
             cache.Dispose();
         }
 
-        // ── Case 5: IsFromCache PropModel → UI 바인딩 ────────────────────
-
+        // IsFromCache PropModel이 캐시 사용 여부에 따라 올바르게 전환되는지 확인
         private void Case5_IsFromCachePropModel()
         {
             var cache = new OfflineCacheFeature<RankingDto>(maxAge: TimeSpan.FromMinutes(5));

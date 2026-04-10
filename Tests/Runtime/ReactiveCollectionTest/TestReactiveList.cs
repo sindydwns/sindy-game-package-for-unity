@@ -30,6 +30,7 @@ namespace Sindy.Test
             EnumerationWorks();
         }
 
+        // 기본 Add로 요소가 정상 추가되고 Contains로 확인 가능한지 검증
         private void AddBasic()
         {
             var list = new ReactiveList<string>();
@@ -40,6 +41,7 @@ namespace Sindy.Test
             Assert.IsTrue(list.Contains("A"));
         }
 
+        // 여러 요소를 Add한 뒤 인덱스 순서가 올바른지 확인
         private void AddMultiple()
         {
             var list = new ReactiveList<string>();
@@ -54,6 +56,7 @@ namespace Sindy.Test
             Assert.AreEqual("C", list[2]);
         }
 
+        // Insert로 지정 인덱스에 요소를 삽입하면 순서가 올바른지 확인
         private void InsertAtIndex()
         {
             var list = new ReactiveList<string>();
@@ -68,6 +71,7 @@ namespace Sindy.Test
             Assert.AreEqual("C", list[2]);
         }
 
+        // 존재하는 요소를 Remove하면 삭제되는지 확인
         private void RemoveExisting()
         {
             var list = new ReactiveList<string>();
@@ -81,6 +85,7 @@ namespace Sindy.Test
             Assert.IsTrue(list.Contains("B"));
         }
 
+        // 존재하지 않는 요소를 Remove 시 무시되고 OnRemoved 이벤트가 발생하지 않는지 확인
         private void RemoveNonExisting()
         {
             var list = new ReactiveList<string>();
@@ -95,6 +100,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, removedCount);
         }
 
+        // Clear 시 각 요소마다 OnRemoved 이벤트가 개별 발생하는지 확인
         private void ClearFiresPerItem()
         {
             var list = new ReactiveList<string>();
@@ -111,6 +117,7 @@ namespace Sindy.Test
             Assert.AreEqual(3, removed.Count);
         }
 
+        // Contains로 요소 포함 여부를 올바르게 판별하는지 확인
         private void ContainsCheck()
         {
             var list = new ReactiveList<int>();
@@ -121,6 +128,7 @@ namespace Sindy.Test
             Assert.IsFalse(list.Contains(99));
         }
 
+        // Find로 조건에 맞는 첫 번째 요소를 검색하고, 없으면 null을 반환하는지 확인
         private void FindPredicate()
         {
             var list = new ReactiveList<string>();
@@ -137,6 +145,7 @@ namespace Sindy.Test
             Assert.IsNull(notFound);
         }
 
+        // 인덱서로 요소에 접근할 수 있는지 확인
         private void IndexerAccess()
         {
             var list = new ReactiveList<string>();
@@ -147,6 +156,7 @@ namespace Sindy.Test
             Assert.AreEqual("B", list[1]);
         }
 
+        // IndexOf로 요소의 인덱스를 조회하고, 없으면 -1을 반환하는지 확인
         private void IndexOfCheck()
         {
             var list = new ReactiveList<string>();
@@ -158,6 +168,7 @@ namespace Sindy.Test
             Assert.AreEqual(-1, list.IndexOf("Z"));
         }
 
+        // Add/Remove/Clear에 따라 Count가 올바르게 추적되는지 확인
         private void CountTracked()
         {
             var list = new ReactiveList<int>();
@@ -174,6 +185,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, list.Count);
         }
 
+        // AddRange로 여러 요소를 한 번에 추가하고 각각 OnAdded 이벤트가 발생하는지 확인
         private void AddRangeWorks()
         {
             var list = new ReactiveList<int>();
@@ -187,6 +199,7 @@ namespace Sindy.Test
             Assert.AreEqual(3, added.Count);
         }
 
+        // Add/Insert 시 OnAdded 이벤트가 올바른 요소와 함께 발생하는지 확인
         private void OnAddedEventFires()
         {
             var list = new ReactiveList<string>();
@@ -201,6 +214,7 @@ namespace Sindy.Test
             Assert.AreEqual("B", added[1]);
         }
 
+        // Remove 시 OnRemoved 이벤트가 올바른 요소와 함께 발생하는지 확인
         private void OnRemovedEventFires()
         {
             var list = new ReactiveList<string>();
@@ -216,6 +230,7 @@ namespace Sindy.Test
             Assert.AreEqual("A", removed[0]);
         }
 
+        // OnChange Subject를 구독하여 Add/Remove 시 ChangeEvent가 올바르게 발행되는지 확인
         private void OnChangeSubjectFires()
         {
             var list = new ReactiveList<string>();
@@ -232,6 +247,7 @@ namespace Sindy.Test
             Assert.AreEqual("A", changes[1].Item);
         }
 
+        // foreach로 모든 요소를 순회할 수 있는지 확인
         private void EnumerationWorks()
         {
             var list = new ReactiveList<int>();

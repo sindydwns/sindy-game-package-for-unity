@@ -31,6 +31,7 @@ namespace Sindy.Test
             return entity;
         }
 
+        // Add 시 OnChange 이벤트가 올바른 이전/이후 수량과 함께 발생하는지 확인
         private void OnChangeFiresOnAdd()
         {
             var inv = new Inventory();
@@ -47,6 +48,7 @@ namespace Sindy.Test
             Assert.AreEqual(100, events[0].Gap);
         }
 
+        // Remove 시 OnChange 이벤트가 올바른 이전/이후 수량과 함께 발생하는지 확인
         private void OnChangeFiresOnRemove()
         {
             var inv = new Inventory();
@@ -64,6 +66,7 @@ namespace Sindy.Test
             Assert.AreEqual(-30, events[0].Gap);
         }
 
+        // Set 시 OnChange 이벤트가 올바른 이전/이후 수량과 함께 발생하는지 확인
         private void OnChangeFiresOnSet()
         {
             var inv = new Inventory();
@@ -80,6 +83,7 @@ namespace Sindy.Test
             Assert.AreEqual(200, events[0].NewAmount);
         }
 
+        // Set으로 같은 값을 설정하면 OnChange 이벤트가 발생하지 않는지 확인
         private void OnChangeNotFiresWhenNoChange()
         {
             var inv = new Inventory();
@@ -94,6 +98,7 @@ namespace Sindy.Test
             Assert.AreEqual(0, events.Count);
         }
 
+        // 새 Entity 추가 시 OnChangeStack 이벤트가 발생하는지 확인
         private void OnChangeStackFiresOnCreate()
         {
             var inv = new Inventory();
@@ -108,6 +113,7 @@ namespace Sindy.Test
             Assert.AreEqual(gold, stackEvents[0].Entity);
         }
 
+        // Entity 수량이 0이 되어 스택 삭제 시 OnChangeStack 이벤트가 발생하는지 확인
         private void OnChangeStackFiresOnDelete()
         {
             var inv = new Inventory();
@@ -123,6 +129,7 @@ namespace Sindy.Test
             Assert.AreEqual(gold, stackEvents[0].Entity);
         }
 
+        // ChangeEvent의 Entity, Inventory, OldAmount, NewAmount, Gap 필드가 올바른지 확인
         private void OnChangeEventHasCorrectValues()
         {
             var inv = new Inventory();
@@ -141,6 +148,7 @@ namespace Sindy.Test
             Assert.AreEqual(30, captured.Gap);
         }
 
+        // EntityStack의 OnChange를 구독하여 Add/Remove 시 스냅샷 값이 올바른지 확인
         private void EntityStackOnChangeWorks()
         {
             var inv = new Inventory();
