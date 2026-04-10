@@ -10,6 +10,7 @@ namespace Sindy.Test
         void Start()
         {
             tests.Add(new TestFormatNumberPropModel());
+            tests.Add(new TestViewModelCore());
 
             tests.ForEach(test => test.Run());
         }
