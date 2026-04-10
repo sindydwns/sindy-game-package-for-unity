@@ -15,17 +15,22 @@ namespace Sindy.View.Components
     [RequireComponent(typeof(HoldButton))]
     public class ButtonComponent : SindyComponent<SubjModel<Unit>>
     {
+        [SerializeField] private GameObject highlightTarget;
+
         private HoldButton button;
+        private CanvasGroup canvasGroup;
 
         void Awake()
         {
             button = GetComponent<HoldButton>();
+            canvasGroup = GetComponent<CanvasGroup>();
         }
 
         protected override void Init(SubjModel<Unit> model)
         {
-            var hold = (model as ButtonModel)?.Feature<HoldFeature>();
+            var buttonModel = model as ButtonModel;
 
+            var hold = buttonModel?.Feature<HoldFeature>();
             if (hold != null)
             {
                 void OnClickOrHold()
@@ -48,10 +53,28 @@ namespace Sindy.View.Components
                 disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClick)));
             }
 
-            var interactable = (model as ButtonModel)?.Feature<InteractableFeature>();
+            var interactable = buttonModel?.Feature<InteractableFeature>();
             if (interactable != null)
             {
                 interactable.Interactable.Subscribe(v => button.interactable = v).AddTo(disposables);
+            }
+
+            var visibility = buttonModel?.Feature<VisibilityFeature>();
+            if (visibility != null)
+            {
+                visibility.Show.Subscribe(v => gameObject.SetActive(v)).AddTo(disposables);
+            }
+
+            var highlight = buttonModel?.Feature<HighlightFeature>();
+            if (highlight != null && highlightTarget != null)
+            {
+                highlight.Highlight.Subscribe(v => highlightTarget.SetActive(v)).AddTo(disposables);
+            }
+
+            var raycastBlock = buttonModel?.Feature<RaycastBlockFeature>();
+            if (raycastBlock != null && canvasGroup != null)
+            {
+                raycastBlock.IgnoreRaycast.Subscribe(v => canvasGroup.blocksRaycasts = !v).AddTo(disposables);
             }
         }
     }
