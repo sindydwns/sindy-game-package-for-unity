@@ -39,12 +39,12 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────────────────
         private void Example1_SimpleNotice()
         {
-            ComponentBuilder
-                .Build("notice_popup").WithModel(new PopupModel())
-                .Patch("header.title", "label").WithModel(new LabelModel("공지"))
-                .Patch("body.message", "label").WithModel(new LabelModel("서버 점검이 예정되어 있습니다."))
-                .Patch("footer.confirm", "button").WithModel(new ButtonModel())
-                .OnLayer(UILayer.Popup).Open();
+            ComponentBlueprint
+                .Create("notice_popup").WithModel(() => new PopupModel())
+                .Patch("header.title", "label").WithModel(() => new LabelModel("공지"))
+                .Patch("body.message", "label").WithModel(() => new LabelModel("서버 점검이 예정되어 있습니다."))
+                .Patch("footer.confirm", "button").WithModel(() => new ButtonModel())
+                .Open(UILayer.Popup);
         }
 
         // ── 예시 2 ────────────────────────────────────────────────────────────
@@ -58,9 +58,9 @@ namespace Sindy.Test
             model.Confirm.Subscribe(_ => Debug.Log("구매 확인"));
             model.Cancel.Subscribe(_ => Debug.Log("구매 취소"));
 
-            ComponentBuilder
-                .Build("notice_popup").WithModel(model)
-                .OnLayer(UILayer.Popup).Open();
+            ComponentBlueprint
+                .Create("notice_popup").WithModel(() => model)
+                .Open(UILayer.Popup);
         }
 
         // ── 예시 3 ────────────────────────────────────────────────────────────
@@ -69,8 +69,8 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────────────────
         private void Example3_ToastWithTimer()
         {
-            ComponentBuilder
-                .Build("toast_popup").WithModel(() =>
+            ComponentBlueprint
+                .Create("toast_popup").WithModel(() =>
                 {
                     var model = new ToastModel("저장되었습니다.", duration: 2f);
                     model.Timer.IsFinished
@@ -78,7 +78,7 @@ namespace Sindy.Test
                         .Subscribe(_ => Debug.Log("토스트 종료"));
                     return model;
                 })
-                .OnLayer(UILayer.Toast).Open();
+                .Open(UILayer.Toast);
         }
 
         // ── 예시 4 ────────────────────────────────────────────────────────────
@@ -102,9 +102,9 @@ namespace Sindy.Test
             var model = new CharacterProfileModel(data);
             model.Close.Subscribe(_ => Debug.Log("프로필 닫기"));
 
-            ComponentBuilder
-                .Build("character_profile_popup").WithModel(model)
-                .OnLayer(UILayer.Popup).Open();
+            ComponentBlueprint
+                .Create("character_profile_popup").WithModel(() => model)
+                .Open(UILayer.Popup);
         }
 
         // ── 예시 5 ────────────────────────────────────────────────────────────
@@ -113,8 +113,8 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────────────────
         private void Example5_ShopWithTabs()
         {
-            ComponentBuilder
-                .Build("shop_popup").WithModel(() =>
+            ComponentBlueprint
+                .Create("shop_popup").WithModel(() =>
                 {
                     var model = new ShopModel();
 
@@ -127,7 +127,7 @@ namespace Sindy.Test
                     model.Close.Subscribe(_ => Debug.Log("상점 닫기"));
                     return model;
                 })
-                .OnLayer(UILayer.Popup).Open();
+                .Open(UILayer.Popup);
         }
 
         // ── 예시 6 ────────────────────────────────────────────────────────────
@@ -137,8 +137,8 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────────────────
         private void Example6_CharacterInventoryWithFilter()
         {
-            ComponentBuilder
-                .Build("character_inventory_popup").WithModel(() =>
+            ComponentBlueprint
+                .Create("character_inventory_popup").WithModel(() =>
                 {
                     var model = new CharacterInventoryModel();
                     var filter = model.Filter;
@@ -166,8 +166,8 @@ namespace Sindy.Test
                     model.Close.Subscribe(_ => Debug.Log("인벤토리 닫기"));
                     return model;
                 })
-                .Patch("filter.search_bar", "search_input").WithModel(new LabelModel("캐릭터 이름 검색"))
-                .OnLayer(UILayer.Popup).Open();
+                .Patch("filter.search_bar", "search_input").WithModel(() => new LabelModel("캐릭터 이름 검색"))
+                .Open(UILayer.Popup);
         }
 
         // ── 가상 데이터 헬퍼 ──────────────────────────────────────────────────

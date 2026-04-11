@@ -25,6 +25,25 @@ namespace Sindy.View.Features
         internal bool HasAlignment => Alignment.HasValue;
         internal bool HasSize => PreferredWidth >= 0 || PreferredHeight >= 0;
 
+        internal LayoutFeature Clone() => new()
+        {
+            MarginTop = MarginTop,
+            MarginRight = MarginRight,
+            MarginBottom = MarginBottom,
+            MarginLeft = MarginLeft,
+            HasMargin = HasMargin,
+            LayoutDirection = LayoutDirection,
+            Spacing = Spacing,
+            PaddingTop = PaddingTop,
+            PaddingRight = PaddingRight,
+            PaddingBottom = PaddingBottom,
+            PaddingLeft = PaddingLeft,
+            HasPadding = HasPadding,
+            Alignment = Alignment,
+            PreferredWidth = PreferredWidth,
+            PreferredHeight = PreferredHeight,
+        };
+
         public void Apply(RectTransform target)
         {
             if (target == null) return;

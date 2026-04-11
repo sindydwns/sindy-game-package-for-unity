@@ -162,7 +162,7 @@ namespace Sindy.Test.Editor
             var cancelBtn = MakeChild<ButtonComponent>(root, "CancelButton", c => SetSerializedField(c, "button", AddButton(c.gameObject)));
 
             // Example1 Patch 키: header.title / body.message / footer.confirm 은
-            // ComponentBuilder가 ViewModel에 child로 주입하므로 ViewComponent.views에 등록
+            // ComponentBlueprint가 ViewModel에 child로 주입하므로 ViewComponent.views에 등록
             SetViewComponentViews(view, new[]
             {
                 ("title",         (SindyComponent)titleLabel),

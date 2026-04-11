@@ -149,31 +149,41 @@ button.Feature<InteractableFeature>().Interactable.Value = false;
 
 ---
 
-## ComponentBuilder
+## ComponentBlueprint
 
-코드에서 프리팹을 조립하여 UI를 엽니다.
+코드에서 프리팹을 조립하여 UI를 엽니다. 모델은 항상 팩토리로 주입하며, Blueprint는 재사용할 수 있습니다.
 
 ```
-Build("프리팹") → WithModel(모델) → Patch("경로", "프리팹") → WithModel(자식모델) → OnLayer(레이어) → Open()
+Create("프리팹") → WithModel(팩토리) → Patch("경로", "프리팹") → WithModel(팩토리) → Open(레이어)
 ```
 
 ```csharp
 // 기본 팝업
-ComponentBuilder
-    .Build("notice_popup").WithModel(new PopupModel())
-    .Patch("header.title", "label").WithModel(new LabelModel("공지"))
-    .Patch("footer.confirm", "button").WithModel(new ButtonModel())
-    .OnLayer(UILayer.Popup).Open();
+ComponentBlueprint
+    .Create("notice_popup").WithModel(() => new PopupModel())
+    .Patch("header.title", "label").WithModel(() => new LabelModel("공지"))
+    .Patch("footer.confirm", "button").WithModel(() => new ButtonModel())
+    .Open(UILayer.Popup);
 
 // 팩토리로 지연 생성 (Open 시점에 모델 생성)
-ComponentBuilder
-    .Build("shop_popup").WithModel(() =>
+ComponentBlueprint
+    .Create("shop_popup").WithModel(() =>
     {
         var model = new ShopModel();
         model.Category.Subscribe(i => model.Items.SetItems(LoadItems(i)));
         return model;
     })
-    .OnLayer(UILayer.Popup).Open();
+    .Open(UILayer.Popup);
+
+// 재사용 가능한 Blueprint 템플릿
+static readonly ComponentBlueprint Card = ComponentBlueprint.Create("card")
+    .Layout(Direction.Vertical, spacing: 4)
+    .Patch("icon", "icon_prefab")
+    .Patch("title", "label");
+
+ComponentBlueprint.Create(Card)
+    .WithModel(() => new CardModel())
+    .Open(UILayer.Popup);
 ```
 
 ---
