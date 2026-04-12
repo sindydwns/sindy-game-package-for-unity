@@ -1,19 +1,26 @@
 {
     "name": "Sindy.Tests.Editor",
-    "rootNamespace": "Sindy.Test.Editor",
+    "rootNamespace": "Sindy.Test",
     "references": [
         "Sindy",
-        "Unity.TextMeshPro"
+        "Sindy.Tests.Runtime",
+        "Unity.TextMeshPro",
+        "UnityEngine.TestRunner",
+        "UnityEditor.TestRunner"
     ],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll"
+    ],
     "autoReferenced": false,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }
