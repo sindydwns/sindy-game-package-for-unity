@@ -2,7 +2,8 @@
     "name": "Sindy.Editor",
     "rootNamespace": "Sindy",
     "references": [
-        "Sindy"
+        "Sindy",
+        "Unity.TextMeshPro"
     ],
     "includePlatforms": [
         "Editor"
