@@ -4,7 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     /// <summary>
     /// Unity 배치 모드 태스크의 베이스 클래스.

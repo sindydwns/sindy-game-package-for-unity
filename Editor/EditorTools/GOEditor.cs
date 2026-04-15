@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     /// <summary>
     /// GameObject와 컴포넌트를 메서드 체이닝으로 편집하는 빌더.
@@ -56,7 +56,7 @@ namespace Sindy.Editor.SceneTools
             _go = go;
         }
 
-        // ── 내부 팩토리: SceneEditor / PrefabEdit / Child() 에서만 사용 ─────
+        // ── 내부 팩토리: SceneEditor / PrefabEditor / Child() 에서만 사용 ─────
 
         /// <summary>씬 루트 기준 경로로 GO를 탐색하거나 생성합니다.</summary>
         internal static GOEditor GetOrCreate(Scene scene, string path)
@@ -123,7 +123,7 @@ namespace Sindy.Editor.SceneTools
             return new GOEditor(current.gameObject);
         }
 
-        /// <summary>기존 GameObject를 직접 래핑합니다. (PrefabEdit.Root() 용)</summary>
+        /// <summary>기존 GameObject를 직접 래핑합니다. (PrefabEditor.Root() 용)</summary>
         internal static GOEditor For(GameObject go)
         {
             if (go == null) throw new ArgumentNullException(nameof(go));
@@ -403,7 +403,7 @@ namespace Sindy.Editor.SceneTools
         }
     }
 
-    // ── 내부 공유 유틸: GOEditor / SOEdit 모두 사용 ──────────────────────────
+    // ── 내부 공유 유틸: GOEditor / SOEditor 모두 사용 ──────────────────────────
 
     /// <summary>SerializedProperty 경로 탐색 공유 유틸</summary>
     internal static class SOPropertyHelper

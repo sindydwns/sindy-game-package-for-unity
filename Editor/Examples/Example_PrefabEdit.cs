@@ -1,7 +1,7 @@
 // ────────────────────────────────────────────────────────────────────────────
-// 예제 B — 프리팹 편집 (PrefabEdit / GOEditor / AssetFinder)
+// 예제 B — 프리팹 편집 (PrefabEditor / GOEditor / AssetFinder)
 //
-// 구현 파일: Editor/SceneEditor/PrefabEdit.cs, GOEditor.cs, AssetFinder.cs
+// 구현 파일: Editor/EditorTools/PrefabEditor.cs, GOEditor.cs, AssetFinder.cs
 //
 // 전제: 아래 경로에 편집 대상 프리팹이 존재해야 합니다.
 //   GaugePrefabPath — GaugeComponent가 붙은 프리팹
@@ -11,7 +11,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
-using Sindy.Editor.SceneTools;
+using Sindy.Editor.EditorTools;
 using Sindy.View.Components;
 using TMPro;
 using UnityEditor;
@@ -21,7 +21,7 @@ using UnityEngine.UI;
 namespace Sindy.Editor.Examples
 {
     /// <summary>
-    /// 예제 B — PrefabEdit, GOEditor 사용법
+    /// 예제 B — PrefabEditor, GOEditor 사용법
     ///
     /// 시나리오:
     ///   (1) AssetFinder로 GaugeComponent 프리팹을 찾아 fill 색상을 변경
@@ -76,12 +76,12 @@ namespace Sindy.Editor.Examples
         private static void EditGaugePrefab(string prefabPath)
         {
             // Dispose 시 SaveAsPrefabAsset + UnloadPrefabContents 자동 실행.
-            using (var p = PrefabEdit.Open(prefabPath))
+            using (var p = PrefabEditor.Open(prefabPath))
             {
                 if (p == null) return;
 
                 // ── 루트 GO의 GaugeComponent 편집 ────────────────────────────
-                // p.Root(): PrefabEdit.RootObject에 대한 GOEditor 단축 표현.
+                // p.Root(): PrefabEditor.RootObject에 대한 GOEditor 단축 표현.
                 p.Root()
                     .WithComp<GaugeComponent>()
                     .Apply();
@@ -114,7 +114,7 @@ namespace Sindy.Editor.Examples
         /// </summary>
         private static void EditLabelPrefab(string prefabPath)
         {
-            using (var p = PrefabEdit.Open(prefabPath))
+            using (var p = PrefabEditor.Open(prefabPath))
             {
                 if (p == null) return;
 
@@ -162,7 +162,7 @@ namespace Sindy.Editor.Examples
             {
                 string path = AssetDatabase.GetAssetPath(go);
 
-                using (var p = PrefabEdit.Open(path))
+                using (var p = PrefabEditor.Open(path))
                 {
                     if (p == null) continue;
 

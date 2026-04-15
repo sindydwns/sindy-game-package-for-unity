@@ -18,7 +18,7 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     [InitializeOnLoad]
     public static class EditorCommandWatcher

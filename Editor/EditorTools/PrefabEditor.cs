@@ -3,7 +3,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     /// <summary>
     /// 프리팹을 안전하게 편집하는 컨텍스트 래퍼.
@@ -13,7 +13,7 @@ namespace Sindy.Editor.SceneTools
     /// </para>
     /// <example>
     /// <code>
-    /// using (var p = PrefabEdit.Open("Assets/.../MyPrefab.prefab"))
+    /// using (var p = PrefabEditor.Open("Assets/.../MyPrefab.prefab"))
     /// {
     ///     if (p == null) return;
     ///
@@ -37,7 +37,7 @@ namespace Sindy.Editor.SceneTools
     /// </code>
     /// </example>
     /// </summary>
-    public sealed class PrefabEdit : IDisposable
+    public sealed class PrefabEditor : IDisposable
     {
         private readonly string _assetPath;
         private GameObject _root;
@@ -50,7 +50,7 @@ namespace Sindy.Editor.SceneTools
 
         // ── 생성자 ────────────────────────────────────────────────────────────
 
-        private PrefabEdit(string assetPath, GameObject root)
+        private PrefabEditor(string assetPath, GameObject root)
         {
             _assetPath = assetPath;
             _root = root;
@@ -63,7 +63,7 @@ namespace Sindy.Editor.SceneTools
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .prefab 파일 경로</param>
         /// <returns>편집 컨텍스트. 경로 오류 또는 로드 실패 시 null.</returns>
-        public static PrefabEdit Open(string assetPath)
+        public static PrefabEditor Open(string assetPath)
         {
             if (string.IsNullOrEmpty(assetPath) ||
                 !assetPath.EndsWith(".prefab", StringComparison.OrdinalIgnoreCase))
@@ -79,8 +79,8 @@ namespace Sindy.Editor.SceneTools
                 return null;
             }
 
-            Debug.Log($"[PrefabEdit] 프리팹 로드됨: {assetPath}");
-            return new PrefabEdit(assetPath, root);
+            Debug.Log($"[PrefabEditor] 프리팹 로드됨: {assetPath}");
+            return new PrefabEditor(assetPath, root);
         }
 
         // ── 계층 탐색 ─────────────────────────────────────────────────────────
@@ -121,7 +121,7 @@ namespace Sindy.Editor.SceneTools
             PrefabUtility.SaveAsPrefabAsset(_root, _assetPath);
             PrefabUtility.UnloadPrefabContents(_root);
             _root = null;
-            Debug.Log($"[PrefabEdit] 프리팹 저장 및 언로드 완료: {_assetPath}");
+            Debug.Log($"[PrefabEditor] 프리팹 저장 및 언로드 완료: {_assetPath}");
         }
     }
 }

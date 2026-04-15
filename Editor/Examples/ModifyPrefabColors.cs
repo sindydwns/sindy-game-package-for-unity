@@ -12,7 +12,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Sindy.Editor.SceneTools;
+using Sindy.Editor.EditorTools;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -50,7 +50,7 @@ namespace Sindy.Editor.Examples
                 string path = $"{PrefabFolder}/{name}.prefab";
                 var prefabResult = new PrefabColorResult { prefab = name, changes = new List<ColorChange>() };
 
-                using (var p = PrefabEdit.Open(path))
+                using (var p = PrefabEditor.Open(path))
                 {
                     if (p == null)
                     {

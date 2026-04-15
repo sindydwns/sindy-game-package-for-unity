@@ -4,7 +4,7 @@ using System.Text;
 using UnityEditor;
 using UnityEngine;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     /// <summary>
     /// 컴포넌트의 SerializedProperty 경로 목록을 출력하는 진단 유틸리티.

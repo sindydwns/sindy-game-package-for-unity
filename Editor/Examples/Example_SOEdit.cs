@@ -1,11 +1,11 @@
 // ────────────────────────────────────────────────────────────────────────────
-// 예제 C — ScriptableObject 편집 (SOEdit / AssetFinder)
+// 예제 C — ScriptableObject 편집 (SOEditor / AssetFinder)
 //
-// 구현 파일: Editor/SceneEditor/SOEdit.cs, AssetFinder.cs
+// 구현 파일: Editor/EditorTools/SOEditor.cs, AssetFinder.cs
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
-using Sindy.Editor.SceneTools;
+using Sindy.Editor.EditorTools;
 using Sindy.Scriptables;
 using UnityEditor;
 using UnityEngine;
@@ -13,32 +13,32 @@ using UnityEngine;
 namespace Sindy.Editor.Examples
 {
     /// <summary>
-    /// 예제 C — SOEdit, AssetFinder SO 탐색 사용법
+    /// 예제 C — SOEditor, AssetFinder SO 탐색 사용법
     ///
     /// 시나리오:
-    ///   (1) SOEdit.Create()로 ScriptableObject 에셋을 새로 생성하고 필드 설정
-    ///   (2) SOEdit.Open()으로 기존 에셋을 로드하여 편집
+    ///   (1) SOEditor.Create()로 ScriptableObject 에셋을 새로 생성하고 필드 설정
+    ///   (2) SOEditor.Open()으로 기존 에셋을 로드하여 편집
     ///   (3) AssetFinder.AllAssets&lt;T&gt;()로 탐색 후 일괄 편집
     ///   (4) 중첩 경로(dot notation) 사용 예시
     ///
     /// Menu: Sindy/Examples/C - SO Edit
     /// </summary>
-    public static class Example_SOEdit
+    public static class Example_SOEditor
     {
         private const string SOOutputFolder = "Assets/sindy-game-package-for-unity/Tests/Runtime";
 
         // ─────────────────────────────────────────────────────────────────────
-        // (1) 새 ScriptableObject 에셋 생성 + SOEdit으로 필드 설정
+        // (1) 새 ScriptableObject 에셋 생성 + SOEditor으로 필드 설정
         // ─────────────────────────────────────────────────────────────────────
 
         [MenuItem("Sindy/Examples/C - SO Create & Edit")]
         public static void CreateAndEdit()
         {
-            // ── SOEdit.Create(): CreateInstance + CreateAsset + SerializedObject.Update 자동 처리 ──
+            // ── SOEditor.Create(): CreateInstance + CreateAsset + SerializedObject.Update 자동 처리 ──
             // Dispose 시 AssetDatabase.SaveAssets() 자동 호출.
             // Apply() 없이 Dispose하면 LogWarning 출력 (미저장 경고).
 
-            using (var so = SOEdit<IntVariable>.Create($"{SOOutputFolder}/Example_IntVariable.asset"))
+            using (var so = SOEditor<IntVariable>.Create($"{SOOutputFolder}/Example_IntVariable.asset"))
             {
                 // ScriptableObjectVariable<T>.Value  → 직렬화 이름: "Value"  (대문자, public)
                 // ScriptableObjectVariable<T>.description → "description" (소문자, public)
@@ -47,14 +47,14 @@ namespace Sindy.Editor.Examples
                   .Apply();
             }
 
-            using (var so = SOEdit<FloatVariable>.Create($"{SOOutputFolder}/Example_FloatVariable.asset"))
+            using (var so = SOEditor<FloatVariable>.Create($"{SOOutputFolder}/Example_FloatVariable.asset"))
             {
                 so.SOFloat("Value", 0.75f)
                   .SOStr("description", "예제용 퍼센트 값 (0.0 ~ 1.0)")
                   .Apply();
             }
 
-            using (var so = SOEdit<BoolVariable>.Create($"{SOOutputFolder}/Example_BoolVariable.asset"))
+            using (var so = SOEditor<BoolVariable>.Create($"{SOOutputFolder}/Example_BoolVariable.asset"))
             {
                 so.SOBool("Value", true)
                   .SOStr("description", "예제용 플래그")
@@ -73,7 +73,7 @@ namespace Sindy.Editor.Examples
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // (2) 기존 SO 에셋 로드 + SOEdit으로 편집
+        // (2) 기존 SO 에셋 로드 + SOEditor으로 편집
         // ─────────────────────────────────────────────────────────────────────
 
         [MenuItem("Sindy/Examples/C - SO Load & Edit")]
@@ -81,9 +81,9 @@ namespace Sindy.Editor.Examples
         {
             string path = $"{SOOutputFolder}/Example_IntVariable.asset";
 
-            // ── SOEdit.Open(): LoadAssetAtPath<T> + SerializedObject.Update 자동 처리 ──
+            // ── SOEditor.Open(): LoadAssetAtPath<T> + SerializedObject.Update 자동 처리 ──
             // 로드 실패 시 null 반환 → null 체크 필수.
-            using (var so = SOEdit<IntVariable>.Open(path))
+            using (var so = SOEditor<IntVariable>.Open(path))
             {
                 if (so == null)
                 {
@@ -118,7 +118,7 @@ namespace Sindy.Editor.Examples
             {
                 string assetPath = AssetDatabase.GetAssetPath(floatVar);
 
-                using (var so = SOEdit<FloatVariable>.Open(assetPath))
+                using (var so = SOEditor<FloatVariable>.Open(assetPath))
                 {
                     if (so == null) continue;
 
@@ -154,7 +154,7 @@ namespace Sindy.Editor.Examples
             //
             // "필드.서브필드" 경로로 한 줄에 접근 가능:
             string assetPath = AssetDatabase.GetAssetPath((UnityEngine.Object)targetSO);
-            using (var so = SOEdit<IntVariable>.Open(assetPath))
+            using (var so = SOEditor<IntVariable>.Open(assetPath))
             {
                 if (so == null) return;
 

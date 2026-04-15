@@ -5,7 +5,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
-using Sindy.Editor.SceneTools;
+using Sindy.Editor.EditorTools;
 using TMPro;
 using UnityEditor;
 using UnityEngine;

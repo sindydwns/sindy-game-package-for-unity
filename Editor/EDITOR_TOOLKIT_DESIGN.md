@@ -25,8 +25,8 @@
 | `SceneEditor` | `SceneEditor.cs` | 씬 열기/저장 컨텍스트 래퍼 (IDisposable) |
 | `GOEditor` | `GOEditor.cs` | GameObject 계층 탐색 + 컴포넌트 필드 편집 빌더 |
 | `SOPropertyHelper` | `GOEditor.cs` (내부) | SerializedProperty 경로 탐색 공유 유틸 |
-| `PrefabEdit` | `PrefabEdit.cs` | 프리팹 로드/편집/저장 컨텍스트 래퍼 (IDisposable) |
-| `SOEdit<T>` | `SOEdit.cs` | ScriptableObject 편집 컨텍스트 래퍼 (IDisposable) |
+| `PrefabEditor` | `PrefabEditor.cs` | 프리팹 로드/편집/저장 컨텍스트 래퍼 (IDisposable) |
+| `SOEditor<T>` | `SOEditor.cs` | ScriptableObject 편집 컨텍스트 래퍼 (IDisposable) |
 | `AssetFinder` | `AssetFinder.cs` | AssetDatabase 기반 프리팹·SO 탐색 유틸 (캐시 포함) |
 | `FieldPeeker` | `FieldPeeker.cs` | SerializedProperty 경로 목록 출력 진단 유틸 |
 | `FieldPeekerWindow` | `FieldPeeker.cs` | FieldPeeker GUI 버전 EditorWindow |
@@ -40,12 +40,12 @@
 SceneEditor ──┬─→ GOEditor (GetOrCreate / FindOnly)
               └─→ GOEditor (GOFind → null-safe)
 
-PrefabEdit  ──┬─→ GOEditor (GO / GOFind / Root)
+PrefabEditor──┬─→ GOEditor (GO / GOFind / Root)
               └─→ GOEditor.Child / ChildFind
 
-SOEdit<T>   ──→  SO* 메서드 + Apply() + Dispose(SaveAssets)
+SOEditor<T> ──→  SO* 메서드 + Apply() + Dispose(SaveAssets)
 
-AssetFinder ──→  SceneEditor / PrefabEdit 에서 경로 또는 참조를 얻을 때 사용
+AssetFinder ──→  SceneEditor / PrefabEditor 에서 경로 또는 참조를 얻을 때 사용
 
 BatchEntryPoint ←── SetupShowcaseTask (예시 상속)
 BatchRunner     ──→  Unity 배치 서브프로세스 실행
@@ -60,7 +60,7 @@ EditorCommandWatcher ──→  IPC: Temp/sindy_cmd.json 폴링 → 리플렉션
 ### 2-1. `SceneEditor`
 
 ```csharp
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 
 public sealed class SceneEditor : IDisposable
 {
@@ -167,17 +167,17 @@ public sealed class GOEditor : IDisposable
 
 ---
 
-### 2-3. `PrefabEdit`
+### 2-3. `PrefabEditor`
 
 ```csharp
-public sealed class PrefabEdit : IDisposable
+public sealed class PrefabEditor : IDisposable
 {
     // ── 프로퍼티
     public GameObject RootObject { get; }
 
     // ── 팩토리
     /// 프리팹 로드 (LoadPrefabContents). 실패 시 null.
-    public static PrefabEdit Open(string assetPath);
+    public static PrefabEditor Open(string assetPath);
 
     // ── 계층 탐색
     /// 루트 기준 상대 경로로 자식 GO 탐색/생성.
@@ -197,35 +197,35 @@ public sealed class PrefabEdit : IDisposable
 
 ---
 
-### 2-4. `SOEdit<T>`
+### 2-4. `SOEditor<T>`
 
 ```csharp
-public sealed class SOEdit<T> : IDisposable where T : ScriptableObject
+public sealed class SOEditor<T> : IDisposable where T : ScriptableObject
 {
     // ── 프로퍼티
     public T Asset { get; }
 
     // ── 팩토리
     /// 기존 에셋 로드. 실패 시 null.
-    public static SOEdit<T> Open(string assetPath);
+    public static SOEditor<T> Open(string assetPath);
 
     /// 새 에셋 생성 (이미 있으면 덮어씀).
-    public static SOEdit<T> Create(string assetPath);
+    public static SOEditor<T> Create(string assetPath);
 
-    // ── 필드 세터 (모두 SOEdit<T> 반환 — 체이닝 가능)
-    public SOEdit<T> SORef     (string path, UnityEngine.Object value, bool ignoreNullWarning = false);
-    public SOEdit<T> SOStr     (string path, string value);
-    public SOEdit<T> SOBool    (string path, bool value);
-    public SOEdit<T> SOInt     (string path, int value);
-    public SOEdit<T> SOLong    (string path, long value);
-    public SOEdit<T> SOFloat   (string path, float value);
-    public SOEdit<T> SODouble  (string path, double value);
-    public SOEdit<T> SOEnum    (string path, int value);
-    public SOEdit<T> SOColor   (string path, Color value);
-    public SOEdit<T> SOVector2 (string path, Vector2 value);
-    public SOEdit<T> SOVector3 (string path, Vector3 value);
-    public SOEdit<T> SOVector4 (string path, Vector4 value);
-    public SOEdit<T> SOQuaternion(string path, Quaternion value);
+    // ── 필드 세터 (모두 SOEditor<T> 반환 — 체이닝 가능)
+    public SOEditor<T> SORef     (string path, UnityEngine.Object value, bool ignoreNullWarning = false);
+    public SOEditor<T> SOStr     (string path, string value);
+    public SOEditor<T> SOBool    (string path, bool value);
+    public SOEditor<T> SOInt     (string path, int value);
+    public SOEditor<T> SOLong    (string path, long value);
+    public SOEditor<T> SOFloat   (string path, float value);
+    public SOEditor<T> SODouble  (string path, double value);
+    public SOEditor<T> SOEnum    (string path, int value);
+    public SOEditor<T> SOColor   (string path, Color value);
+    public SOEditor<T> SOVector2 (string path, Vector2 value);
+    public SOEditor<T> SOVector3 (string path, Vector3 value);
+    public SOEditor<T> SOVector4 (string path, Vector4 value);
+    public SOEditor<T> SOQuaternion(string path, Quaternion value);
 
     // ── 커밋
     /// ApplyModifiedProperties() + SetDirty(). Dispose 시 SaveAssets() 자동 호출.
@@ -240,6 +240,8 @@ public sealed class SOEdit<T> : IDisposable where T : ScriptableObject
 ---
 
 ### 2-5. `AssetFinder`
+
+
 
 ```csharp
 public static class AssetFinder
@@ -474,8 +476,8 @@ public static class QuickFix
 | 작업 | 사용 클래스 |
 |------|------------|
 | 씬 GO 추가 / 컴포넌트 설정 | `SceneEditor` + `GOEditor` |
-| 프리팹 편집 | `PrefabEdit` + `GOEditor` |
-| ScriptableObject 값 변경 | `SOEdit<T>` |
+| 프리팹 편집 | `PrefabEditor` + `GOEditor` |
+| ScriptableObject 값 변경 | `SOEditor<T>` |
 | 에셋 경로·참조 탐색 | `AssetFinder` |
 | 씬 하이라키 읽기 | `ReadSceneHierarchy.Execute` (IPC) |
 | 직렬화 필드명 확인 | `FieldPeeker` 또는 `Sindy/Tools/Field Peeker Window` |
@@ -555,13 +557,14 @@ Unity 빌트인 컴포넌트는 내부 직렬화 필드명이 프로퍼티명과
 - [x] `GOEditor.Child()` / `ChildFind()` — 현재 GO 기준 상대 경로 탐색
 - [x] `GOEditor` SO* 전체 메서드 (13종) 구현됨
 - [x] `GOEditor.Dispose()` — Apply() 없이 미저장 시 LogWarning
-- [x] `PrefabEdit.Open()` — LoadPrefabContents, 실패 시 null
-- [x] `PrefabEdit.Dispose()` — SaveAsPrefabAsset + UnloadPrefabContents 자동
-- [x] `PrefabEdit.Root()` — RootObject에 대한 GOEditor 반환
-- [x] `SOEdit<T>.Create()` — CreateInstance + CreateAsset
-- [x] `SOEdit<T>.Open()` — LoadAssetAtPath, 실패 시 null
-- [x] `SOEdit<T>.Dispose()` — Apply() 후 SaveAssets 자동, 미적용 시 LogWarning
+- [x] `PrefabEditor.Open()` — LoadPrefabContents, 실패 시 null
+- [x] `PrefabEditor.Dispose()` — SaveAsPrefabAsset + UnloadPrefabContents 자동
+- [x] `PrefabEditor.Root()` — RootObject에 대한 GOEditor 반환
+- [x] `SOEditor<T>.Create()` — CreateInstance + CreateAsset
+- [x] `SOEditor<T>.Open()` — LoadAssetAtPath, 실패 시 null
+- [x] `SOEditor<T>.Dispose()` — Apply() 후 SaveAssets 자동, 미적용 시 LogWarning
 - [x] `AssetFinder.AllPrefabs<T>()` — 에디터 세션 캐시 포함
+
 - [x] `AssetFinder.Prefab(string, hint)` — FullName + 이름 힌트 탐색
 - [x] `AssetFinder.AllAssets<T>()` — SO 탐색 + 캐시
 - [x] `FieldPeeker.Print<T>()` / `FieldPeekerWindow` 구현됨
@@ -580,7 +583,7 @@ Unity 빌트인 컴포넌트는 내부 직렬화 필드명이 프로퍼티명과
 - [ ] `Sindy/Tools/Field Peeker Window` 동작 확인
 - [ ] `sindy_cmd.sh "Sindy.Editor.Examples.BatchTest.Ping"` IPC 왕복 확인
 - [ ] `GOEditor` Apply() 누락 경고 로그 출력 확인
-- [ ] `SOEdit` Apply() 누락 경고 로그 출력 확인
+- [ ] `SOEditor` Apply() 누락 경고 로그 출력 확인
 - [ ] `GOFind()` 실패 경고 메시지 형식 확인
 
 ---
@@ -605,11 +608,11 @@ SindyGamePackage/
 │
 └── Assets/sindy-game-package-for-unity/Editor/
     ├── EDITOR_TOOLKIT_DESIGN.md  ← 이 파일
-    ├── SceneEditor/
+    ├── EditorTools/
     │   ├── SceneEditor.cs         — 씬 열기/저장 컨텍스트
     │   ├── GOEditor.cs            — GO 체인 빌더 + SOPropertyHelper
-    │   ├── PrefabEdit.cs          — 프리팹 편집 컨텍스트
-    │   ├── SOEdit.cs              — ScriptableObject 편집 컨텍스트
+    │   ├── PrefabEditor.cs        — 프리팹 편집 컨텍스트
+    │   ├── SOEditor.cs            — ScriptableObject 편집 컨텍스트
     │   ├── AssetFinder.cs         — 프리팹/SO 탐색 유틸 (캐시)
     │   ├── FieldPeeker.cs         — 직렬화 경로 조회 도구 + EditorWindow
     │   ├── EditorCommandWatcher.cs — IPC 폴링 시스템 [InitializeOnLoad]
@@ -617,8 +620,8 @@ SindyGamePackage/
     │   └── BatchRunner.cs         — Unity 배치 서브프로세스 실행 헬퍼
     ├── Examples/
     │   ├── Example_SceneEdit.cs   — 예제 A: SceneEditor + GOEditor + AssetFinder
-    │   ├── Example_PrefabEdit.cs  — 예제 B: PrefabEdit + GOEditor + AssetFinder
-    │   ├── Example_SOEdit.cs      — 예제 C: SOEdit + AssetFinder
+    │   ├── Example_PrefabEdit.cs  — 예제 B: PrefabEditor + GOEditor + AssetFinder
+    │   ├── Example_SOEdit.cs      — 예제 C: SOEditor + AssetFinder
     │   └── Example_BatchTask.cs   — 예제 D: BatchTest.Ping, SetupShowcaseTask,
     │                                         ReadSceneHierarchy
     └── Sindy.Editor.asmdef

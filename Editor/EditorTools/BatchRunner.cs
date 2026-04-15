@@ -7,7 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     /// <summary>
     /// 에디터에서 Unity 배치 모드 서브프로세스를 실행하는 헬퍼.

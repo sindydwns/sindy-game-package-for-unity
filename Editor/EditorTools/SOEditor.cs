@@ -4,19 +4,19 @@ using System.Runtime.ExceptionServices;
 using UnityEditor;
 using UnityEngine;
 
-namespace Sindy.Editor.SceneTools
+namespace Sindy.Editor.EditorTools
 {
     /// <summary>
     /// ScriptableObject 에셋을 안전하게 편집하는 컨텍스트 래퍼.
     /// <para>
-    /// PrefabEdit / SceneEditor와 동일한 IDisposable + SO* 체이닝 패턴을 사용합니다.
+    /// PrefabEditor / SceneEditor와 동일한 IDisposable + SO* 체이닝 패턴을 사용합니다.
     /// Apply() 없이 Dispose되면 미저장 변경사항에 대해 LogWarning이 출력됩니다.
     /// Dispose 시 AssetDatabase.SaveAssets()가 자동으로 호출됩니다.
     /// </para>
     /// <example>
     /// <code>
     /// // 기존 에셋 열기
-    /// using (var so = SOEdit&lt;IntVariable&gt;.Open("Assets/.../MyInt.asset"))
+    /// using (var so = SOEditor&lt;IntVariable&gt;.Open("Assets/.../MyInt.asset"))
     /// {
     ///     if (so == null) return;
     ///     so.SOInt("Value", 42)
@@ -26,14 +26,14 @@ namespace Sindy.Editor.SceneTools
     /// // Dispose → AssetDatabase.SaveAssets() 자동 호출
     ///
     /// // 새 에셋 생성
-    /// using (var so = SOEdit&lt;FloatVariable&gt;.Create("Assets/.../NewFloat.asset"))
+    /// using (var so = SOEditor&lt;FloatVariable&gt;.Create("Assets/.../NewFloat.asset"))
     /// {
     ///     so.SOFloat("Value", 0.5f).Apply();
     /// }
     /// </code>
     /// </example>
     /// </summary>
-    public sealed class SOEdit<T> : IDisposable where T : ScriptableObject
+    public sealed class SOEditor<T> : IDisposable where T : ScriptableObject
     {
         private readonly T _asset;
         private readonly SerializedObject _so;
@@ -47,7 +47,7 @@ namespace Sindy.Editor.SceneTools
 
         // ── 생성자 ────────────────────────────────────────────────────────────
 
-        private SOEdit(T asset)
+        private SOEditor(T asset)
         {
             _asset = asset;
             _so = new SerializedObject(asset);
@@ -61,17 +61,17 @@ namespace Sindy.Editor.SceneTools
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .asset 파일 경로</param>
         /// <returns>편집 컨텍스트. 로드 실패 시 null.</returns>
-        public static SOEdit<T> Open(string assetPath)
+        public static SOEditor<T> Open(string assetPath)
         {
             var asset = AssetDatabase.LoadAssetAtPath<T>(assetPath);
             if (asset == null)
             {
-                Debug.LogError($"[SOEdit] 에셋을 로드할 수 없습니다: {assetPath}\n" +
+                Debug.LogError($"[SOEditor] 에셋을 로드할 수 없습니다: {assetPath}\n" +
                                $"경로를 확인하거나 AssetFinder.Asset<{typeof(T).Name}>()을 사용하세요.");
                 return null;
             }
-            Debug.Log($"[SOEdit] 에셋 로드됨: {assetPath}");
-            return new SOEdit<T>(asset);
+            Debug.Log($"[SOEditor] 에셋 로드됨: {assetPath}");
+            return new SOEditor<T>(asset);
         }
 
         /// <summary>
@@ -80,12 +80,12 @@ namespace Sindy.Editor.SceneTools
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .asset 파일 경로</param>
         /// <returns>편집 컨텍스트.</returns>
-        public static SOEdit<T> Create(string assetPath)
+        public static SOEditor<T> Create(string assetPath)
         {
             var asset = ScriptableObject.CreateInstance<T>();
             AssetDatabase.CreateAsset(asset, assetPath);
-            Debug.Log($"[SOEdit] 에셋 생성됨: {assetPath}");
-            return new SOEdit<T>(asset);
+            Debug.Log($"[SOEditor] 에셋 생성됨: {assetPath}");
+            return new SOEditor<T>(asset);
         }
 
         // ── 필드 세터 ─────────────────────────────────────────────────────────
@@ -93,47 +93,47 @@ namespace Sindy.Editor.SceneTools
         // public 필드는 선언명 그대로 사용 (예: "Value", "description").
         // [SerializeField] private 필드도 선언명 그대로 사용.
 
-        public SOEdit<T> SORef(string path, UnityEngine.Object value, bool ignoreNullWarning = false)
+        public SOEditor<T> SORef(string path, UnityEngine.Object value, bool ignoreNullWarning = false)
         {
             if (value == null && !ignoreNullWarning)
-                Debug.LogWarning($"[SOEdit] '{_asset.name}':{path} — null 참조가 설정됩니다.");
+                Debug.LogWarning($"[SOEditor] '{_asset.name}':{path} — null 참조가 설정됩니다.");
             return SetProperty(path, p => p.objectReferenceValue = value);
         }
 
-        public SOEdit<T> SOStr(string path, string value)
+        public SOEditor<T> SOStr(string path, string value)
             => SetProperty(path, p => p.stringValue = value);
 
-        public SOEdit<T> SOBool(string path, bool value)
+        public SOEditor<T> SOBool(string path, bool value)
             => SetProperty(path, p => p.boolValue = value);
 
-        public SOEdit<T> SOInt(string path, int value)
+        public SOEditor<T> SOInt(string path, int value)
             => SetProperty(path, p => p.intValue = value);
 
-        public SOEdit<T> SOLong(string path, long value)
+        public SOEditor<T> SOLong(string path, long value)
             => SetProperty(path, p => p.longValue = value);
 
-        public SOEdit<T> SOFloat(string path, float value)
+        public SOEditor<T> SOFloat(string path, float value)
             => SetProperty(path, p => p.floatValue = value);
 
-        public SOEdit<T> SODouble(string path, double value)
+        public SOEditor<T> SODouble(string path, double value)
             => SetProperty(path, p => p.doubleValue = value);
 
-        public SOEdit<T> SOEnum(string path, int value)
+        public SOEditor<T> SOEnum(string path, int value)
             => SetProperty(path, p => p.enumValueIndex = value);
 
-        public SOEdit<T> SOColor(string path, Color value)
+        public SOEditor<T> SOColor(string path, Color value)
             => SetProperty(path, p => p.colorValue = value);
 
-        public SOEdit<T> SOVector2(string path, Vector2 value)
+        public SOEditor<T> SOVector2(string path, Vector2 value)
             => SetProperty(path, p => p.vector2Value = value);
 
-        public SOEdit<T> SOVector3(string path, Vector3 value)
+        public SOEditor<T> SOVector3(string path, Vector3 value)
             => SetProperty(path, p => p.vector3Value = value);
 
-        public SOEdit<T> SOVector4(string path, Vector4 value)
+        public SOEditor<T> SOVector4(string path, Vector4 value)
             => SetProperty(path, p => p.vector4Value = value);
 
-        public SOEdit<T> SOQuaternion(string path, Quaternion value)
+        public SOEditor<T> SOQuaternion(string path, Quaternion value)
             => SetProperty(path, p => p.quaternionValue = value);
 
         // ── 커밋 ──────────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ namespace Sindy.Editor.SceneTools
             if (_so.hasModifiedProperties)
             {
                 Debug.LogWarning(
-                    $"[SOEdit] Apply() 호출 없이 SOEdit이 Dispose됨. " +
+                    $"[SOEditor] Apply() 호출 없이 SOEditor이 Dispose됨. " +
                     $"변경사항이 저장되지 않았습니다. " +
                     $"대상: '{_asset?.name ?? "null"}' ({typeof(T).Name})");
                 return;
@@ -174,13 +174,13 @@ namespace Sindy.Editor.SceneTools
             if (_wasApplied && _asset != null)
             {
                 AssetDatabase.SaveAssets();
-                Debug.Log($"[SOEdit] 에셋 저장 완료: {AssetDatabase.GetAssetPath(_asset)}");
+                Debug.Log($"[SOEditor] 에셋 저장 완료: {AssetDatabase.GetAssetPath(_asset)}");
             }
         }
 
         // ── 내부 헬퍼 ─────────────────────────────────────────────────────────
 
-        private SOEdit<T> SetProperty(string path, Action<SerializedProperty> setter)
+        private SOEditor<T> SetProperty(string path, Action<SerializedProperty> setter)
         {
             try
             {
@@ -189,7 +189,7 @@ namespace Sindy.Editor.SceneTools
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SOEdit] '{_asset.name}':{path} 설정 실패: {e.Message}");
+                Debug.LogError($"[SOEditor] '{_asset.name}':{path} 설정 실패: {e.Message}");
                 ExceptionDispatchInfo.Capture(e).Throw();
             }
             return this;
