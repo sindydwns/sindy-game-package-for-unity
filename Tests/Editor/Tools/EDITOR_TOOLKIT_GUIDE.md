@@ -2,33 +2,122 @@
 
 Unity 에디터 스크립트를 **메서드 체이닝 + IDisposable 컨텍스트** 패턴으로 작성하고, 셸/AI에서 원격으로 실행하기 위한 통합 가이드.
 
+> 모든 경로는 Unity 프로젝트 루트(`SindyGamePackage/`)를 기준으로 표기합니다.
+
+---
+
+## UPM 설치 방법
+
+### 방식 비교
+
+| 방식 | 패키지 경로 | sindy_cmd.sh 실행 |
+|------|------------|------------------|
+| **Embedded** | `Assets/sindy-game-package-for-unity/` | 직접 실행 가능 |
+| **로컬 참조** | `Packages/com.sindy/` | 직접 실행 가능 |
+| **Git URL / Registry** | `Library/PackageCache/com.sindy@version/` | ⚠️ 복사 필요 (읽기 전용) |
+
+### 1. Embedded (현재 방식)
+
+패키지 폴더를 프로젝트 `Assets/` 안에 직접 복사합니다.
+
+```
+YourProject/Assets/sindy-game-package-for-unity/
+```
+
+스크립트 실행:
+```bash
+bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "..."
+bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "..."
+```
+
+### 2. 로컬 참조 (Local file reference)
+
+`Packages/manifest.json`의 `dependencies`에 추가합니다:
+
+```json
+{
+  "dependencies": {
+    "com.sindy": "file:../../path/to/SindyGamePackage/Assets/sindy-game-package-for-unity"
+  }
+}
+```
+
+> 경로는 `Packages/` 폴더 기준 상대 경로입니다.
+
+설치 후 패키지 위치: `Packages/com.sindy/`
+
+스크립트 실행:
+```bash
+bash Packages/com.sindy/Tests/Editor/Tools/sindy_cmd.sh "..."
+bash Packages/com.sindy/Tests/Editor/Tools/batch_run.sh "..."
+```
+
+### 3. Git URL / Registry
+
+Package Manager → **Add package from git URL**:
+```
+https://github.com/your-repo/SindyGamePackage.git?path=Assets/sindy-game-package-for-unity
+```
+
+설치 후 패키지 위치: `Library/PackageCache/com.sindy@1.0.0-alpha.18/`
+
+> ⚠️ **`Library/PackageCache/`는 읽기 전용입니다.**
+> `sindy_cmd.sh` / `batch_run.sh`를 직접 실행할 수 없습니다.
+>
+> **해결 방법**: 스크립트를 자신의 프로젝트 폴더에 복사한 뒤 실행하세요:
+> ```bash
+> mkdir -p Assets/Tools
+> cp Library/PackageCache/com.sindy@*/Tests/Editor/Tools/sindy_cmd.sh Assets/Tools/
+> cp Library/PackageCache/com.sindy@*/Tests/Editor/Tools/batch_run.sh Assets/Tools/
+> ```
+> ```bash
+> bash Assets/Tools/sindy_cmd.sh "..."
+> bash Assets/Tools/batch_run.sh "..."
+> ```
+> 스크립트는 실행 위치에서 위쪽으로 올라가며 `Assets/`와 `ProjectSettings/`가 함께 있는 폴더를 프로젝트 루트로 자동 인식합니다.
+
 ---
 
 ## 빠른 시작
 
 > 지금 당장 실행해서 동작을 확인하고 싶을 때.
 
-### 에디터가 열려 있을 때 — IPC 모드
+### IPC 모드 처음 설정 (에디터가 열려 있을 때)
 
-```bash
-# 동작 확인 Ping
-bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.BatchTest.Ping"
+1. **Unity 에디터에서 프로젝트 열기**
+   `SindyGamePackage/` 폴더를 Unity Hub에서 열거나 더블클릭으로 실행
 
-# 씬 하이라키 읽기 → Temp/sindy_hierarchy.json 생성
-bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.ReadSceneHierarchy.Execute"
+2. **컴파일 완료 확인**
+   Unity Console에 다음 로그가 보이면 준비 완료:
+   ```
+   [SindyCmd] EditorCommandWatcher 시작됨. 커맨드 파일 폴링 중...
+   ```
+   > 컴파일 중에는 아무 응답이 없습니다. 하단 상태바의 스피너가 멈출 때까지 대기.
 
-# 쇼케이스 씬 세팅
-bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
-```
+3. **Ping 테스트로 동작 확인**
+   ```bash
+   # 프로젝트 루트(SindyGamePackage/)에서 실행
+   bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "Sindy.Editor.Examples.BatchTest.Ping"
+   ```
+   성공 시 `"success": true` 출력 확인.
 
-### 에디터가 닫혀 있을 때 — 배치 모드
+4. **이후 실행 예시**
+   ```bash
+   # 씬 하이라키 읽기 → Temp/sindy_hierarchy.json 생성
+   bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "Sindy.Editor.Examples.ReadSceneHierarchy.Execute"
+
+   # 쇼케이스 씬 세팅
+   bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
+   ```
+
+### 배치 모드 (에디터가 닫혀 있을 때)
 
 ```bash
 # 기본 실행
-./Tools/batch_run.sh "MyTask.Run"
+bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "MyTask.Run"
 
 # 타임아웃 지정 (초, 기본 120)
-./Tools/batch_run.sh "MyTask.Run" 180
+bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "MyTask.Run" 180
 ```
 
 ---
@@ -39,8 +128,8 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 
 | 상황 | 명령 | 특징 |
 |------|------|------|
-| 에디터 열려 있음 | `bash Tools/sindy_cmd.sh "Namespace.Class.Method"` | 에디터 상태 유지, 씬 저장·Undo·UI 반영 가능 |
-| 에디터 닫혀 있음 | `bash Tools/batch_run.sh "Class.Method"` | headless 실행, CI/CD에 적합 |
+| 에디터 열려 있음 | `bash Assets/.../Tests/Editor/Tools/sindy_cmd.sh "Namespace.Class.Method"` | 에디터 상태 유지, 씬 저장·Undo·UI 반영 가능 |
+| 에디터 닫혀 있음 | `bash Assets/.../Tests/Editor/Tools/batch_run.sh "Class.Method"` | headless 실행, CI/CD에 적합 |
 
 **IPC 모드 제약사항**
 - 메서드는 `static`, 인수 없음 형식이어야 함
@@ -53,7 +142,10 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 
 ### SceneEditor
 
-> 씬을 열고, GameObject를 탐색/생성하고, 저장할 때.
+> **이럴 때 쓴다**: 씬 파일을 열어서 GameObject 추가·수정·저장해야 할 때. 에디터 열린 상태에서 씬을 직접 수정하므로 Undo·저장 상태가 에디터에 즉시 반영됨.
+> - 새 UI 요소를 씬에 자동으로 배치할 때
+> - CI/배치 스크립트로 씬 초기 설정을 자동화할 때
+> - 여러 씬을 순회하며 특정 GO 구조를 일괄 수정할 때
 
 `namespace Sindy.Editor.EditorTools` · `sealed class SceneEditor : IDisposable`
 
@@ -65,11 +157,44 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 | `MarkDirty` | — | `void` | Dispose 시 `EditorSceneManager.SaveScene` 호출 예약 |
 | `Dispose` | — | `void` | `MarkDirty()` 호출된 경우 씬 자동 저장 |
 
+**흔한 실수**
+- `MarkDirty()` 를 빠뜨리면 Dispose 시 저장이 일어나지 않음. 변경 후 반드시 호출.
+- `GO("Canvas.Panel")` 은 없으면 자동 생성하므로, 탐색만 원하면 `GOFind` 사용.
+
+**메서드 체이닝 예제**
+
+```csharp
+using (var ctx = SceneEditor.Open("Assets/Scenes/MyScene.unity"))
+{
+    if (ctx == null) return;                        // 사용자 취소 또는 경로 오류
+
+    // 계층 경로로 GO 접근 — 없으면 자동 생성
+    ctx.GO("Canvas.HUD.Title")
+       .AddComp<TextMeshProUGUI>()
+       .SOStr("m_text", "Hello World")
+       .SOFloat("m_fontSize", 32f)
+       .SOColor("m_fontColor", Color.white)
+       .Apply();                                    // ← 반드시 호출
+
+    // 자식 GO 이동 후 별도 컴포넌트 설정
+    ctx.GO("Canvas.HUD.Background")
+       .AddComp<Image>()
+       .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
+       .Apply();
+
+    ctx.MarkDirty();                                // ← 저장 예약
+}
+// Dispose → 씬 자동 저장
+```
+
 ---
 
 ### GOEditor
 
-> GameObject에 컴포넌트를 추가하고 SerializedProperty를 수정할 때.
+> **이럴 때 쓴다**: 특정 GameObject에 컴포넌트를 추가하거나 SerializedProperty 값을 변경할 때. SceneEditor·PrefabEditor에서 반환받아 사용.
+> - 컴포넌트 필드 값을 코드로 한 번에 여러 개 초기화할 때
+> - 자식 계층 구조를 탐색하며 각각 다른 설정을 적용할 때
+> - 타입 어셈블리가 달라 제네릭 사용이 불가할 때(`AddComp(string)` 사용)
 
 `namespace Sindy.Editor.EditorTools` · `sealed class GOEditor : IDisposable`
 
@@ -97,13 +222,44 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 | `Apply` | — | `void` | `ApplyModifiedProperties()` + `SetDirty()`. **체인 마지막에 반드시 호출** |
 | `Dispose` | — | `void` | `Apply()` 없이 미저장 변경사항 있으면 LogWarning |
 
-> `AddComp<T>()` 또는 `WithComp<T>()` 호출 전에 SO* 메서드를 호출하면 `InvalidOperationException` 발생.
+**흔한 실수**
+- `AddComp<T>()` / `WithComp<T>()` **이전**에 SO* 메서드를 호출하면 `InvalidOperationException` 발생. 순서: 컴포넌트 타게팅 → SO* → Apply.
+- `Apply()` 를 빠뜨리면 변경이 적용되지 않음. `Dispose()` 시 LogWarning이 뜨지만 데이터는 저장 안 됨.
+- 어셈블리가 다른 타입은 제네릭 사용 불가 → `AddComp("Sindy.MyNS.MyComp")` 문자열 오버로드 사용.
+
+**메서드 체이닝 예제**
+
+```csharp
+// 여러 컴포넌트를 같은 GO에 순서대로 설정
+ctx.GO("PlayerRoot")
+   .AddComp<Rigidbody2D>()
+   .SOFloat("m_GravityScale", 2f)
+   .SOBool("m_IsKinematic", false)
+   .Apply()                         // Rigidbody2D 적용
+
+// Child로 자식 GO 이동
+var playerGO = ctx.GO("PlayerRoot");
+playerGO.Child("Sprite")
+        .AddComp<SpriteRenderer>()
+        .SOColor("m_Color", Color.white)
+        .Apply();
+
+// 어셈블리 경계 우회 (다른 asmdef의 타입)
+ctx.GO("UIManager")
+   .AddComp("MyGame.UI.UIManagerComponent")
+   .SORef("mainCanvas", canvas)
+   .SOBool("autoInit", true)
+   .Apply();
+```
 
 ---
 
 ### PrefabEditor
 
-> 프리팹 파일을 열고, 수정하고, 저장할 때.
+> **이럴 때 쓴다**: 프리팹 파일을 직접 열어서 수정하고 저장할 때. 씬과 무관하게 프리팹 에셋 자체를 변경.
+> - 공통 UI 프리팹의 색상·텍스트를 일괄 초기화할 때
+> - 프리팹 루트에 새 컴포넌트를 추가하거나 기본값을 세팅할 때
+> - 수십 개 프리팹에 같은 변경을 반복 적용할 때(`AssetFinder.AllPrefabs<T>`와 조합)
 
 `namespace Sindy.Editor.EditorTools` · `sealed class PrefabEditor : IDisposable`
 
@@ -115,11 +271,39 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 | `Root` | — | `GOEditor` | 프리팹 루트 GO에 대한 GOEditor 반환 |
 | `Dispose` | — | `void` | `SaveAsPrefabAsset` + `UnloadPrefabContents` 자동 호출 |
 
+**흔한 실수**
+- Dispose 시 자동 저장되므로 별도 `MarkDirty()` 불필요 (SceneEditor와 다른 점).
+- 경로가 잘못되면 `Open()`이 `null` 반환. 경로 확인 후 null 체크 필수.
+
+**메서드 체이닝 예제**
+
+```csharp
+using (var p = PrefabEditor.Open("Assets/Prefabs/MyButton.prefab"))
+{
+    if (p == null) return;
+
+    // 루트에 컴포넌트 설정
+    p.Root().WithComp<Image>()
+            .SOColor("m_Color", Color.cyan)
+            .Apply();
+
+    // 자식 GO 접근
+    p.GO("Label").AddComp<TextMeshProUGUI>()
+                 .SOStr("m_text", "Click Me")
+                 .SOFloat("m_fontSize", 18f)
+                 .Apply();
+}
+// Dispose → SaveAsPrefabAsset + UnloadPrefabContents 자동
+```
+
 ---
 
 ### SOEditor\<T\>
 
-> ScriptableObject 에셋을 생성하거나 값을 수정할 때.
+> **이럴 때 쓴다**: ScriptableObject 에셋의 값을 코드로 읽거나 수정할 때.
+> - 게임 밸런스 수치를 스크립트로 일괄 업데이트할 때
+> - 설정 에셋을 새로 생성하고 초기값을 세팅할 때
+> - `AssetFinder.AllAssets<T>()`와 조합해 모든 SO 에셋을 순회 수정할 때
 
 `namespace Sindy.Editor.EditorTools` · `sealed class SOEditor<T> : IDisposable where T : ScriptableObject`
 
@@ -131,11 +315,47 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 | `Apply` | — | `void` | `ApplyModifiedProperties()` + `SetDirty()` |
 | `Dispose` | — | `void` | `Apply()` 호출 시 `AssetDatabase.SaveAssets()`. 미적용 변경사항 있으면 LogWarning |
 
+**흔한 실수**
+- `Apply()` 없이 Dispose하면 변경사항이 디스크에 저장되지 않음.
+- `Create()`는 기존 에셋을 덮어쓰므로 경로 확인 후 사용.
+
+**메서드 체이닝 예제**
+
+```csharp
+// 기존 에셋 수정
+using (var so = SOEditor<FloatVariable>.Open("Assets/Data/Speed.asset"))
+{
+    if (so == null) return;
+    so.SOFloat("Value", 9.8f)
+      .SOStr("description", "중력 가속도")
+      .Apply();
+}
+
+// 새 에셋 생성
+using (var so = SOEditor<FloatVariable>.Create("Assets/Data/NewSpeed.asset"))
+{
+    so.SOFloat("Value", 5f)
+      .SOStr("description", "초기 속도")
+      .Apply();
+}
+
+// AllAssets로 일괄 수정
+foreach (var asset in AssetFinder.AllAssets<FloatVariable>("Assets/Data/"))
+{
+    string path = AssetDatabase.GetAssetPath(asset);
+    using var so = SOEditor<FloatVariable>.Open(path);
+    so?.SOFloat("Value", asset.Value * 1.1f).Apply(); // 모두 10% 증가
+}
+```
+
 ---
 
 ### AssetFinder
 
-> 에셋/프리팹 경로를 모를 때 타입이나 이름으로 탐색할 때.
+> **이럴 때 쓴다**: 에셋 경로를 모르거나 동적으로 찾아야 할 때. 하드코딩 경로 대신 타입·이름으로 검색.
+> - 특정 컴포넌트가 붙은 프리팹을 찾을 때
+> - 프리팹 이름 일부만 알고 정확한 경로가 기억나지 않을 때
+> - 특정 폴더 내 모든 SO 에셋을 처리할 때
 
 `namespace Sindy.Editor.EditorTools` · `static class AssetFinder`
 
@@ -150,13 +370,17 @@ bash Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
 | `AllAssets<T>` | `string inFolder = null` | `List<T>` | T 타입 SO 에셋 전체 반환 |
 | `ClearCache` | — | `void` | 에디터 세션 캐시 전체 삭제 |
 
+**흔한 실수**
+- 캐시가 있어서 새로 추가한 에셋이 탐색되지 않을 수 있음 → `AssetFinder.ClearCache()` 호출 후 재탐색.
+- `Prefab<T>` 는 T 컴포넌트 자체를 반환함 (GameObject 아님). `AllPrefabs<T>` 는 GameObject 반환.
+
 ---
 
 ### FieldPeeker
 
-> 컴포넌트의 직렬화 필드명(SerializedProperty path)을 확인할 때.
+> **이럴 때 쓴다**: SO* 메서드에 쓸 직렬화 필드명(SerializedProperty path)을 모를 때. 컴포넌트의 내부 직렬화 경로는 프로퍼티명과 다른 경우가 많음.
 
-- **메뉴**: `Sindy/Tools/Field Peeker Window` — 컴포넌트 드래그 → 경로 목록 표시 → [복사] 버튼
+- **에디터 메뉴**: `Sindy/Tools/Field Peeker Window` — 컴포넌트 드래그 → 경로 목록 표시 → [복사] 버튼
 - **코드에서**: `FieldPeeker.Print<T>(go)` 또는 `FieldPeeker.Print(component)` → Console 출력
 
 Unity 빌트인 컴포넌트 주요 필드명:
@@ -222,7 +446,7 @@ using (var so = SOEditor<FloatVariable>.Create("Assets/Data/NewSpeed.asset"))
 > 예외 처리·AssetDatabase.Refresh·종료 코드를 자동으로 처리해야 할 때.
 
 ```csharp
-// Editor/Examples/ 또는 Editor/SceneEditor/ 에 파일 생성
+// Assets/sindy-game-package-for-unity/Editor/Examples/ 에 파일 생성
 public class MyTask : BatchEntryPoint
 {
     // Unity -executeMethod MyTask.Run 으로 호출됨
@@ -316,14 +540,16 @@ EditorApplication.Exit(1); // 실패
 // EditorUtility.DisplayDialog(...)  ← 배치 모드에서 자동 무시됨
 ```
 
-### 실패 원인별 대처
+### 에러 발생 시 대처
 
-| 원인 | 대처 |
-|------|------|
-| 씬/에셋 경로 오류 | `AssetFinder`로 경로 재확인 |
-| 타입/필드명 오류 | `Field Peeker Window`로 직렬화 필드명 확인 |
-| 컴파일 에러 | 로그에서 `error CS` 검색 후 수정 |
-| 타임아웃 | 두 번째 인자로 타임아웃 값 늘리기 |
+| 증상 | 원인 | 대처 |
+|------|------|------|
+| `TIMEOUT: Unity 에디터가 N초 내에 응답하지 않았습니다` | 에디터 닫힘 / 컴파일 중 / 모달 다이얼로그 열림 | Unity 열려있는지 확인, Console에 `[SindyCmd] EditorCommandWatcher 시작됨` 로그 확인, 배치 모드라면 `batch_run.sh` 사용 |
+| `타입을 찾을 수 없습니다: Namespace.Type` | 네임스페이스·타입명 오타, 또는 컴파일 에러 | Unity Console에서 `error CS` 검색 후 수정, namespace 포함 전체 이름 재확인 |
+| `static 메서드를 찾을 수 없습니다` | 메서드가 static이 아님 또는 이름 오타 | 메서드에 `static` 키워드 추가, 대소문자 포함 이름 재확인 |
+| `NullReferenceException` 발생 | `Open()` 반환값 null 체크 누락, 또는 씬/에셋 경로 오류 | `if (ctx == null) return;` 또는 `throw` 패턴으로 null 처리, `AssetFinder`로 경로 재확인 |
+| 배치 모드 타임아웃 (`batch_run.sh`) | `EditorApplication.Exit()` 호출 누락 | `BatchEntryPoint` 사용 시 자동 처리됨, 단독 메서드면 `if (Application.isBatchMode) EditorApplication.Exit(0);` 추가 |
+| 씬/에셋 경로 오류 | 경로 오타 또는 파일 없음 | `AssetFinder`로 동적 탐색, `FieldPeeker`로 필드명 확인 |
 
 ---
 
@@ -365,29 +591,63 @@ cat Logs/batch_MyTask_Run_20250101_123456.log | grep -E "Error|Exception|FAIL"
 
 ### 파일 구조
 
+패키지 스크립트(`sindy_cmd.sh`, `batch_run.sh`)는 설치 방식에 따라 다른 경로에 위치합니다.
+스크립트는 자신의 위치에서 위쪽으로 올라가며 프로젝트 루트를 자동 탐색하므로, 어느 경로에서 실행해도 동작합니다.
+
+**Embedded 설치 시:**
 ```
-SindyGamePackage/
-├── Tools/
-│   ├── sindy_cmd.sh              ← IPC 모드 실행 스크립트
-│   └── batch_run.sh              ← 배치 모드 실행 스크립트
-├── Temp/                         ← Unity 자동 관리 (.gitignore 포함)
-│   ├── sindy_cmd.json            ← IPC 커맨드 파일 (실행 후 삭제됨)
-│   └── sindy_result.json         ← IPC 결과 파일
+YourProject/                          ← 프로젝트 루트 (Assets/, ProjectSettings/ 위치)
+├── Temp/                             ← IPC 통신 파일 (Unity 자동 관리)
+│   ├── sindy_cmd.json                ← IPC 커맨드 파일 (실행 후 삭제됨)
+│   └── sindy_result.json             ← IPC 결과 파일
 ├── Logs/
-│   ├── batch_*.log               ← Unity 전체 로그 (자동 생성)
-│   └── batch_result.txt          ← 배치 결과 요약 (자동 생성)
-└── Assets/sindy-game-package-for-unity/Editor/
-    ├── SceneEditor/
-    │   ├── EditorCommandWatcher.cs ← IPC 폴링 시스템 [InitializeOnLoad]
-    │   ├── BatchEntryPoint.cs    ← 배치 태스크 베이스 클래스
-    │   ├── SceneEditor.cs
-    │   ├── GOEditor.cs
-    │   ├── PrefabEdit.cs
-    │   ├── SOEdit.cs
-    │   └── AssetFinder.cs
-    └── Examples/
-        ├── Example_BatchTask.cs
-        ├── Example_SceneEdit.cs
-        ├── Example_PrefabEdit.cs
-        └── Example_SOEdit.cs
+│   ├── batch_*.log                   ← Unity 전체 로그 (자동 생성)
+│   └── batch_result.txt              ← 배치 결과 요약 (자동 생성)
+└── Assets/sindy-game-package-for-unity/Tests/Editor/Tools/
+    ├── sindy_cmd.sh
+    └── batch_run.sh
+```
+
+**로컬 참조 설치 시:**
+```
+YourProject/
+└── Packages/com.sindy/Tests/Editor/Tools/
+    ├── sindy_cmd.sh
+    └── batch_run.sh
+```
+
+**Git URL / Registry 설치 시 (읽기 전용 → 복사 필요):**
+```
+YourProject/
+├── Library/PackageCache/com.sindy@1.0.0-alpha.18/Tests/Editor/Tools/
+│   ├── sindy_cmd.sh   ← 읽기 전용, 직접 실행 불가
+│   └── batch_run.sh   ← 읽기 전용, 직접 실행 불가
+└── Assets/Tools/      ← 여기에 복사해서 실행
+    ├── sindy_cmd.sh
+    └── batch_run.sh
+```
+
+**패키지 내부 구조 (공통):**
+```
+<package-root>/
+├── Editor/
+│   ├── EditorTools/
+│   │   ├── EditorCommandWatcher.cs  ← IPC 폴링 시스템 [InitializeOnLoad]
+│   │   ├── BatchEntryPoint.cs       ← 배치 태스크 베이스 클래스
+│   │   ├── BatchRunner.cs           ← Unity 배치 서브프로세스 실행 헬퍼
+│   │   ├── SceneEditor.cs
+│   │   ├── GOEditor.cs
+│   │   ├── PrefabEditor.cs
+│   │   ├── SOEditor.cs
+│   │   ├── AssetFinder.cs
+│   │   └── FieldPeeker.cs
+│   └── Examples/
+│       ├── Example_BatchTask.cs
+│       ├── Example_SceneEdit.cs
+│       ├── Example_PrefabEdit.cs
+│       └── Example_SOEdit.cs
+└── Tests/Editor/Tools/
+    ├── sindy_cmd.sh
+    ├── batch_run.sh
+    └── EDITOR_TOOLKIT_GUIDE.md     ← 이 파일
 ```

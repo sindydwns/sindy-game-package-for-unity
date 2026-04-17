@@ -26,7 +26,22 @@ if [ -z "$METHOD" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_PATH="$(cd "$SCRIPT_DIR/.." && pwd)"
+find_project_root() {
+  local dir="$1"
+  while [ "$dir" != "/" ]; do
+    if [ -d "$dir/Assets" ] && [ -d "$dir/ProjectSettings" ]; then
+      echo "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  return 1
+}
+PROJECT_PATH="$(find_project_root "$SCRIPT_DIR")"
+if [ -z "$PROJECT_PATH" ]; then
+  echo "ERROR: Unity 프로젝트 루트를 찾을 수 없습니다. Assets/ 와 ProjectSettings/ 폴더가 있는 디렉토리를 찾을 수 없음." >&2
+  exit 1
+fi
 CMD_FILE="$PROJECT_PATH/Temp/sindy_cmd.json"
 RESULT_FILE="$PROJECT_PATH/Temp/sindy_result.json"
 
