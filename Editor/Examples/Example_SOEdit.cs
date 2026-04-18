@@ -25,7 +25,8 @@ namespace Sindy.Editor.Examples
     /// </summary>
     public static class Example_SOEditor
     {
-        private const string SOOutputFolder = "Assets/sindy-game-package-for-unity/Tests/Runtime";
+        private static string SOOutputFolder =>
+            PackagePathHelper.Resolve("Tests/Runtime");
 
         // ─────────────────────────────────────────────────────────────────────
         // (1) 새 ScriptableObject 에셋 생성 + SOEditor으로 필드 설정

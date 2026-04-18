@@ -32,11 +32,11 @@ namespace Sindy.Editor.Examples
     /// </summary>
     public static class Example_PrefabEdit
     {
-        private const string GaugePrefabPath =
-            "Assets/sindy-game-package-for-unity/Tests/Runtime/ComponentBuilderTest/Prefabs/Gauge.prefab";
+        private static string GaugePrefabPath =>
+            PackagePathHelper.Resolve("Tests/Runtime/ComponentBuilderTest/Prefabs/Gauge.prefab");
 
-        private const string LabelPrefabPath =
-            "Assets/sindy-game-package-for-unity/Tests/Runtime/ComponentBuilderTest/Prefabs/Label.prefab";
+        private static string LabelPrefabPath =>
+            PackagePathHelper.Resolve("Tests/Runtime/ComponentBuilderTest/Prefabs/Label.prefab");
 
         // ─────────────────────────────────────────────────────────────────────
 
@@ -57,8 +57,20 @@ namespace Sindy.Editor.Examples
         [MenuItem("Sindy/Examples/B - Prefab Edit (경로 직접 지정)")]
         public static void RunWithDirectPath()
         {
-            EditGaugePrefab(GaugePrefabPath);
-            EditLabelPrefab(LabelPrefabPath);
+            var gaugePath = GaugePrefabPath;
+            var labelPath = LabelPrefabPath;
+
+            if (!System.IO.File.Exists(gaugePath))
+            {
+                Debug.LogError(
+                    $"[Example B] 프리팹을 찾을 수 없습니다: {gaugePath}\n" +
+                    "UPM 설치 방식(Git/Local/Embedded)에 따라 경로가 다를 수 있습니다. " +
+                    "PackagePathHelper.Resolve()를 확인하세요.");
+                return;
+            }
+
+            EditGaugePrefab(gaugePath);
+            EditLabelPrefab(labelPath);
         }
 
         // ─── GaugeComponent 프리팹 편집 ──────────────────────────────────────

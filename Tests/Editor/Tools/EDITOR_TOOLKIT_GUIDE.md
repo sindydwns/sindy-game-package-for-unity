@@ -523,6 +523,26 @@ public static class QuickFix
 
 ## 주의사항
 
+### 예제 코드의 경로 해결 방식
+
+예제 코드(`Example_SceneEdit`, `Example_PrefabEdit`, `Example_SOEdit`)는 `PackagePathHelper`를 통해 설치 방식에 무관하게 경로를 해결합니다.
+
+```
+// PackagePathHelper.Resolve("Tests/Runtime/Scenes/MyScene.unity")
+//   UPM(Git/Local): "Packages/com.sindy/Tests/Runtime/Scenes/MyScene.unity"
+//   Embedded:       "Assets/sindy-game-package-for-unity/Tests/Runtime/Scenes/MyScene.unity"
+```
+
+| 설치 방식 | Packages/com.sindy/ 접근 | 에셋 쓰기 가능 |
+|----------|--------------------------|--------------|
+| Embedded | ✗ (Assets/ 폴백) | ✅ |
+| 로컬 참조 | ✅ | ✅ |
+| Git URL | ✅ (캐시 가상 경로) | ⚠️ 읽기 전용 |
+
+> **Git URL 설치 시 주의**: 패키지 폴더는 읽기 전용이므로 `SOEditor.Create()`로 패키지 내부에 에셋을 생성하면 실패합니다. 생성 경로를 프로젝트의 `Assets/` 하위로 변경하세요.
+
+---
+
 ### 배치 모드 필수 규칙
 
 ```csharp

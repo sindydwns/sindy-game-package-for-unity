@@ -25,17 +25,25 @@ namespace Sindy.Editor.Examples
     /// </summary>
     public static class Example_SceneEdit
     {
-        private const string ScenePath =
-            "Assets/sindy-game-package-for-unity/Tests/Runtime/ComponentBuilderTest" +
-            "/_test_component_builder_quick.unity";
-
         [MenuItem("Sindy/Examples/A - Scene Edit")]
         public static void Run()
         {
+            var scenePath = PackagePathHelper.Resolve(
+                "Tests/Runtime/ComponentBuilderTest/_test_component_builder_quick.unity");
+
+            if (!System.IO.File.Exists(scenePath))
+            {
+                Debug.LogError(
+                    $"[Example A] 씬을 찾을 수 없습니다: {scenePath}\n" +
+                    "UPM 설치 방식(Git/Local/Embedded)에 따라 경로가 다를 수 있습니다. " +
+                    "PackagePathHelper.Resolve()를 확인하세요.");
+                return;
+            }
+
             // ── 1. 씬 열기 ──────────────────────────────────────────────────
             // 이미 열린 씬이면 재사용. 미저장 변경사항이 있으면 사용자에게 묻는다.
             // 취소 또는 실패 시 null 반환 → null 체크 필수.
-            using (var ctx = SceneEditor.Open(ScenePath))
+            using (var ctx = SceneEditor.Open(scenePath))
             {
                 if (ctx == null) return;
 
