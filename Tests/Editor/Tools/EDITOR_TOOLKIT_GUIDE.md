@@ -1,6 +1,6 @@
 # Editor Toolkit Guide
 
-Unity 에디터 스크립트를 **메서드 체이닝 + IDisposable 컨텍스트** 패턴으로 작성하고, 셸/AI에서 원격으로 실행하기 위한 통합 가이드.
+Unity 에디터 스크립트를 **메서드 체이닝 + IDisposable 컨텍스트** 패턴으로 작성하고, HTTP/AI에서 원격으로 실행하기 위한 통합 가이드.
 
 > 모든 경로는 Unity 프로젝트 루트(`SindyGamePackage/`)를 기준으로 표기합니다.
 
@@ -8,26 +8,12 @@ Unity 에디터 스크립트를 **메서드 체이닝 + IDisposable 컨텍스트
 
 ## UPM 설치 방법
 
-### 방식 비교
-
-| 방식 | 패키지 경로 | sindy_cmd.sh 실행 |
-|------|------------|------------------|
-| **Embedded** | `Assets/sindy-game-package-for-unity/` | 직접 실행 가능 |
-| **로컬 참조** | `Packages/com.sindy/` | 직접 실행 가능 |
-| **Git URL / Registry** | `Library/PackageCache/com.sindy@version/` | ⚠️ 복사 필요 (읽기 전용) |
-
 ### 1. Embedded (현재 방식)
 
 패키지 폴더를 프로젝트 `Assets/` 안에 직접 복사합니다.
 
 ```
 YourProject/Assets/sindy-game-package-for-unity/
-```
-
-스크립트 실행:
-```bash
-bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "..."
-bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "..."
 ```
 
 ### 2. 로컬 참조 (Local file reference)
@@ -46,12 +32,6 @@ bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "..."
 
 설치 후 패키지 위치: `Packages/com.sindy/`
 
-스크립트 실행:
-```bash
-bash Packages/com.sindy/Tests/Editor/Tools/sindy_cmd.sh "..."
-bash Packages/com.sindy/Tests/Editor/Tools/batch_run.sh "..."
-```
-
 ### 3. Git URL / Registry
 
 Package Manager → **Add package from git URL**:
@@ -61,28 +41,13 @@ https://github.com/your-repo/SindyGamePackage.git?path=Assets/sindy-game-package
 
 설치 후 패키지 위치: `Library/PackageCache/com.sindy@1.0.0-alpha.18/`
 
-> ⚠️ **`Library/PackageCache/`는 읽기 전용입니다.**
-> `sindy_cmd.sh` / `batch_run.sh`를 직접 실행할 수 없습니다.
->
-> **해결 방법**: 스크립트를 자신의 프로젝트 폴더에 복사한 뒤 실행하세요:
-> ```bash
-> mkdir -p Assets/Tools
-> cp Library/PackageCache/com.sindy@*/Tests/Editor/Tools/sindy_cmd.sh Assets/Tools/
-> cp Library/PackageCache/com.sindy@*/Tests/Editor/Tools/batch_run.sh Assets/Tools/
-> ```
-> ```bash
-> bash Assets/Tools/sindy_cmd.sh "..."
-> bash Assets/Tools/batch_run.sh "..."
-> ```
-> 스크립트는 실행 위치에서 위쪽으로 올라가며 `Assets/`와 `ProjectSettings/`가 함께 있는 폴더를 프로젝트 루트로 자동 인식합니다.
-
 ---
 
 ## 빠른 시작
 
 > 지금 당장 실행해서 동작을 확인하고 싶을 때.
 
-### IPC 모드 처음 설정 (에디터가 열려 있을 때)
+### 1. HTTP 방식 (메인 — 에디터가 열려 있을 때)
 
 1. **Unity 에디터에서 프로젝트 열기**
    `SindyGamePackage/` 폴더를 Unity Hub에서 열거나 더블클릭으로 실행
@@ -90,48 +55,62 @@ https://github.com/your-repo/SindyGamePackage.git?path=Assets/sindy-game-package
 2. **컴파일 완료 확인**
    Unity Console에 다음 로그가 보이면 준비 완료:
    ```
-   [SindyCmd] EditorCommandWatcher 시작됨. 커맨드 파일 폴링 중...
+   [SindyCmd] HTTP 서버 시작됨 → http://localhost:7777
    ```
    > 컴파일 중에는 아무 응답이 없습니다. 하단 상태바의 스피너가 멈출 때까지 대기.
 
 3. **Ping 테스트로 동작 확인**
    ```bash
-   # 프로젝트 루트(SindyGamePackage/)에서 실행
-   bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "Sindy.Editor.Examples.BatchTest.Ping"
+   curl -s http://localhost:7777/ping
    ```
-   성공 시 `"success": true` 출력 확인.
+   `{"id":"","success":true,"message":"pong",...}` 출력 확인.
 
-4. **이후 실행 예시**
+4. **메서드 실행 예시**
    ```bash
+   # 동작 확인
+   curl -s http://localhost:7777/execute \
+     -H "Content-Type: application/json" \
+     -d '{"method":"Sindy.Editor.Examples.BatchTest.Ping"}'
+
    # 씬 하이라키 읽기 → Temp/sindy_hierarchy.json 생성
-   bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "Sindy.Editor.Examples.ReadSceneHierarchy.Execute"
+   curl -s http://localhost:7777/execute \
+     -H "Content-Type: application/json" \
+     -d '{"method":"Sindy.Editor.Examples.ReadSceneHierarchy.Execute"}'
 
    # 쇼케이스 씬 세팅
-   bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/sindy_cmd.sh "Sindy.Editor.Examples.SetupShowcaseTask.Run"
+   curl -s http://localhost:7777/execute \
+     -H "Content-Type: application/json" \
+     -d '{"method":"Sindy.Editor.Examples.SetupShowcaseTask.Run"}'
    ```
 
-### 배치 모드 (에디터가 닫혀 있을 때)
+포트 변경: Unity 메뉴 → **Edit > Preferences > Sindy**
+
+### 2. 배치 모드 (에디터가 닫혀 있을 때)
+
+Unity를 직접 배치 모드로 실행합니다. Unity 실행 파일 경로는 에디터 메뉴 `Sindy/Batch/▶ Show Unity Path`로 확인하거나, `BatchRunner.BuildCommand()`로 명령어 문자열을 생성할 수 있습니다.
 
 ```bash
-# 기본 실행
-bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "MyTask.Run"
-
-# 타임아웃 지정 (초, 기본 120)
-bash Assets/sindy-game-package-for-unity/Tests/Editor/Tools/batch_run.sh "MyTask.Run" 180
+# 직접 실행 예시 (Unity 경로는 환경에 따라 다름)
+"/Applications/Unity/Hub/Editor/6000.0.x/Unity.app/Contents/MacOS/Unity" \
+  -batchmode \
+  -projectPath "$(pwd)" \
+  -executeMethod MyTask.Run \
+  -quit \
+  -logFile "Logs/batch_MyTask.log"
 ```
 
 ---
 
 ## 실행 모드 선택
 
-> 어떤 스크립트로 실행할지 판단할 때.
+> 어떤 방식으로 실행할지 판단할 때.
 
-| 상황 | 명령 | 특징 |
+| 상황 | 방식 | 특징 |
 |------|------|------|
-| 에디터 열려 있음 | `bash Assets/.../Tests/Editor/Tools/sindy_cmd.sh "Namespace.Class.Method"` | 에디터 상태 유지, 씬 저장·Undo·UI 반영 가능 |
-| 에디터 닫혀 있음 | `bash Assets/.../Tests/Editor/Tools/batch_run.sh "Class.Method"` | headless 실행, CI/CD에 적합 |
+| 에디터 열려 있음 | `curl http://localhost:7777/execute` | 에디터 상태 유지, 씬 저장·Undo·UI 반영 가능 |
+| 에디터 닫혀 있음 | Unity `-batchmode -executeMethod` | headless 실행, CI/CD에 적합 |
 
-**IPC 모드 제약사항**
+**HTTP 방식 제약사항**
 - 메서드는 `static`, 인수 없음 형식이어야 함
 - `Namespace.TypeName.MethodName` 형식 (마지막 `.` 기준으로 타입/메서드 분리)
 - Unity 에디터가 열려 있고 컴파일 완료 상태여야 함
@@ -491,9 +470,9 @@ public static class QuickFix
 
 ---
 
-## IPC 실행 가능 메서드 목록
+## HTTP 실행 가능 메서드 목록
 
-> `sindy_cmd.sh`로 바로 호출할 수 있는 등록된 메서드 목록.
+> `curl http://localhost:7777/execute`로 바로 호출할 수 있는 등록된 메서드 목록.
 
 | 클래스 | 전체 경로 | 설명 |
 |--------|-----------|------|
@@ -564,31 +543,48 @@ EditorApplication.Exit(1); // 실패
 
 | 증상 | 원인 | 대처 |
 |------|------|------|
-| `TIMEOUT: Unity 에디터가 N초 내에 응답하지 않았습니다` | 에디터 닫힘 / 컴파일 중 / 모달 다이얼로그 열림 | Unity 열려있는지 확인, Console에 `[SindyCmd] EditorCommandWatcher 시작됨` 로그 확인, 배치 모드라면 `batch_run.sh` 사용 |
+| HTTP 요청 타임아웃 / 연결 거부 | 에디터 닫힘 / 컴파일 중 / 포트 충돌 | Unity 열려있는지 확인, Console에 `[SindyCmd] HTTP 서버 시작됨` 로그 확인, 포트 변경 시 Preferences > Sindy |
 | `타입을 찾을 수 없습니다: Namespace.Type` | 네임스페이스·타입명 오타, 또는 컴파일 에러 | Unity Console에서 `error CS` 검색 후 수정, namespace 포함 전체 이름 재확인 |
 | `static 메서드를 찾을 수 없습니다` | 메서드가 static이 아님 또는 이름 오타 | 메서드에 `static` 키워드 추가, 대소문자 포함 이름 재확인 |
 | `NullReferenceException` 발생 | `Open()` 반환값 null 체크 누락, 또는 씬/에셋 경로 오류 | `if (ctx == null) return;` 또는 `throw` 패턴으로 null 처리, `AssetFinder`로 경로 재확인 |
-| 배치 모드 타임아웃 (`batch_run.sh`) | `EditorApplication.Exit()` 호출 누락 | `BatchEntryPoint` 사용 시 자동 처리됨, 단독 메서드면 `if (Application.isBatchMode) EditorApplication.Exit(0);` 추가 |
 | 씬/에셋 경로 오류 | 경로 오타 또는 파일 없음 | `AssetFinder`로 동적 탐색, `FieldPeeker`로 필드명 확인 |
 
 ---
 
-## 내부 구조
+## 내부 구조 / 배경 지식
 
-### IPC 동작 흐름
+> 이 섹션은 직접 사용할 필요 없는 내부 동작 설명입니다. HTTP 방식이 막힐 때(방화벽·포트 충돌) 폴백 수단으로만 참고하세요.
+
+### HTTP IPC 동작 흐름
 
 ```
-셸 (sindy_cmd.sh)                   Unity Editor (EditorCommandWatcher)
-─────────────────────────────────   ──────────────────────────────────────
+AI / Shell                           Unity Editor (EditorCommandWatcher)
+──────────────────────────────────   ──────────────────────────────────────
+curl POST /execute                   HTTP 리스너 스레드 (블로킹)
+  {"method":"..."}          ──────→  요청 수신 → _requestQueue에 enqueue
+                                     │
+                                     └─ EditorApplication.update (100ms 폴링)
+                                        큐에서 dequeue → 리플렉션으로 메서드 실행
+                                        → HTTP 응답 반환
+                                           {"success":true,"message":"OK"}
+```
+
+### 파일 기반 IPC 동작 흐름 (폴백)
+
+> HTTP 포트가 방화벽에 막히거나 포트 충돌 시 사용할 수 있는 폴백 방식.
+> `EditorCommandWatcher`는 두 방식을 동시에 폴링합니다.
+
+```
+외부 프로세스                        Unity Editor (EditorCommandWatcher)
+──────────────────────────────────   ──────────────────────────────────────
 1. Temp/sindy_cmd.json 작성
    {"method":"...","id":"abc123"}
-2. Temp/sindy_result.json 폴링
-   (1초 간격, 최대 30초)              3. EditorApplication.update (100ms 폴링)
-                                      4. sindy_cmd.json 발견 → 즉시 삭제
-                                      5. 리플렉션으로 메서드 실행
-                                      6. sindy_result.json 작성
-                                         {"id":"abc123","success":true,...}
-7. 결과 출력 후 exit 0/1
+2. Temp/sindy_result.json 폴링       3. EditorApplication.update (100ms 폴링)
+   (1초 간격, 최대 30초)                4. sindy_cmd.json 발견 → 즉시 삭제
+                                        5. 리플렉션으로 메서드 실행
+                                        6. sindy_result.json 작성
+                                           {"id":"abc123","success":true,...}
+7. 결과 확인 후 처리
 ```
 
 ### 배치 모드 로그 확인
@@ -611,48 +607,12 @@ cat Logs/batch_MyTask_Run_20250101_123456.log | grep -E "Error|Exception|FAIL"
 
 ### 파일 구조
 
-패키지 스크립트(`sindy_cmd.sh`, `batch_run.sh`)는 설치 방식에 따라 다른 경로에 위치합니다.
-스크립트는 자신의 위치에서 위쪽으로 올라가며 프로젝트 루트를 자동 탐색하므로, 어느 경로에서 실행해도 동작합니다.
-
-**Embedded 설치 시:**
-```
-YourProject/                          ← 프로젝트 루트 (Assets/, ProjectSettings/ 위치)
-├── Temp/                             ← IPC 통신 파일 (Unity 자동 관리)
-│   ├── sindy_cmd.json                ← IPC 커맨드 파일 (실행 후 삭제됨)
-│   └── sindy_result.json             ← IPC 결과 파일
-├── Logs/
-│   ├── batch_*.log                   ← Unity 전체 로그 (자동 생성)
-│   └── batch_result.txt              ← 배치 결과 요약 (자동 생성)
-└── Assets/sindy-game-package-for-unity/Tests/Editor/Tools/
-    ├── sindy_cmd.sh
-    └── batch_run.sh
-```
-
-**로컬 참조 설치 시:**
-```
-YourProject/
-└── Packages/com.sindy/Tests/Editor/Tools/
-    ├── sindy_cmd.sh
-    └── batch_run.sh
-```
-
-**Git URL / Registry 설치 시 (읽기 전용 → 복사 필요):**
-```
-YourProject/
-├── Library/PackageCache/com.sindy@1.0.0-alpha.18/Tests/Editor/Tools/
-│   ├── sindy_cmd.sh   ← 읽기 전용, 직접 실행 불가
-│   └── batch_run.sh   ← 읽기 전용, 직접 실행 불가
-└── Assets/Tools/      ← 여기에 복사해서 실행
-    ├── sindy_cmd.sh
-    └── batch_run.sh
-```
-
 **패키지 내부 구조 (공통):**
 ```
 <package-root>/
 ├── Editor/
 │   ├── EditorTools/
-│   │   ├── EditorCommandWatcher.cs  ← IPC 폴링 시스템 [InitializeOnLoad]
+│   │   ├── EditorCommandWatcher.cs  ← HTTP 서버 + 파일 기반 IPC 폴링 [InitializeOnLoad]
 │   │   ├── BatchEntryPoint.cs       ← 배치 태스크 베이스 클래스
 │   │   ├── BatchRunner.cs           ← Unity 배치 서브프로세스 실행 헬퍼
 │   │   ├── SceneEditor.cs
@@ -667,7 +627,16 @@ YourProject/
 │       ├── Example_PrefabEdit.cs
 │       └── Example_SOEdit.cs
 └── Tests/Editor/Tools/
-    ├── sindy_cmd.sh
-    ├── batch_run.sh
     └── EDITOR_TOOLKIT_GUIDE.md     ← 이 파일
+```
+
+**프로젝트 루트 구조:**
+```
+YourProject/                          ← 프로젝트 루트 (Assets/, ProjectSettings/ 위치)
+├── Temp/                             ← IPC 통신 파일 (Unity 자동 관리)
+│   ├── sindy_cmd.json                ← 파일 기반 IPC 커맨드 (폴백용, 실행 후 삭제됨)
+│   └── sindy_result.json             ← 파일 기반 IPC 결과 (폴백용)
+└── Logs/
+    ├── batch_*.log                   ← Unity 전체 로그 (자동 생성)
+    └── batch_result.txt              ← 배치 결과 요약 (자동 생성)
 ```
