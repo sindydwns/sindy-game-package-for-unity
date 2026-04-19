@@ -5,7 +5,7 @@
 //    감지하여 리플렉션으로 메서드를 실행하고 결과를 Temp/sindy_result.json에 기록
 //
 // 2. HTTP 서버: POST /execute, GET /ping 엔드포인트
-//    포트: EditorPrefs "Sindy.EditorTools.HttpPort" (기본값 7777)
+//    포트: EditorPrefs "Sindy.EditorTools.HttpPort" (기본값 6060)
 //    포트 변경: Edit > Preferences > Sindy
 //
 // 커맨드 파일 형식:
@@ -41,7 +41,7 @@ namespace Sindy.Editor.EditorTools
         private const double PollIntervalSeconds = 0.1;
 
         // ── HTTP 서버 ─────────────────────────────────────────────────────────────
-        private const int DefaultPort = 7777;
+        private const int DefaultPort = 6060;
         private const string PortPrefKey = "Sindy.EditorTools.HttpPort";
 
         private static HttpListener _httpListener;

@@ -361,7 +361,7 @@ Unity 에디터가 열려 있는 상태에서 AI(셸)가 에디터 메서드를 
 ```
 AI / Shell                           Unity Editor (EditorCommandWatcher)
 ──────────────────────────────────   ──────────────────────────────────────
-curl POST http://localhost:7777/execute
+curl POST http://localhost:6060/execute
   {"method":"Namespace.Type.Method"}
                               ──────→ HTTP 리스너 스레드 (백그라운드)
                                       요청 수신 → _requestQueue enqueue
@@ -376,23 +376,23 @@ curl POST http://localhost:7777/execute
 
 ```bash
 # 메서드 실행
-curl -s http://localhost:7777/execute \
+curl -s http://localhost:6060/execute \
   -H "Content-Type: application/json" \
   -d '{"method":"Sindy.Editor.Examples.BatchTest.Ping"}'
 
 # 서버 상태 확인
-curl -s http://localhost:7777/ping
+curl -s http://localhost:6060/ping
 
 # 예시
-curl -s http://localhost:7777/execute \
+curl -s http://localhost:6060/execute \
   -H "Content-Type: application/json" \
   -d '{"method":"Sindy.Editor.Examples.SetupShowcaseTask.Run"}'
-curl -s http://localhost:7777/execute \
+curl -s http://localhost:6060/execute \
   -H "Content-Type: application/json" \
   -d '{"method":"Sindy.Editor.Examples.ReadSceneHierarchy.Execute"}'
 ```
 
-포트 변경: **Edit > Preferences > Sindy** (`EditorPrefs` 키: `Sindy.EditorTools.HttpPort`, 기본값 `7777`)
+포트 변경: **Edit > Preferences > Sindy** (`EditorPrefs` 키: `Sindy.EditorTools.HttpPort`, 기본값 `6060`)
 
 ### 파일 기반 IPC (폴백)
 
@@ -501,7 +501,7 @@ public static class QuickFix
 
 | 상황 | 방식 |
 |------|------|
-| Unity 에디터 열려 있음 | `curl -s http://localhost:7777/execute -d '{"method":"Namespace.Class.Method"}'` |
+| Unity 에디터 열려 있음 | `curl -s http://localhost:6060/execute -d '{"method":"Namespace.Class.Method"}'` |
 | Unity 에디터 닫혀 있음 | Unity `-batchmode -executeMethod Class.Method` |
 
 ### 작업 종류별 툴 선택
@@ -539,7 +539,7 @@ namespace Sindy.Editor.Examples
 
 실행:
 ```bash
-curl -s http://localhost:7777/execute \
+curl -s http://localhost:6060/execute \
   -H "Content-Type: application/json" \
   -d '{"method":"Sindy.Editor.Examples.MyNewTask.Execute"}'
 ```
@@ -614,7 +614,7 @@ Unity 빌트인 컴포넌트는 내부 직렬화 필드명이 프로퍼티명과
 - [ ] `Sindy/Examples/B - Prefab Edit` 실행 결과
 - [ ] `Sindy/Examples/C - SO Create & Edit` / `C - SO Load & Edit` 실행 결과
 - [ ] `Sindy/Tools/Field Peeker Window` 동작 확인
-- [ ] `curl http://localhost:7777/execute` HTTP IPC 왕복 확인
+- [ ] `curl http://localhost:6060/execute` HTTP IPC 왕복 확인
 - [ ] `GOEditor` Apply() 누락 경고 로그 출력 확인
 - [ ] `SOEditor` Apply() 누락 경고 로그 출력 확인
 - [ ] `GOFind()` 실패 경고 메시지 형식 확인

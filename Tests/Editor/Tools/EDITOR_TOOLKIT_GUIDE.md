@@ -55,30 +55,30 @@ https://github.com/your-repo/SindyGamePackage.git?path=Assets/sindy-game-package
 2. **컴파일 완료 확인**
    Unity Console에 다음 로그가 보이면 준비 완료:
    ```
-   [SindyCmd] HTTP 서버 시작됨 → http://localhost:7777
+   [SindyCmd] HTTP 서버 시작됨 → http://localhost:6060
    ```
    > 컴파일 중에는 아무 응답이 없습니다. 하단 상태바의 스피너가 멈출 때까지 대기.
 
 3. **Ping 테스트로 동작 확인**
    ```bash
-   curl -s http://localhost:7777/ping
+   curl -s http://localhost:6060/ping
    ```
    `{"id":"","success":true,"message":"pong",...}` 출력 확인.
 
 4. **메서드 실행 예시**
    ```bash
    # 동작 확인
-   curl -s http://localhost:7777/execute \
+   curl -s http://localhost:6060/execute \
      -H "Content-Type: application/json" \
      -d '{"method":"Sindy.Editor.Examples.BatchTest.Ping"}'
 
    # 씬 하이라키 읽기 → Temp/sindy_hierarchy.json 생성
-   curl -s http://localhost:7777/execute \
+   curl -s http://localhost:6060/execute \
      -H "Content-Type: application/json" \
      -d '{"method":"Sindy.Editor.Examples.ReadSceneHierarchy.Execute"}'
 
    # 쇼케이스 씬 세팅
-   curl -s http://localhost:7777/execute \
+   curl -s http://localhost:6060/execute \
      -H "Content-Type: application/json" \
      -d '{"method":"Sindy.Editor.Examples.SetupShowcaseTask.Run"}'
    ```
@@ -107,7 +107,7 @@ Unity를 직접 배치 모드로 실행합니다. Unity 실행 파일 경로는 
 
 | 상황 | 방식 | 특징 |
 |------|------|------|
-| 에디터 열려 있음 | `curl http://localhost:7777/execute` | 에디터 상태 유지, 씬 저장·Undo·UI 반영 가능 |
+| 에디터 열려 있음 | `curl http://localhost:6060/execute` | 에디터 상태 유지, 씬 저장·Undo·UI 반영 가능 |
 | 에디터 닫혀 있음 | Unity `-batchmode -executeMethod` | headless 실행, CI/CD에 적합 |
 
 **HTTP 방식 제약사항**
@@ -472,7 +472,7 @@ public static class QuickFix
 
 ## HTTP 실행 가능 메서드 목록
 
-> `curl http://localhost:7777/execute`로 바로 호출할 수 있는 등록된 메서드 목록.
+> `curl http://localhost:6060/execute`로 바로 호출할 수 있는 등록된 메서드 목록.
 
 | 클래스 | 전체 경로 | 설명 |
 |--------|-----------|------|

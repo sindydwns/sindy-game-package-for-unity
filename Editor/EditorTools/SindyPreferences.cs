@@ -7,7 +7,7 @@ namespace Sindy.Editor.EditorTools
     public static class SindyPreferences
     {
         private const string PortPrefKey = "Sindy.EditorTools.HttpPort";
-        private const int DefaultPort = 7777;
+        private const int DefaultPort = 6060;
 
         [SettingsProvider]
         public static SettingsProvider CreateProvider() => new SettingsProvider("Preferences/Sindy", SettingsScope.User)
