@@ -433,12 +433,28 @@ namespace Sindy.Editor.EditorTools
 
         private static Type FindType(string typeName)
         {
+            // 1차: 풀네임 일치 (Namespace.TypeName)
             foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 Type t = asm.GetType(typeName);
                 if (t != null)
                     return t;
             }
+
+            // 2차: 심플네임 일치 (TypeName만 전달된 경우 폴백)
+            string simpleName = typeName.Contains('.')
+                ? typeName.Substring(typeName.LastIndexOf('.') + 1)
+                : typeName;
+
+            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                foreach (Type t in asm.GetTypes())
+                {
+                    if (t.Name == simpleName)
+                        return t;
+                }
+            }
+
             return null;
         }
 
