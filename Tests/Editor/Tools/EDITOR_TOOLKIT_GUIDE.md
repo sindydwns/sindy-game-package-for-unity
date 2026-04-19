@@ -81,7 +81,53 @@ https://github.com/your-repo/SindyGamePackage.git?path=Assets/sindy-game-package
    curl -s http://localhost:6060/execute \
      -H "Content-Type: application/json" \
      -d '{"method":"Sindy.Editor.Examples.SetupShowcaseTask.Run"}'
+
+   # ── /edit 엔드포인트 (SindyEdit 파사드 직접 사용) ──
+
+   # 프리팹 색상 변경 (이름으로 탐색)
+   curl -s http://localhost:6060/edit \
+     -H "Content-Type: application/json" \
+     -d '{"asset":"GaugeBar","go":"Fill/Image","prop":"m_Color","value":[0.2,0.8,0.4,1.0]}'
+
+   # 씬 텍스트 변경 (전체 경로 지정)
+   curl -s http://localhost:6060/edit \
+     -H "Content-Type: application/json" \
+     -d '{"asset":"Assets/Scenes/Main.unity","go":"Canvas/Header/Title","prop":"m_text","value":"Hello"}'
+
+   # ScriptableObject 정수 필드 변경
+   curl -s http://localhost:6060/edit \
+     -H "Content-Type: application/json" \
+     -d '{"asset":"Assets/Config/Game.asset","prop":"maxHealth","value":200}'
+
+   # float 필드 변경
+   curl -s http://localhost:6060/edit \
+     -H "Content-Type: application/json" \
+     -d '{"asset":"Assets/Config/Game.asset","prop":"gravity","value":9.81}'
+
+   # bool 필드 변경
+   curl -s http://localhost:6060/edit \
+     -H "Content-Type: application/json" \
+     -d '{"asset":"Assets/Config/Game.asset","prop":"debugMode","value":true}'
+
+   # Vector3 변경 (3개 float 배열)
+   curl -s http://localhost:6060/edit \
+     -H "Content-Type: application/json" \
+     -d '{"asset":"Assets/Prefabs/Player.prefab","go":"Body","prop":"m_LocalPosition","value":[0,1,0]}'
    ```
+
+   **응답 형식** (`/execute`와 동일):
+   ```json
+   {"id":"","success":true,"message":"OK — GaugeBar.GO(Fill/Image).m_Color","timestamp":"..."}
+   ```
+
+   **`/edit` 요청 필드 설명:**
+
+   | 필드 | 타입 | 필수 | 설명 |
+   |------|------|------|------|
+   | `asset` | string | ✅ | 에셋 이름(자동 탐색) 또는 전체 경로(`Assets/...`) |
+   | `go` | string | — | 씬/프리팹의 GO 계층 경로. `.asset` 편집 시 생략 |
+   | `prop` | string | ✅ | 편집할 SerializedProperty 경로 |
+   | `value` | any | ✅ | 값. string / number / bool / float 배열(2=Vector2, 3=Vector3, 4=Color) |
 
 포트 변경: Unity 메뉴 → **Edit > Preferences > Sindy**
 
@@ -326,6 +372,111 @@ foreach (var asset in AssetFinder.AllAssets<FloatVariable>("Assets/Data/"))
     so?.SOFloat("Value", asset.Value * 1.1f).Apply(); // 모두 10% 증가
 }
 ```
+
+---
+
+### SindyEdit (통합 파사드)
+
+> **이럴 때 쓴다**: 씬·프리팹·ScriptableObject 를 타입에 무관한 동일한 코드 패턴으로 편집하고 싶을 때. 에셋 타입을 신경 쓰지 않아도 되는 편의 레이어.
+> - HTTP `/edit` 엔드포인트를 통해 에셋 이름만으로 원격 편집할 때
+> - 편집 대상이 씬인지 프리팹인지 모르거나 혼재할 때
+> - 스크립트에서 타입 분기 없이 통일된 패턴을 유지하고 싶을 때
+
+`namespace Sindy.Editor.EditorTools`
+
+#### SindyEdit (정적 파사드)
+
+| 메서드 | 파라미터 | 반환값 | 설명 |
+|--------|----------|--------|------|
+| `Open` (static) | `string assetPath` | `AssetEditSession?` | 확장자로 타입 자동 감지(`.unity`→씬, `.prefab`→프리팹, 나머지→SO). 실패 시 `null` |
+| `Find` (static) | `string nameOrPath` | `AssetEditSession?` | 이름으로 에셋 탐색. 프리팹→씬→SO 순서. 전체 경로 시 `Open`과 동일 |
+
+#### AssetEditSession (IDisposable)
+
+| 메서드 | 파라미터 | 반환값 | 설명 |
+|--------|----------|--------|------|
+| `GO` | `string goPath` | `AssetEditSession` | `'/'` 또는 `'.'` 구분 계층 경로로 GO 탐색. 탐색 실패 시 LogWarning |
+| `SOString` | `string prop, string value` | `AssetEditSession` | `stringValue` 세터 |
+| `SOInt` | `string prop, int value` | `AssetEditSession` | `intValue` 세터 |
+| `SOFloat` | `string prop, float value` | `AssetEditSession` | `floatValue` 세터 |
+| `SOBool` | `string prop, bool value` | `AssetEditSession` | `boolValue` 세터 |
+| `SOColor` | `string prop, Color value` | `AssetEditSession` | `colorValue` 세터 |
+| `SOVector3` | `string prop, Vector3 value` | `AssetEditSession` | `vector3Value` 세터 |
+| `SOVector2` | `string prop, Vector2 value` | `AssetEditSession` | `vector2Value` 세터 |
+| `Set` | `string prop, object value` | `AssetEditSession` | 타입 자동 판별. HTTP IPC용. |
+| `Save` | — | `void` | 명시적 저장. Dispose에서도 자동 저장되므로 생략 가능 |
+| `Dispose` | — | `void` | 변경사항 자동 저장 + 내부 리소스 정리 |
+
+**내부 동작 원리**
+
+| 에셋 타입 | 내부 구현 | 저장 시점 |
+|----------|----------|----------|
+| `.unity` | `SceneEditor` 위임 | Dispose 시 `EditorSceneManager.SaveScene` |
+| `.prefab` | `PrefabEditor` 위임 | Dispose 시 `SaveAsPrefabAsset + UnloadPrefabContents` |
+| `.asset` / 기타 | `SerializedObject` 직접 | Dispose 시 `AssetDatabase.SaveAssets` |
+
+**GO() 경로 탐색 방식**
+
+- 씬 모드: 씬 루트 기준 경로 (예: `"Canvas/Panel/Title"`)
+- 프리팹 모드: 프리팹 루트의 **자식** 기준 경로 (예: `"Fill/Image"`)
+- `'/'`와 `'.'` 구분자 모두 허용 (`"Canvas/Panel"` ≡ `"Canvas.Panel"`)
+- GO를 찾지 못하면 LogWarning을 출력하고 이후 SO* 세터는 무시됨
+
+**GO() 이후 컴포넌트 자동 탐색**
+
+`GO()` 후 SO* 메서드를 호출하면, 해당 GO의 **모든 컴포넌트**를 순회하며 프로퍼티를 가진 첫 번째 컴포넌트를 찾습니다. 컴포넌트를 명시할 필요가 없습니다.
+
+```csharp
+// Image.m_Color 를 자동으로 찾아 설정
+s.GO("Fill/Image").SOColor("m_Color", Color.green);
+
+// TextMeshProUGUI.m_text 를 자동으로 찾아 설정
+s.GO("Header/Title").SOString("m_text", "Hello");
+```
+
+**흔한 실수**
+
+- `.asset` 파일에 `GO()`를 호출하면 LogWarning 후 무시됨 (SO 편집은 `GO()` 없이 직접 `SOInt()` 등 호출)
+- 동일한 이름의 프로퍼티가 여러 컴포넌트에 있으면 첫 번째 컴포넌트만 수정됨
+
+**코드 예제**
+
+```csharp
+// ─── 씬 편집 ───────────────────────────────────────────────────────────────
+using var s = SindyEdit.Open("Assets/Scenes/Main.unity");
+s.GO("Canvas/Panel/Title")
+ .SOString("m_text", "Hello World")
+ .SOColor("m_Color", Color.white);
+// Dispose → 자동 저장
+
+// ─── 프리팹 편집 (코드 패턴 완전히 동일) ──────────────────────────────────
+using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
+s.GO("Fill/Image").SOColor("m_Color", Color.green);
+
+// ─── ScriptableObject 편집 ─────────────────────────────────────────────────
+using var s = SindyEdit.Open("Assets/Config/Game.asset");
+s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
+
+// ─── 이름으로 자동 탐색 ───────────────────────────────────────────────────
+using var s = SindyEdit.Find("GaugeBar");      // 프리팹 이름
+s.GO("Fill/Image").SOColor("m_Color", Color.green);
+
+// ─── 명시적 Save (using 없이 사용 시) ─────────────────────────────────────
+var session = SindyEdit.Open("Assets/Prefabs/Button.prefab");
+session.GO("Label").SOString("m_text", "Click");
+session.Save();
+session.Dispose();
+```
+
+**기존 개별 클래스와의 비교**
+
+| | SindyEdit (통합 파사드) | 기존 개별 클래스 |
+|-|----------------------|----------------|
+| 타입 감지 | 자동 (확장자 기반) | 수동 (`SceneEditor.Open` / `PrefabEditor.Open` / `SOEditor<T>.Open`) |
+| 컴포넌트 지정 | 자동 (프로퍼티명으로 탐색) | 수동 (`AddComp<T>()` / `WithComp<T>()` 후 SO*) |
+| Apply 호출 | 불필요 (Dispose 시 자동) | **필수** (`Apply()` 없으면 변경 안 됨) |
+| HTTP IPC | `/edit` 엔드포인트로 지원 | 지원 없음 |
+| 적합한 용도 | 빠른 단일 프로퍼티 편집, HTTP 원격 편집 | 복잡한 컴포넌트 조작, AddComp, 세밀한 제어 |
 
 ---
 
@@ -615,6 +766,7 @@ cat Logs/batch_MyTask_Run_20250101_123456.log | grep -E "Error|Exception|FAIL"
 │   │   ├── EditorCommandWatcher.cs  ← HTTP 서버 + 파일 기반 IPC 폴링 [InitializeOnLoad]
 │   │   ├── BatchEntryPoint.cs       ← 배치 태스크 베이스 클래스
 │   │   ├── BatchRunner.cs           ← Unity 배치 서브프로세스 실행 헬퍼
+│   │   ├── SindyEdit.cs             ← 통합 파사드 (씬/프리팹/SO 동일 API)
 │   │   ├── SceneEditor.cs
 │   │   ├── GOEditor.cs
 │   │   ├── PrefabEditor.cs

@@ -73,10 +73,21 @@ namespace Sindy.Editor.EditorTools
             public string method;
         }
 
+        [Serializable]
+        private class EditRequestDto
+        {
+            public string asset;
+            public string go;
+            public string prop;
+            // value 필드는 string/number/bool/array 등 이형(heterogeneous)이므로
+            // 별도 파싱 로직(ParseValueFromJson)에서 처리합니다.
+        }
+
         private class PendingRequest
         {
-            public string RequestType; // "ping" or "execute"
+            public string RequestType; // "ping" | "execute" | "edit"
             public string Method;
+            public string RawBody;
             public HttpListenerContext Context;
         }
 
@@ -136,6 +147,16 @@ namespace Sindy.Editor.EditorTools
                                 Context = context
                             });
                         }
+                        else if (context.Request.HttpMethod == "POST" && urlPath == "/edit")
+                        {
+                            var body = new StreamReader(context.Request.InputStream).ReadToEnd();
+                            _requestQueue.Enqueue(new PendingRequest
+                            {
+                                RequestType = "edit",
+                                RawBody = body,
+                                Context = context
+                            });
+                        }
                         else
                         {
                             context.Response.StatusCode = 404;
@@ -177,6 +198,10 @@ namespace Sindy.Editor.EditorTools
                         message   = "pong",
                         timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
                     };
+                }
+                else if (req.RequestType == "edit")
+                {
+                    result = ExecuteEditCore(req.RawBody);
                 }
                 else
                 {
@@ -295,6 +320,174 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogError($"[SindyCmd] {msg}\n{ex.StackTrace}");
                 return new ResultDto { success = false, message = msg, timestamp = timestamp };
             }
+        }
+
+        // ── /edit 엔드포인트 처리 ────────────────────────────────────────────────
+
+        /// <summary>
+        /// POST /edit 요청을 처리합니다.
+        /// SindyEdit 파사드를 통해 씬·프리팹·SO를 동적으로 편집합니다.
+        /// </summary>
+        private static ResultDto ExecuteEditCore(string rawJson)
+        {
+            string timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+
+            if (string.IsNullOrEmpty(rawJson))
+                return new ResultDto { success = false, message = "요청 본문이 비어있습니다.", timestamp = timestamp };
+
+            try
+            {
+                var dto = JsonUtility.FromJson<EditRequestDto>(rawJson);
+
+                if (string.IsNullOrEmpty(dto?.asset))
+                    return new ResultDto { success = false, message = "asset 필드가 없습니다.", timestamp = timestamp };
+
+                if (string.IsNullOrEmpty(dto.prop))
+                    return new ResultDto { success = false, message = "prop 필드가 없습니다.", timestamp = timestamp };
+
+                object value = ParseValueFromJson(rawJson);
+                if (value == null)
+                    return new ResultDto { success = false, message = "value 필드를 파싱할 수 없습니다.", timestamp = timestamp };
+
+                // 에셋 세션 열기: 전체 경로면 Open, 이름이면 Find
+                bool isPath = dto.asset.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase)
+                           || dto.asset.StartsWith("Packages/", StringComparison.OrdinalIgnoreCase);
+                var session = isPath ? SindyEdit.Open(dto.asset) : SindyEdit.Find(dto.asset);
+
+                if (session == null)
+                    return new ResultDto
+                    {
+                        success   = false,
+                        message   = $"에셋을 열 수 없습니다: {dto.asset}",
+                        timestamp = timestamp
+                    };
+
+                using (session)
+                {
+                    if (!string.IsNullOrEmpty(dto.go))
+                        session.GO(dto.go);
+
+                    session.Set(dto.prop, value);
+                }
+
+                string goDesc = string.IsNullOrEmpty(dto.go) ? "" : $".GO({dto.go})";
+                return new ResultDto
+                {
+                    success   = true,
+                    message   = $"OK — {dto.asset}{goDesc}.{dto.prop}",
+                    timestamp = timestamp
+                };
+            }
+            catch (Exception ex)
+            {
+                string msg = $"예외: {ex.GetType().Name}: {ex.Message}";
+                Debug.LogError($"[SindyCmd] /edit 처리 중 예외: {msg}\n{ex.StackTrace}");
+                return new ResultDto { success = false, message = msg, timestamp = timestamp };
+            }
+        }
+
+        /// <summary>
+        /// JSON 본문에서 "value" 키의 값을 파싱합니다.
+        /// <para>
+        /// - string → string<br/>
+        /// - true/false → bool<br/>
+        /// - 정수 → int<br/>
+        /// - 소수점 포함 숫자 → float<br/>
+        /// - 2개 float 배열 → Vector2<br/>
+        /// - 3개 float 배열 → Vector3<br/>
+        /// - 4개 float 배열 → Color
+        /// </para>
+        /// </summary>
+        private static object ParseValueFromJson(string rawJson)
+        {
+            // "value" 키 위치 탐색
+            int keyIdx = rawJson.IndexOf("\"value\"", StringComparison.Ordinal);
+            if (keyIdx < 0) return null;
+
+            int colon = rawJson.IndexOf(':', keyIdx + 7);
+            if (colon < 0) return null;
+
+            // 공백 스킵
+            int pos = colon + 1;
+            while (pos < rawJson.Length && char.IsWhiteSpace(rawJson[pos])) pos++;
+            if (pos >= rawJson.Length) return null;
+
+            char first = rawJson[pos];
+
+            // ── 문자열 ─────────────────────────────────────────────────────
+            if (first == '"')
+            {
+                pos++; // opening quote 스킵
+                var sb = new System.Text.StringBuilder();
+                while (pos < rawJson.Length)
+                {
+                    char ch = rawJson[pos];
+                    if (ch == '\\' && pos + 1 < rawJson.Length)
+                    {
+                        pos++;
+                        sb.Append(rawJson[pos]);
+                    }
+                    else if (ch == '"') break;
+                    else sb.Append(ch);
+                    pos++;
+                }
+                return sb.ToString();
+            }
+
+            // ── 배열 ───────────────────────────────────────────────────────
+            if (first == '[')
+            {
+                int end = rawJson.IndexOf(']', pos);
+                if (end < 0) return null;
+
+                string content = rawJson.Substring(pos + 1, end - pos - 1).Trim();
+                if (string.IsNullOrEmpty(content)) return null;
+
+                string[] parts = content.Split(',');
+                var floats = new System.Collections.Generic.List<float>(4);
+                foreach (var part in parts)
+                {
+                    if (float.TryParse(part.Trim(),
+                        System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float f))
+                        floats.Add(f);
+                }
+
+                if (floats.Count == 4) return new Color(floats[0], floats[1], floats[2], floats[3]);
+                if (floats.Count == 3) return new Vector3(floats[0], floats[1], floats[2]);
+                if (floats.Count == 2) return new Vector2(floats[0], floats[1]);
+                return null;
+            }
+
+            // ── bool / 숫자 ────────────────────────────────────────────────
+            int tokEnd = pos;
+            while (tokEnd < rawJson.Length
+                   && rawJson[tokEnd] != ','
+                   && rawJson[tokEnd] != '}'
+                   && rawJson[tokEnd] != ']'
+                   && !char.IsWhiteSpace(rawJson[tokEnd]))
+                tokEnd++;
+
+            string token = rawJson.Substring(pos, tokEnd - pos).Trim();
+
+            if (token == "true")  return true;
+            if (token == "false") return false;
+            if (token == "null")  return null;
+
+            // 소수점 또는 지수 표기가 있으면 float
+            if (token.Contains('.') || token.Contains('e') || token.Contains('E'))
+            {
+                if (float.TryParse(token,
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out float fv))
+                    return fv;
+            }
+            else
+            {
+                if (int.TryParse(token, out int iv)) return iv;
+            }
+
+            return null;
         }
 
         // ── 타입 탐색 ────────────────────────────────────────────────────────────
