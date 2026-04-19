@@ -9,7 +9,7 @@
 
 1. [클래스 구조 및 역할](#1-클래스-구조-및-역할)
 2. [공개 API 레퍼런스](#2-공개-api-레퍼런스)
-3. [IPC 시스템 (HTTP 기본 + 파일 기반 폴백)](#3-ipc-시스템)
+3. [IPC 시스템 (HTTP)](#3-ipc-시스템)
 4. [배치 모드 시스템 (BatchEntryPoint)](#4-배치-모드-시스템)
 5. [AI 워크플로우 요약](#5-ai-워크플로우-요약)
 6. [직렬화 필드명 레퍼런스](#6-직렬화-필드명-레퍼런스)
@@ -30,7 +30,7 @@
 | `AssetFinder` | `AssetFinder.cs` | AssetDatabase 기반 프리팹·SO 탐색 유틸 (캐시 포함) |
 | `FieldPeeker` | `FieldPeeker.cs` | SerializedProperty 경로 목록 출력 진단 유틸 |
 | `FieldPeekerWindow` | `FieldPeeker.cs` | FieldPeeker GUI 버전 EditorWindow |
-| `EditorCommandWatcher` | `EditorCommandWatcher.cs` | HTTP 서버 + 파일 기반 IPC 폴링 `[InitializeOnLoad]` |
+| `EditorCommandWatcher` | `EditorCommandWatcher.cs` | HTTP IPC 서버 `[InitializeOnLoad]` |
 | `BatchEntryPoint` | `BatchEntryPoint.cs` | 배치 태스크 베이스 클래스 (예외 처리·종료 자동화) |
 | `BatchRunner` | `BatchRunner.cs` | 에디터에서 Unity 배치 서브프로세스 실행 헬퍼 |
 
@@ -50,8 +50,7 @@ AssetFinder ──→  SceneEditor / PrefabEditor 에서 경로 또는 참조를
 BatchEntryPoint ←── SetupShowcaseTask (예시 상속)
 BatchRunner     ──→  Unity 배치 서브프로세스 실행
 
-EditorCommandWatcher ──→  HTTP: POST /execute, GET /ping
-                     ──→  파일 기반 IPC 폴백: Temp/sindy_cmd.json 폴링 → 리플렉션 실행
+EditorCommandWatcher ──→  HTTP: POST /execute, POST /edit, GET /ping
 ```
 
 ---
@@ -353,10 +352,9 @@ public static class BatchRunner
 
 ## 3. IPC 시스템
 
-Unity 에디터가 열려 있는 상태에서 AI(셸)가 에디터 메서드를 원격 실행하는 IPC 시스템.
-**HTTP가 기본 통신 방식**이며, 파일 기반 폴링은 HTTP 포트가 막히거나 충돌할 때를 위한 폴백입니다.
+Unity 에디터가 열려 있는 상태에서 AI(셸)가 에디터 메서드를 원격 실행하는 HTTP IPC 시스템.
 
-### HTTP 방식 (기본)
+### HTTP 방식
 
 ```
 AI / Shell                           Unity Editor (EditorCommandWatcher)
@@ -394,38 +392,12 @@ curl -s http://localhost:6060/execute \
 
 포트 변경: **Edit > Preferences > Sindy** (`EditorPrefs` 키: `Sindy.EditorTools.HttpPort`, 기본값 `6060`)
 
-### 파일 기반 IPC (폴백)
-
-HTTP 포트가 방화벽에 막히거나 포트 충돌 시 사용 가능.
-`EditorCommandWatcher`는 HTTP와 파일 기반 IPC를 동시에 폴링합니다.
-
-```
-외부 프로세스                        Unity Editor (EditorCommandWatcher)
-──────────────────────────────────   ──────────────────────────────────────
-1. Temp/sindy_cmd.json 작성
-   { "method": "...", "id": "abc123" }
-2. Temp/sindy_result.json 폴링        3. EditorApplication.update (100ms 폴링)
-   (1초 간격, 최대 30초)                 4. sindy_cmd.json 발견 → 파일 즉시 삭제
-                                         5. 리플렉션: Type.GetMethod → Invoke(null, null)
-                                         6. sindy_result.json 작성
-                                              { "id": "...", "success": true/false,
-                                                "message": "...", "timestamp": "..." }
-```
-
-### 제약사항 (공통)
+### 제약사항
 
 - 메서드는 반드시 **static, 인수 없음** 형식이어야 함
 - `Namespace.TypeName.MethodName` 형식 (마지막 `.` 기준으로 타입/메서드 분리)
 - Unity 에디터가 열려있고 컴파일 완료 상태여야 함
 - 모달 다이얼로그(DisplayDialog)가 열린 상태면 폴링 중단
-
-### 파일 위치 (파일 기반 IPC 폴백용)
-
-| 파일 | 역할 |
-|------|------|
-| `Temp/sindy_cmd.json` | 커맨드 입력 (실행 후 자동 삭제) |
-| `Temp/sindy_result.json` | 실행 결과 |
-| `Temp/sindy_hierarchy.json` | ReadSceneHierarchy 출력 JSON |
 
 ---
 
@@ -602,7 +574,7 @@ Unity 빌트인 컴포넌트는 내부 직렬화 필드명이 프로퍼티명과
 - [x] `AssetFinder.Prefab(string, hint)` — FullName + 이름 힌트 탐색
 - [x] `AssetFinder.AllAssets<T>()` — SO 탐색 + 캐시
 - [x] `FieldPeeker.Print<T>()` / `FieldPeekerWindow` 구현됨
-- [x] `EditorCommandWatcher` — `[InitializeOnLoad]`, HTTP 서버, 100ms 폴링, 파일 기반 IPC 폴백, 리플렉션 실행
+- [x] `EditorCommandWatcher` — `[InitializeOnLoad]`, HTTP 서버, 리플렉션 실행
 - [x] `BatchEntryPoint.RunTask<T>()` — AssetDatabase.Refresh + Execute + 예외 처리 + Exit
 - [x] `BatchRunner.FindUnityPath()` — 현재 버전 우선, Hub 최신 버전 폴백
 
@@ -626,8 +598,6 @@ Unity 빌트인 컴포넌트는 내부 직렬화 필드명이 프로퍼티명과
 ```
 SindyGamePackage/                      ← 프로젝트 루트 (경로 기준점)
 ├── Temp/                              ← Unity 자동 관리 (.gitignore)
-│   ├── sindy_cmd.json                 ← 파일 기반 IPC 커맨드 (폴백용, 실행 후 자동 삭제)
-│   ├── sindy_result.json              ← 파일 기반 IPC 결과 (폴백용)
 │   └── sindy_hierarchy.json           ← ReadSceneHierarchy 출력
 ├── Logs/
 │   ├── batch_*.log                    ← Unity 전체 배치 로그
@@ -642,7 +612,7 @@ SindyGamePackage/                      ← 프로젝트 루트 (경로 기준점
     │   │   ├── SOEditor.cs             — ScriptableObject 편집 컨텍스트
     │   │   ├── AssetFinder.cs          — 프리팹/SO 탐색 유틸 (캐시)
     │   │   ├── FieldPeeker.cs          — 직렬화 경로 조회 도구 + EditorWindow
-    │   │   ├── EditorCommandWatcher.cs — HTTP 서버 + 파일 기반 IPC 폴백 [InitializeOnLoad]
+    │   │   ├── EditorCommandWatcher.cs — HTTP IPC 서버 [InitializeOnLoad]
     │   │   ├── BatchEntryPoint.cs      — 배치 태스크 베이스 클래스
     │   │   └── BatchRunner.cs          — Unity 배치 서브프로세스 실행 헬퍼
     │   └── Examples/

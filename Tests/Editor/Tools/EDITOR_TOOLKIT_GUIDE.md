@@ -704,7 +704,7 @@ EditorApplication.Exit(1); // 실패
 
 ## 내부 구조 / 배경 지식
 
-> 이 섹션은 직접 사용할 필요 없는 내부 동작 설명입니다. HTTP 방식이 막힐 때(방화벽·포트 충돌) 폴백 수단으로만 참고하세요.
+> 이 섹션은 직접 사용할 필요 없는 내부 동작 설명입니다.
 
 ### HTTP IPC 동작 흐름
 
@@ -714,28 +714,10 @@ AI / Shell                           Unity Editor (EditorCommandWatcher)
 curl POST /execute                   HTTP 리스너 스레드 (블로킹)
   {"method":"..."}          ──────→  요청 수신 → _requestQueue에 enqueue
                                      │
-                                     └─ EditorApplication.update (100ms 폴링)
+                                     └─ EditorApplication.update
                                         큐에서 dequeue → 리플렉션으로 메서드 실행
                                         → HTTP 응답 반환
                                            {"success":true,"message":"OK"}
-```
-
-### 파일 기반 IPC 동작 흐름 (폴백)
-
-> HTTP 포트가 방화벽에 막히거나 포트 충돌 시 사용할 수 있는 폴백 방식.
-> `EditorCommandWatcher`는 두 방식을 동시에 폴링합니다.
-
-```
-외부 프로세스                        Unity Editor (EditorCommandWatcher)
-──────────────────────────────────   ──────────────────────────────────────
-1. Temp/sindy_cmd.json 작성
-   {"method":"...","id":"abc123"}
-2. Temp/sindy_result.json 폴링       3. EditorApplication.update (100ms 폴링)
-   (1초 간격, 최대 30초)                4. sindy_cmd.json 발견 → 즉시 삭제
-                                        5. 리플렉션으로 메서드 실행
-                                        6. sindy_result.json 작성
-                                           {"id":"abc123","success":true,...}
-7. 결과 확인 후 처리
 ```
 
 ### 배치 모드 로그 확인
@@ -763,7 +745,7 @@ cat Logs/batch_MyTask_Run_20250101_123456.log | grep -E "Error|Exception|FAIL"
 <package-root>/
 ├── Editor/
 │   ├── EditorTools/
-│   │   ├── EditorCommandWatcher.cs  ← HTTP 서버 + 파일 기반 IPC 폴링 [InitializeOnLoad]
+│   │   ├── EditorCommandWatcher.cs  ← HTTP IPC 서버 [InitializeOnLoad]
 │   │   ├── BatchEntryPoint.cs       ← 배치 태스크 베이스 클래스
 │   │   ├── BatchRunner.cs           ← Unity 배치 서브프로세스 실행 헬퍼
 │   │   ├── SindyEdit.cs             ← 통합 파사드 (씬/프리팹/SO 동일 API)
@@ -785,9 +767,6 @@ cat Logs/batch_MyTask_Run_20250101_123456.log | grep -E "Error|Exception|FAIL"
 **프로젝트 루트 구조:**
 ```
 YourProject/                          ← 프로젝트 루트 (Assets/, ProjectSettings/ 위치)
-├── Temp/                             ← IPC 통신 파일 (Unity 자동 관리)
-│   ├── sindy_cmd.json                ← 파일 기반 IPC 커맨드 (폴백용, 실행 후 삭제됨)
-│   └── sindy_result.json             ← 파일 기반 IPC 결과 (폴백용)
 └── Logs/
     ├── batch_*.log                   ← Unity 전체 로그 (자동 생성)
     └── batch_result.txt              ← 배치 결과 요약 (자동 생성)

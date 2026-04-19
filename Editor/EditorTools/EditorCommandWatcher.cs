@@ -1,18 +1,9 @@
 // ────────────────────────────────────────────────────────────────────────────
-// EditorCommandWatcher — 파일 기반 IPC + HTTP 서버
+// EditorCommandWatcher — HTTP IPC 서버
 //
-// 1. 파일 기반 IPC: AI(쉘)가 Temp/sindy_cmd.json을 작성하면 Unity 에디터가
-//    감지하여 리플렉션으로 메서드를 실행하고 결과를 Temp/sindy_result.json에 기록
-//
-// 2. HTTP 서버: POST /execute, GET /ping 엔드포인트
-//    포트: EditorPrefs "Sindy.EditorTools.HttpPort" (기본값 6060)
-//    포트 변경: Edit > Preferences > Sindy
-//
-// 커맨드 파일 형식:
-//   { "method": "Sindy.Editor.Examples.BatchTest.Ping", "id": "abc123" }
-//
-// 결과 파일 형식:
-//   { "id": "abc123", "success": true, "message": "OK", "timestamp": "..." }
+// HTTP 서버: POST /execute, POST /edit, GET /ping 엔드포인트
+// 포트: EditorPrefs "Sindy.EditorTools.HttpPort" (기본값 6060)
+// 포트 변경: Edit > Preferences > Sindy
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
@@ -31,15 +22,6 @@ namespace Sindy.Editor.EditorTools
     [InitializeOnLoad]
     public static class EditorCommandWatcher
     {
-        // ── 파일 IPC 경로 ────────────────────────────────────────────────────────
-        private static readonly string CmdFile =
-            Path.Combine(Application.dataPath, "..", "Temp", "sindy_cmd.json");
-        private static readonly string ResultFile =
-            Path.Combine(Application.dataPath, "..", "Temp", "sindy_result.json");
-
-        private static double _lastPollTime;
-        private const double PollIntervalSeconds = 0.1;
-
         // ── HTTP 서버 ─────────────────────────────────────────────────────────────
         private const int DefaultPort = 6060;
         private const string PortPrefKey = "Sindy.EditorTools.HttpPort";
@@ -50,13 +32,6 @@ namespace Sindy.Editor.EditorTools
             = new ConcurrentQueue<PendingRequest>();
 
         // ── 직렬화 DTO ──────────────────────────────────────────────────────────
-
-        [Serializable]
-        private class CommandDto
-        {
-            public string method;
-            public string id;
-        }
 
         [Serializable]
         private class ResultDto
@@ -98,7 +73,6 @@ namespace Sindy.Editor.EditorTools
             EditorApplication.update += Poll;
             AssemblyReloadEvents.beforeAssemblyReload += StopHttpServer;
             StartHttpServer();
-            Debug.Log("[SindyCmd] EditorCommandWatcher 시작됨. 커맨드 파일 폴링 중...");
         }
 
         // ── HTTP 서버 ─────────────────────────────────────────────────────────────
@@ -180,12 +154,6 @@ namespace Sindy.Editor.EditorTools
 
         private static void Poll()
         {
-            double now = EditorApplication.timeSinceStartup;
-            if (now - _lastPollTime < PollIntervalSeconds)
-                return;
-            _lastPollTime = now;
-
-            // HTTP 큐 처리
             while (_requestQueue.TryDequeue(out var req))
             {
                 ResultDto result;
@@ -208,35 +176,6 @@ namespace Sindy.Editor.EditorTools
                     result = ExecuteMethodCore(req.Method);
                 }
                 SendHttpResponse(req.Context, result);
-            }
-
-            // 파일 IPC 처리
-            try
-            {
-                if (!File.Exists(CmdFile))
-                    return;
-
-                // 파일 읽기 + 즉시 삭제 (중복 실행 방지)
-                string json = File.ReadAllText(CmdFile);
-                File.Delete(CmdFile);
-
-                CommandDto cmd = JsonUtility.FromJson<CommandDto>(json);
-
-                if (string.IsNullOrEmpty(cmd?.method))
-                {
-                    WriteResult(cmd?.id ?? "?", false, "method 필드가 없거나 비어있습니다.");
-                    return;
-                }
-
-                Debug.Log($"[SindyCmd] 커맨드 수신: method={cmd.method}, id={cmd.id}");
-                ResultDto result = ExecuteMethodCore(cmd.method);
-                result.id = cmd.id ?? string.Empty;
-                WriteResultDto(result);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[SindyCmd] 폴링 중 예외: {ex.Message}");
-                // 에디터 크래시 방지 — 예외를 삼킴
             }
         }
 
@@ -503,37 +442,6 @@ namespace Sindy.Editor.EditorTools
             return null;
         }
 
-        // ── 결과 파일 기록 ───────────────────────────────────────────────────────
-
-        private static void WriteResult(string id, bool success, string message)
-        {
-            WriteResultDto(new ResultDto
-            {
-                id        = id ?? string.Empty,
-                success   = success,
-                message   = message,
-                timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
-            });
-        }
-
-        private static void WriteResultDto(ResultDto result)
-        {
-            try
-            {
-                string json = JsonUtility.ToJson(result);
-
-                string dir = Path.GetDirectoryName(ResultFile);
-                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
-                    Directory.CreateDirectory(dir);
-
-                File.WriteAllText(ResultFile, json);
-                Debug.Log($"[SindyCmd] 결과 기록: {json}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[SindyCmd] 결과 파일 기록 실패: {ex.Message}");
-            }
-        }
     }
 }
 #endif
