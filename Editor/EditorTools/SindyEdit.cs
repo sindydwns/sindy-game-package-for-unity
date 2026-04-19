@@ -260,32 +260,81 @@ namespace Sindy.Editor.EditorTools
         // ── SO* 세터 ──────────────────────────────────────────────────────────
 
         /// <summary>SerializedProperty stringValue 세터</summary>
-        public AssetEditSession SOString(string prop, string value)
-            => SetProperty(prop, p => p.stringValue = value);
+        public AssetEditSession SOString(string prop, string value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.String)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: String, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.stringValue = value;
+        });
 
         /// <summary>SerializedProperty intValue 세터</summary>
-        public AssetEditSession SOInt(string prop, int value)
-            => SetProperty(prop, p => p.intValue = value);
+        public AssetEditSession SOInt(string prop, int value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.Integer)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Integer, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.intValue = value;
+        });
 
         /// <summary>SerializedProperty floatValue 세터</summary>
-        public AssetEditSession SOFloat(string prop, float value)
-            => SetProperty(prop, p => p.floatValue = value);
+        public AssetEditSession SOFloat(string prop, float value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.Float)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Float, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.floatValue = value;
+        });
 
         /// <summary>SerializedProperty boolValue 세터</summary>
-        public AssetEditSession SOBool(string prop, bool value)
-            => SetProperty(prop, p => p.boolValue = value);
+        public AssetEditSession SOBool(string prop, bool value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.Boolean)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Boolean, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.boolValue = value;
+        });
 
         /// <summary>SerializedProperty colorValue 세터</summary>
-        public AssetEditSession SOColor(string prop, Color value)
-            => SetProperty(prop, p => p.colorValue = value);
+        public AssetEditSession SOColor(string prop, Color value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.Color)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Color, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.colorValue = value;
+        });
 
         /// <summary>SerializedProperty vector3Value 세터</summary>
-        public AssetEditSession SOVector3(string prop, Vector3 value)
-            => SetProperty(prop, p => p.vector3Value = value);
+        public AssetEditSession SOVector3(string prop, Vector3 value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.Vector3)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Vector3, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.vector3Value = value;
+        });
 
         /// <summary>SerializedProperty vector2Value 세터</summary>
-        public AssetEditSession SOVector2(string prop, Vector2 value)
-            => SetProperty(prop, p => p.vector2Value = value);
+        public AssetEditSession SOVector2(string prop, Vector2 value) => SetProperty(prop, sp =>
+        {
+            if (sp.propertyType != SerializedPropertyType.Vector2)
+            {
+                Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Vector2, 실제: {sp.propertyType})");
+                return;
+            }
+            sp.vector2Value = value;
+        });
 
         // ── 범용 Set ──────────────────────────────────────────────────────────
 
@@ -373,11 +422,24 @@ namespace Sindy.Editor.EditorTools
             });
         }
 
+        // Unity 내부 직렬화 프로퍼티 — 사용자가 실수로 넘겨도 건너뜀
+        private static readonly HashSet<string> _internalProps = new()
+        {
+            "m_Script", "m_ObjectHideFlags", "m_PrefabInstance",
+            "m_PrefabAsset", "m_CorrespondingSourceObject",
+        };
+
         private AssetEditSession SetProperty(string prop, Action<SerializedProperty> setter)
         {
             if (_disposed)
             {
                 Debug.LogWarning("[SindyEdit] 이미 Dispose된 세션입니다.");
+                return this;
+            }
+
+            if (_internalProps.Contains(prop))
+            {
+                Debug.LogWarning($"[SindyEdit] '{prop}'은 Unity 내부 프로퍼티로 편집할 수 없습니다.");
                 return this;
             }
 
