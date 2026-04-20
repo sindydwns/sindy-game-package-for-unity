@@ -24,7 +24,8 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
 
 ### SindyComponent (비제네릭)
 
-`object Model`을 보유하며 `SetModel(object)`, `Init(object)`, `Clear(object)` 가상 메서드를 제공합니다.  
+`object Model`을 보유하며 `SetModel(object)`, `Init(object)`, `Clear(object)` 가상 메서드를 제공합니다.
+
 내부 상태:
 - `disposables` — `Init`에서 등록한 구독들을 모아두는 리스트
 - `LinkState` — 부모-자식 컴포넌트 연결 관리 (`SindyComponentLinkState`)
@@ -44,8 +45,8 @@ public abstract class SindyComponent<T> : SindyComponent where T : class
 ```
 
 - `SetModel(object)`에서 타입 검사: `T`가 아닌 타입이 오면 `ArgumentException` throw
-- `Init(T)`는 abstract — 반드시 구현해야 함
-- `Clear(T)`는 virtual (기본 빈 구현) — UI 초기화가 필요할 때만 오버라이드
+- `Init(T)` — abstract, 반드시 구현
+- `Clear(T)` — virtual (기본 빈 구현), UI 초기화가 필요할 때만 오버라이드
 
 ---
 
@@ -56,10 +57,11 @@ public abstract class SindyComponent<T> : SindyComponent where T : class
 | 역할 | 단일 UI 요소 바인딩 | ViewModel의 자식들을 하위 컴포넌트에 매핑 |
 | 제네릭 | `T` (자유) | `ViewModel` 고정 |
 | Init 구현 | 직접 구독 코드 작성 | Inspector의 `views` 리스트 순회하며 `model[name]` 전달 |
-| 모델 키 접근 | 없음 | `model["이름"]` 으로 자식 ViewModel 조회 |
+| 모델 키 접근 | 없음 | `model["이름"]`으로 자식 ViewModel 조회 |
 | 사용 위치 | 개별 컴포넌트 (라벨, 버튼 등) | 복잡한 UI 루트, 팝업 컨테이너 |
 
 `ViewComponent`의 Init:
+
 ```csharp
 protected override void Init(ViewModel model)
 {
@@ -73,6 +75,7 @@ protected override void Init(ViewModel model)
     }
 }
 ```
+
 Inspector에서 `(SindyComponent, "키이름")` 쌍을 등록해두면, ViewModel에 담긴 자식 모델이 자동으로 연결됩니다.
 
 ---
@@ -135,6 +138,7 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 ## BindCommonFeatures
 
 `Init` 전에 자동 실행됩니다. 모델이 `ViewModel`이면 다음 Feature를 자동 처리합니다:
+
 - `VisibilityFeature` → `gameObject.SetActive`
 - `LayoutFeature` → `RectTransform`에 레이아웃 적용
 
@@ -146,8 +150,8 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 
 1. `Components/XxxComponent.cs` 파일 생성
 2. 같은 파일에 `XxxModel : PropModel<T>` (또는 `SubjModel<T>`) 정의
-3. `XxxComponent : SindyComponent<XxxModel 또는 PropModel<T>>` 정의
-4. `Init(T model)` — 구독 등록 (`disposables`에 추가)
-5. `Clear(T model)` — UI 초기화 (필요할 때만)
+3. `XxxComponent : SindyComponent<XxxModel>` 정의
+4. `Init(XxxModel model)` — 구독 등록 (`disposables`에 추가)
+5. `Clear(XxxModel model)` — UI 초기화 (필요할 때만)
 6. 복합 컴포넌트면: 자식 컴포넌트에 `.SetParent(this)` 반드시 호출
 7. 테스트: `component.SetModel(null); model.Dispose();` cleanup 검증
