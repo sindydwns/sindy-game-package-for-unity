@@ -440,16 +440,15 @@ using (var p = PrefabEditor.Open("Assets/Prefabs/MyButton.prefab"))
 **메서드 체이닝 예제**
 
 ```csharp
-// 기존 에셋 수정
-using (var so = SOEditor<FloatVariable>.Open("Assets/Data/Speed.asset"))
+// 기존 에셋 수정 — SindyEdit 사용 (Apply 불필요, Dispose 시 자동 저장)
+using (var s = SindyEdit.Open("Assets/Data/Speed.asset"))
 {
-    if (so == null) return;
-    so.SOFloat("Value", 9.8f)
-      .SOStr("description", "중력 가속도")
-      .Apply();
+    if (s == null) return;
+    s.SOFloat("Value", 9.8f)
+     .SOString("description", "중력 가속도");
 }
 
-// 새 에셋 생성
+// 새 에셋 생성 — SindyEdit 미지원. SOEditor<T>.Create()를 직접 사용:
 using (var so = SOEditor<FloatVariable>.Create("Assets/Data/NewSpeed.asset"))
 {
     so.SOFloat("Value", 5f)
@@ -461,8 +460,8 @@ using (var so = SOEditor<FloatVariable>.Create("Assets/Data/NewSpeed.asset"))
 foreach (var asset in AssetFinder.AllAssets<FloatVariable>("Assets/Data/"))
 {
     string path = AssetDatabase.GetAssetPath(asset);
-    using var so = SOEditor<FloatVariable>.Open(path);
-    so?.SOFloat("Value", asset.Value * 1.1f).Apply(); // 모두 10% 증가
+    using var s = SindyEdit.Open(path);
+    s?.SOFloat("Value", asset.Value * 1.1f); // 모두 10% 증가
 }
 ```
 

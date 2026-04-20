@@ -13,12 +13,13 @@ using UnityEngine;
 namespace Sindy.Editor.Examples
 {
     /// <summary>
-    /// 예제 C — SOEditor, AssetFinder SO 탐색 사용법
+    /// 예제 C — SindyEdit / SOEditor / AssetFinder SO 편집 사용법
     ///
     /// 시나리오:
     ///   (1) SOEditor.Create()로 ScriptableObject 에셋을 새로 생성하고 필드 설정
-    ///   (2) SOEditor.Open()으로 기존 에셋을 로드하여 편집
-    ///   (3) AssetFinder.AllAssets&lt;T&gt;()로 탐색 후 일괄 편집
+    ///       (에셋 생성은 SindyEdit 미지원 → SOEditor.Create() 직접 사용)
+    ///   (2) SindyEdit.Open()으로 기존 에셋을 로드하여 편집
+    ///   (3) AssetFinder.AllAssets&lt;T&gt;()로 탐색 후 SindyEdit으로 일괄 편집
     ///   (4) 중첩 경로(dot notation) 사용 예시
     ///
     /// Menu: Sindy/Examples/C - SO Edit
@@ -74,7 +75,7 @@ namespace Sindy.Editor.Examples
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // (2) 기존 SO 에셋 로드 + SOEditor으로 편집
+        // (2) 기존 SO 에셋 로드 + SindyEdit으로 편집
         // ─────────────────────────────────────────────────────────────────────
 
         [MenuItem("Sindy/Examples/C - SO Load & Edit")]
@@ -82,11 +83,11 @@ namespace Sindy.Editor.Examples
         {
             string path = $"{SOOutputFolder}/Example_IntVariable.asset";
 
-            // ── SOEditor.Open(): LoadAssetAtPath<T> + SerializedObject.Update 자동 처리 ──
-            // 로드 실패 시 null 반환 → null 체크 필수.
-            using (var so = SOEditor<IntVariable>.Open(path))
+            // ── SindyEdit.Open(): 에셋 로드. 로드 실패 시 null 반환 → null 체크 필수.
+            // Dispose 시 AssetDatabase.SaveAssets() 자동 호출. Apply() 불필요.
+            using (var s = SindyEdit.Open(path))
             {
-                if (so == null)
+                if (s == null)
                 {
                     EditorUtility.DisplayDialog(
                         "에셋 없음",
@@ -95,11 +96,9 @@ namespace Sindy.Editor.Examples
                     return;
                 }
 
-                so.SOInt("Value", 100)
-                  .SOStr("description", "값이 수정되었습니다.")
-                  .Apply();
+                s.SOInt("Value", 100)
+                 .SOString("description", "값이 수정되었습니다.");
             }
-            // Dispose → AssetDatabase.SaveAssets() 자동 호출
 
             Debug.Log("[Example C] IntVariable 로드 및 수정 완료.");
         }
@@ -119,12 +118,11 @@ namespace Sindy.Editor.Examples
             {
                 string assetPath = AssetDatabase.GetAssetPath(floatVar);
 
-                using (var so = SOEditor<FloatVariable>.Open(assetPath))
+                using (var s = SindyEdit.Open(assetPath))
                 {
-                    if (so == null) continue;
+                    if (s == null) continue;
 
-                    so.SOFloat("Value", 0f) // 모든 FloatVariable 초기화
-                      .Apply();
+                    s.SOFloat("Value", 0f); // 모든 FloatVariable 초기화
                 }
             }
 
@@ -155,13 +153,12 @@ namespace Sindy.Editor.Examples
             //
             // "필드.서브필드" 경로로 한 줄에 접근 가능:
             string assetPath = AssetDatabase.GetAssetPath((UnityEngine.Object)targetSO);
-            using (var so = SOEditor<IntVariable>.Open(assetPath))
+            using (var s = SindyEdit.Open(assetPath))
             {
-                if (so == null) return;
+                if (s == null) return;
 
-                so.SOBool("healthRef.UseConstant",    true)
-                  .SOFloat("healthRef.ConstantValue", 100f)
-                  .Apply();
+                s.SOBool("healthRef.UseConstant",    true)
+                 .SOFloat("healthRef.ConstantValue", 100f);
             }
         }
     }
