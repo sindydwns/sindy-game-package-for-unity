@@ -188,6 +188,7 @@ Unity를 직접 배치 모드로 실행합니다. Unity 실행 파일 경로는 
 | 메서드 | 파라미터 | 반환값 | 설명 |
 |--------|----------|--------|------|
 | `GO` | `string goPath` | `AssetEditSession` | `'/'` 또는 `'.'` 구분 계층 경로로 GO 탐색. 탐색 실패 시 LogWarning |
+| `CreateGO` | `string name` | `AssetEditSession` | 현재 GO의 자식으로 새 GO 생성. `_currentGO` null이면 씬/프리팹 루트에 생성. 생성 후 컨텍스트가 새 GO로 이동 |
 | `SOString` | `string prop, string value` | `AssetEditSession` | `stringValue` 세터 |
 | `SOInt` | `string prop, int value` | `AssetEditSession` | `intValue` 세터 |
 | `SOFloat` | `string prop, float value` | `AssetEditSession` | `floatValue` 세터 |
@@ -195,6 +196,7 @@ Unity를 직접 배치 모드로 실행합니다. Unity 실행 파일 경로는 
 | `SOColor` | `string prop, Color value` | `AssetEditSession` | `colorValue` 세터 |
 | `SOVector3` | `string prop, Vector3 value` | `AssetEditSession` | `vector3Value` 세터 |
 | `SOVector2` | `string prop, Vector2 value` | `AssetEditSession` | `vector2Value` 세터 |
+| `SORef` | `string prop, Object value` | `AssetEditSession` | `objectReferenceValue` 세터. 타입 불일치 시 LogWarning |
 | `Set` | `string prop, object value` | `AssetEditSession` | 타입 자동 판별. HTTP IPC용 |
 | `Save` | — | `void` | 명시적 저장. Dispose에서도 자동 저장되므로 생략 가능 |
 | `Dispose` | — | `void` | 변경사항 자동 저장 + 내부 리소스 정리 |
@@ -248,6 +250,21 @@ s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
 // ─── 이름으로 자동 탐색 ───────────────────────────────────────────────────
 using var s = SindyEdit.Find("GaugeBar");
 s.GO("Fill/Image").SOColor("m_Color", Color.green);
+
+// ─── CreateGO: 새 GO 생성 후 체이닝 ──────────────────────────────────────
+using var s = SindyEdit.Open("Assets/Scenes/Main.unity");
+s.CreateGO("Canvas");                                      // 씬 루트에 생성
+s.GO("Canvas").CreateGO("HUD").CreateGO("Title")           // 자식 GO 순차 생성, _currentGO 이동
+ .AddComp<TextMeshProUGUI>()
+ .SOString("m_text", "Hello");
+s.GOFind("Background").CreateGO("Border")                  // 기존 GO 탐색 후 자식 생성
+ .AddComp<Image>()
+ .SOColor("m_Color", Color.gray);
+
+// ─── SORef: objectReferenceValue 세터 ────────────────────────────────────
+s.GO("Icon").SORef("m_Sprite", spriteAsset);               // 세션 레벨
+s.GOFind("Icon").WithComp<Image>(img =>                    // ComponentEditScope 레벨
+    img.SORef("m_Sprite", spriteAsset));
 ```
 
 **기존 개별 클래스와의 비교**
