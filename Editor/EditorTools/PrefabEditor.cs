@@ -19,18 +19,18 @@ namespace Sindy.Editor.EditorTools
     ///
     ///     // 루트 GO 직접 접근
     ///     p.Root()
-    ///         .WithComp&lt;MyComp&gt;()
+    ///         .WithComp<MyComp>()
     ///         .SOFloat("speed", 5f)
     ///         .Apply();
     ///
     ///     // 자식 경로 접근
     ///     p.GO("Canvas.Panel.Button")
-    ///         .AddComp&lt;Button&gt;()
+    ///         .AddComp<Button>()
     ///         .Apply();
     ///
     ///     // 없으면 생성하지 않는 탐색
     ///     p.GOFind("Canvas.Header")
-    ///      ?.WithComp&lt;Image&gt;()
+    ///      ?.WithComp<Image>()
     ///      .SOColor("m_Color", Color.white)
     ///      .Apply();
     /// }

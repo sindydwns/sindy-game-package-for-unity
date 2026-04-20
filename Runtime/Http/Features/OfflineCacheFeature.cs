@@ -9,18 +9,18 @@ namespace Sindy.Http
     /// 성공 응답을 캐시에 저장하고, 네트워크 에러 시 유효한 캐시를 반환합니다.
     ///
     /// 사용 예:
-    ///   var cache = new OfflineCacheFeature&lt;RankingDto&gt;(TimeSpan.FromMinutes(5));
-    ///   cache.Apply(client.Get&lt;RankingDto&gt;("/api/ranking"))
+    ///   var cache = new OfflineCacheFeature<RankingDto>(TimeSpan.FromMinutes(5));
+    ///   cache.Apply(client.Get<RankingDto>("/api/ranking"))
     ///       .Subscribe(res => ...);
     /// </summary>
     public class OfflineCacheFeature<T> : ViewModelFeature
     {
-        public PropModel<bool>   IsFromCache { get; } = new(false);
-        public PropModel<string> CachedAt    { get; } = new();
+        public PropModel<bool> IsFromCache { get; } = new(false);
+        public PropModel<string> CachedAt { get; } = new();
 
-        private T        stored;
+        private T stored;
         private DateTime storedAt;
-        private bool     hasValue;
+        private bool hasValue;
         private readonly TimeSpan maxAge;
 
         public OfflineCacheFeature(TimeSpan maxAge)
@@ -39,7 +39,7 @@ namespace Sindy.Http
             return source
                 .Do(res =>
                 {
-                    stored   = res.Data;
+                    stored = res.Data;
                     storedAt = DateTime.UtcNow;
                     hasValue = true;
                     IsFromCache.Value = false;
@@ -56,11 +56,11 @@ namespace Sindy.Http
                         return Observable.Throw<HttpResponse<T>>(err);
 
                     IsFromCache.Value = true;
-                    CachedAt.Value    = $"캐시 ({storedAt:HH:mm} 기준)";
+                    CachedAt.Value = $"캐시 ({storedAt:HH:mm} 기준)";
                     return Observable.Return(new HttpResponse<T>
                     {
                         StatusCode = 200,
-                        Data       = stored,
+                        Data = stored,
                     });
                 });
         }

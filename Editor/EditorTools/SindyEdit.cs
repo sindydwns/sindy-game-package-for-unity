@@ -29,12 +29,12 @@ namespace Sindy.Editor.EditorTools
     /// s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
     ///
     /// // SO 신규 생성 후 편집
-    /// using var s = SindyEdit.Create&lt;FloatVariable&gt;("Assets/Data/Speed.asset");
+    /// using var s = SindyEdit.Create<FloatVariable>("Assets/Data/Speed.asset");
     /// s.SOFloat("value", 5f);
     ///
     /// // 이름으로 자동 탐색
     /// using var s = SindyEdit.Find("GaugeBar");
-    /// s.GOFind("Fill").WithComp&lt;Image&gt;(img => img.Set("m_Color", Color.green));
+    /// s.GOFind("Fill").WithComp<Image>(img => img.Set("m_Color", Color.green));
     /// </code>
     /// </example>
     /// </summary>
@@ -58,9 +58,9 @@ namespace Sindy.Editor.EditorTools
             string ext = Path.GetExtension(assetPath).ToLowerInvariant();
             return ext switch
             {
-                ".unity"  => AssetEditSession.ForScene(assetPath),
+                ".unity" => AssetEditSession.ForScene(assetPath),
                 ".prefab" => AssetEditSession.ForPrefab(assetPath),
-                _         => AssetEditSession.ForAsset(assetPath),
+                _ => AssetEditSession.ForAsset(assetPath),
             };
         }
 
@@ -179,12 +179,12 @@ namespace Sindy.Editor.EditorTools
 
         // ── 상태 ──────────────────────────────────────────────────────────────
 
-        private readonly AssetMode          _mode;
-        private readonly string             _assetPath;
+        private readonly AssetMode _mode;
+        private readonly string _assetPath;
 
         // 위임 객체 (모드별로 하나만 사용)
-        private readonly SceneEditor        _sceneEditor;
-        private readonly PrefabEditor       _prefabEditor;
+        private readonly SceneEditor _sceneEditor;
+        private readonly PrefabEditor _prefabEditor;
         private readonly UnityEngine.Object _soAsset;
 
         // 현재 탐색 중인 GO (Scene / Prefab 모드)
@@ -202,11 +202,11 @@ namespace Sindy.Editor.EditorTools
             AssetMode mode, string path,
             SceneEditor se = null, PrefabEditor pe = null, UnityEngine.Object soAsset = null)
         {
-            _mode        = mode;
-            _assetPath   = path;
+            _mode = mode;
+            _assetPath = path;
             _sceneEditor = se;
             _prefabEditor = pe;
-            _soAsset     = soAsset;
+            _soAsset = soAsset;
         }
 
         // ── 내부 팩토리 ───────────────────────────────────────────────────────
@@ -561,19 +561,19 @@ namespace Sindy.Editor.EditorTools
         // ── 값 읽기 ───────────────────────────────────────────────────────────
 
         /// <summary>현재 타깃에서 float 프로퍼티 값을 읽습니다.</summary>
-        public float GetFloat(string prop)  => ReadProperty(prop, sp => sp.floatValue,  0f);
+        public float GetFloat(string prop) => ReadProperty(prop, sp => sp.floatValue, 0f);
 
         /// <summary>현재 타깃에서 string 프로퍼티 값을 읽습니다.</summary>
         public string GetString(string prop) => ReadProperty(prop, sp => sp.stringValue, string.Empty);
 
         /// <summary>현재 타깃에서 int 프로퍼티 값을 읽습니다.</summary>
-        public int GetInt(string prop)      => ReadProperty(prop, sp => sp.intValue,    0);
+        public int GetInt(string prop) => ReadProperty(prop, sp => sp.intValue, 0);
 
         /// <summary>현재 타깃에서 bool 프로퍼티 값을 읽습니다.</summary>
-        public bool GetBool(string prop)    => ReadProperty(prop, sp => sp.boolValue,   false);
+        public bool GetBool(string prop) => ReadProperty(prop, sp => sp.boolValue, false);
 
         /// <summary>현재 타깃에서 Color 프로퍼티 값을 읽습니다.</summary>
-        public Color GetColor(string prop)  => ReadProperty(prop, sp => sp.colorValue,  Color.clear);
+        public Color GetColor(string prop) => ReadProperty(prop, sp => sp.colorValue, Color.clear);
 
         // ── 범용 Set ──────────────────────────────────────────────────────────
 
@@ -590,15 +590,15 @@ namespace Sindy.Editor.EditorTools
 
             return value switch
             {
-                string s   => SOString(prop, s),
-                bool b     => SOBool(prop, b),
-                Color c    => SOColor(prop, c),
+                string s => SOString(prop, s),
+                bool b => SOBool(prop, b),
+                Color c => SOColor(prop, c),
                 Vector3 v3 => SOVector3(prop, v3),
                 Vector2 v2 => SOVector2(prop, v2),
-                int i      => SetIntOrFloat(prop, i),
-                float f    => SOFloat(prop, f),
-                null       => LogAndReturn($"[SindyEdit] Set: value가 null입니다. prop={prop}"),
-                _          => LogAndReturn($"[SindyEdit] Set: 지원하지 않는 타입 {value.GetType().Name}. prop={prop}"),
+                int i => SetIntOrFloat(prop, i),
+                float f => SOFloat(prop, f),
+                null => LogAndReturn($"[SindyEdit] Set: value가 null입니다. prop={prop}"),
+                _ => LogAndReturn($"[SindyEdit] Set: 지원하지 않는 타입 {value.GetType().Name}. prop={prop}"),
             };
         }
 
@@ -724,7 +724,7 @@ namespace Sindy.Editor.EditorTools
             {
                 if (comp == null) continue;
                 var so = GetOrCreateSO(comp);
-                var p  = so.FindProperty(prop);
+                var p = so.FindProperty(prop);
                 if (p != null)
                 {
                     owner = so;
@@ -836,7 +836,7 @@ namespace Sindy.Editor.EditorTools
     /// </para>
     /// <example>
     /// <code>
-    /// session.GO("Player").WithComp&lt;Image&gt;(img =>
+    /// session.GO("Player").WithComp<Image>(img =>
     /// {
     ///     img.Set("m_Color", new Color(1, 0, 0, 1));
     /// });
@@ -864,9 +864,9 @@ namespace Sindy.Editor.EditorTools
 
             switch (value)
             {
-                case string s:   sp.stringValue  = s; break;
-                case bool b:     sp.boolValue    = b; break;
-                case Color c:    sp.colorValue   = c; break;
+                case string s: sp.stringValue = s; break;
+                case bool b: sp.boolValue = b; break;
+                case Color c: sp.colorValue = c; break;
                 case Vector3 v3: sp.vector3Value = v3; break;
                 case Vector2 v2: sp.vector2Value = v2; break;
                 case int i:

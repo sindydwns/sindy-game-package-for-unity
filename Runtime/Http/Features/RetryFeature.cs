@@ -10,7 +10,7 @@ namespace Sindy.Http
     /// Network / Timeout 에러에만 재시도하고, 4xx 에러(NotFound, Unauthorized 등)는 즉시 실패합니다.
     ///
     /// 사용 예:
-    ///   var api = new ApiModel&lt;Unit, DataDto&gt;(client, "/api/data", HttpMethod.GET)
+    ///   var api = new ApiModel<Unit, DataDto>(client, "/api/data", HttpMethod.GET)
     ///       .With(new RetryFeature(maxRetry: 3, baseDelay: 1f));
     /// </summary>
     public class RetryFeature : ViewModelFeature
@@ -26,8 +26,8 @@ namespace Sindy.Http
         /// <param name="retryOnServerError">true이면 5xx ServerError도 재시도합니다</param>
         public RetryFeature(int maxRetry = 3, float baseDelay = 1f, bool retryOnServerError = false)
         {
-            this.maxRetry           = maxRetry;
-            this.baseDelay          = baseDelay;
+            this.maxRetry = maxRetry;
+            this.baseDelay = baseDelay;
             this.retryOnServerError = retryOnServerError;
             IsRetrying.AddTo(this);
         }

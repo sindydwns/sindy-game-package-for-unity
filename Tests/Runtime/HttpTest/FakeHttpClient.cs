@@ -12,13 +12,13 @@ namespace Sindy.Test
     /// 기본 사용 (즉시 응답):
     ///   var fake = new FakeHttpClient();
     ///   fake.Returns(new UserDto { Name = "Sindy" });
-    ///   // → 다음 Send&lt;UserDto&gt;() 호출 시 즉시 OnNext + OnCompleted
+    ///   // → 다음 Send<UserDto>() 호출 시 즉시 OnNext + OnCompleted
     ///
     /// 지연 응답 (IsLoading 중간 상태 검증):
-    ///   fake.ReturnsDeferred&lt;UserDto&gt;(out var trigger);
+    ///   fake.ReturnsDeferred<UserDto>(out var trigger);
     ///   api.Request.Send(Unit.Default);
     ///   Assert.AreEqual(true, api.Response.IsLoading.Value);  // 아직 응답 전
-    ///   trigger.OnNext(new HttpResponse&lt;UserDto&gt; { ... });
+    ///   trigger.OnNext(new HttpResponse<UserDto> { ... });
     ///   trigger.OnCompleted();
     ///   Assert.AreEqual(false, api.Response.IsLoading.Value); // 응답 후
     ///

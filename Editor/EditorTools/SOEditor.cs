@@ -16,7 +16,7 @@ namespace Sindy.Editor.EditorTools
     /// <example>
     /// <code>
     /// // 기존 에셋 열기
-    /// using (var so = SOEditor&lt;IntVariable&gt;.Open("Assets/.../MyInt.asset"))
+    /// using (var so = SOEditor<IntVariable>.Open("Assets/.../MyInt.asset"))
     /// {
     ///     if (so == null) return;
     ///     so.SOInt("Value", 42)
@@ -26,7 +26,7 @@ namespace Sindy.Editor.EditorTools
     /// // Dispose → AssetDatabase.SaveAssets() 자동 호출
     ///
     /// // 새 에셋 생성
-    /// using (var so = SOEditor&lt;FloatVariable&gt;.Create("Assets/.../NewFloat.asset"))
+    /// using (var so = SOEditor<FloatVariable>.Create("Assets/.../NewFloat.asset"))
     /// {
     ///     so.SOFloat("Value", 0.5f).Apply();
     /// }

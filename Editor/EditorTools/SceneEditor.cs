@@ -20,7 +20,7 @@ namespace Sindy.Editor.EditorTools
     /// using (ctx)
     /// {
     ///     ctx.GO("ShowcaseRunner")
-    ///         .AddComp&lt;ShowcaseRunner&gt;()
+    ///         .AddComp<ShowcaseRunner>()
     ///         .SOFloat("cellWidth", 240f)
     ///         .Apply();
     ///

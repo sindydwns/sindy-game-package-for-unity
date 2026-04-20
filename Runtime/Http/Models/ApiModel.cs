@@ -13,13 +13,13 @@ namespace Sindy.Http
     /// Feature 패턴(.With())으로 RetryFeature / TimeoutFeature / AuthFeature를 조합할 수 있습니다.
     ///
     /// 사용 예:
-    ///   var api = new ApiModel&lt;LoginReq, LoginRes&gt;(client, "/api/login");
+    ///   var api = new ApiModel<LoginReq, LoginRes>(client, "/api/login");
     ///   api.Request.Send(new LoginReq { ... });
     ///   api.Response.Data.Subscribe(res => ...).AddTo(disposables);
     /// </summary>
     public class ApiModel<TReq, TRes> : ViewModel
     {
-        public ApiRequestModel<TReq>  Request  { get; }
+        public ApiRequestModel<TReq> Request { get; }
         public ApiResponseModel<TRes> Response { get; }
 
         public new ApiModel<TReq, TRes> With<T>(T feature) where T : ViewModelFeature
@@ -30,10 +30,10 @@ namespace Sindy.Http
 
         public ApiModel(IHttpClient client, string url, HttpMethod method = HttpMethod.POST)
         {
-            Request  = new ApiRequestModel<TReq>();
+            Request = new ApiRequestModel<TReq>();
             Response = new ApiResponseModel<TRes>();
 
-            this["request"]  = Request;
+            this["request"] = Request;
             this["response"] = Response;
 
             // 요청 발행 → 로딩 설정 → HTTP 전송 (+ Feature 적용) → 응답 갱신
@@ -63,7 +63,7 @@ namespace Sindy.Http
         private Observable<HttpResponse<TRes>> ApplyFeatures(
             Func<Observable<HttpResponse<TRes>>> factory)
         {
-            var retry   = Feature<RetryFeature>();
+            var retry = Feature<RetryFeature>();
             var timeout = Feature<TimeoutFeature>();
 
             if (retry != null)
@@ -86,9 +86,9 @@ namespace Sindy.Http
         {
             var req = new HttpRequest
             {
-                Url     = url,
-                Method  = method,
-                Body    = SerializeBody(method, body),
+                Url = url,
+                Method = method,
+                Body = SerializeBody(method, body),
                 Headers = new Dictionary<string, string>
                 {
                     ["Accept"] = "application/json",

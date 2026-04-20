@@ -9,7 +9,7 @@ namespace Sindy.Http
     /// 지정 시간 내에 응답이 없으면 HttpErrorKind.Timeout 에러를 발생시킵니다.
     ///
     /// 사용 예:
-    ///   var api = new ApiModel&lt;Unit, DataDto&gt;(client, "/api/data", HttpMethod.GET)
+    ///   var api = new ApiModel<Unit, DataDto>(client, "/api/data", HttpMethod.GET)
     ///       .With(new TimeoutFeature(seconds: 30f));
     /// </summary>
     public class TimeoutFeature : ViewModelFeature

@@ -19,7 +19,7 @@ namespace Sindy.Editor.Examples
     ///   (1) SOEditor.Create()로 ScriptableObject 에셋을 새로 생성하고 필드 설정
     ///       (에셋 생성은 SindyEdit 미지원 → SOEditor.Create() 직접 사용)
     ///   (2) SindyEdit.Open()으로 기존 에셋을 로드하여 편집
-    ///   (3) AssetFinder.AllAssets&lt;T&gt;()로 탐색 후 SindyEdit으로 일괄 편집
+    ///   (3) AssetFinder.AllAssets<T>()로 탐색 후 SindyEdit으로 일괄 편집
     ///   (4) 중첩 경로(dot notation) 사용 예시
     ///
     /// Menu: Sindy/Examples/C - SO Edit
@@ -157,7 +157,7 @@ namespace Sindy.Editor.Examples
             {
                 if (s == null) return;
 
-                s.SOBool("healthRef.UseConstant",    true)
+                s.SOBool("healthRef.UseConstant", true)
                  .SOFloat("healthRef.ConstantValue", 100f);
             }
         }

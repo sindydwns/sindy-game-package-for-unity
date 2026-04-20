@@ -80,20 +80,20 @@ namespace Sindy.Editor.Examples
         ///
         /// ⚠ 어셈블리 경계:
         ///   ShowcaseRunner는 Sindy.Tests.Runtime 어셈블리에 있으므로
-        ///   이 파일(Sindy.Editor)에서 AddComp&lt;ShowcaseRunner&gt;()를 직접 쓸 수 없다.
+        ///   이 파일(Sindy.Editor)에서 AddComp<ShowcaseRunner>()를 직접 쓸 수 없다.
         ///   대신 타입 전체 이름 문자열을 전달하는 AddComp(string) 오버로드를 사용한다.
         /// </summary>
         private static void SetupShowcaseRunner(SceneEditor ctx)
         {
             // ── AssetFinder: 타입 전체 이름 + 힌트로 프리팹 컴포넌트 탐색 ──
-            var label  = AssetFinder.Prefab("Sindy.View.Components.LabelComponent",  "label");
+            var label = AssetFinder.Prefab("Sindy.View.Components.LabelComponent", "label");
             var button = AssetFinder.Prefab("Sindy.View.Components.ButtonComponent", "button");
-            var gauge  = AssetFinder.Prefab("Sindy.View.Components.GaugeComponent",  "gauge");
+            var gauge = AssetFinder.Prefab("Sindy.View.Components.GaugeComponent", "gauge");
             var toggle = AssetFinder.Prefab("Sindy.View.Components.ToggleComponent", "toggle");
-            var list   = AssetFinder.Prefab("Sindy.View.Components.ListComponent",   "list");
-            var page   = AssetFinder.Prefab("Sindy.View.Components.PageComponent",   "page");
-            var tab    = AssetFinder.Prefab("Sindy.View.Components.TabComponent",    "tab");
-            var popup  = AssetFinder.Prefab("Sindy.View.Components.PopupComponent",  "popup");
+            var list = AssetFinder.Prefab("Sindy.View.Components.ListComponent", "list");
+            var page = AssetFinder.Prefab("Sindy.View.Components.PageComponent", "page");
+            var tab = AssetFinder.Prefab("Sindy.View.Components.TabComponent", "tab");
+            var popup = AssetFinder.Prefab("Sindy.View.Components.PopupComponent", "popup");
 
             // ── GOEditor 체인 ─────────────────────────────────────────────────
             // GO("ShowcaseRunner") : 씬 루트에서 "ShowcaseRunner" 탐색, 없으면 생성
@@ -102,19 +102,19 @@ namespace Sindy.Editor.Examples
             // Apply()              : ApplyModifiedProperties + SetDirty. 반드시 호출!
             ctx.GO("ShowcaseRunner")
                 .AddComp("Sindy.Test.ShowcaseRunner") // 문자열 오버로드로 어셈블리 경계 우회
-                .SORef("labelPrefab",  label,  ignoreNullWarning: true)
+                .SORef("labelPrefab", label, ignoreNullWarning: true)
                 .SORef("buttonPrefab", button, ignoreNullWarning: true)
-                .SORef("gaugePrefab",  gauge,  ignoreNullWarning: true)
+                .SORef("gaugePrefab", gauge, ignoreNullWarning: true)
                 .SORef("togglePrefab", toggle, ignoreNullWarning: true)
-                .SORef("listPrefab",   list,   ignoreNullWarning: true)
-                .SORef("pagePrefab",   page,   ignoreNullWarning: true)
-                .SORef("tabPrefab",    tab,    ignoreNullWarning: true)
-                .SORef("popupPrefab",  popup,  ignoreNullWarning: true)
-                .SOFloat("cellWidth",   240f)
-                .SOFloat("cellHeight",  200f)
-                .SOInt("gridColumns",   3)
-                .SOFloat("cycleSec",    3.0f)
-                .SOColor("bgColor",   new Color(0.12f, 0.12f, 0.15f))
+                .SORef("listPrefab", list, ignoreNullWarning: true)
+                .SORef("pagePrefab", page, ignoreNullWarning: true)
+                .SORef("tabPrefab", tab, ignoreNullWarning: true)
+                .SORef("popupPrefab", popup, ignoreNullWarning: true)
+                .SOFloat("cellWidth", 240f)
+                .SOFloat("cellHeight", 200f)
+                .SOInt("gridColumns", 3)
+                .SOFloat("cycleSec", 3.0f)
+                .SOColor("bgColor", new Color(0.12f, 0.12f, 0.15f))
                 .SOColor("cellColor", new Color(0.20f, 0.20f, 0.26f))
                 .Apply();
         }
@@ -135,15 +135,15 @@ namespace Sindy.Editor.Examples
         ///   Image.color              → "m_Color"
         ///
         ///   정확한 필드명을 모를 때: Sindy/Tools/Field Peeker Window (FieldPeeker 도구)
-        ///   또는 코드에서: FieldPeeker.Print&lt;TextMeshProUGUI&gt;(gameObject);
+        ///   또는 코드에서: FieldPeeker.Print<TextMeshProUGUI>(gameObject);
         /// </summary>
         private static void SetupHUD(SceneEditor ctx)
         {
             // ── Canvas.HUD.Title ──────────────────────────────────────────────
             ctx.GO("Canvas.HUD.Title")
                 .AddComp<TextMeshProUGUI>()
-                .SOStr("m_text",        "ComponentBuilder Showcase")
-                .SOFloat("m_fontSize",   28f)
+                .SOStr("m_text", "ComponentBuilder Showcase")
+                .SOFloat("m_fontSize", 28f)
                 .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
                 .Apply();
 
@@ -156,8 +156,8 @@ namespace Sindy.Editor.Examples
             // ── Canvas.HUD.Footer.VersionLabel ────────────────────────────────
             ctx.GO("Canvas.HUD.Footer.VersionLabel")
                 .AddComp<TextMeshProUGUI>()
-                .SOStr("m_text",        "v1.0.0")
-                .SOFloat("m_fontSize",   11f)
+                .SOStr("m_text", "v1.0.0")
+                .SOFloat("m_fontSize", 11f)
                 .SOColor("m_fontColor", new Color(0.55f, 0.55f, 0.55f))
                 .Apply();
 
@@ -196,7 +196,7 @@ namespace Sindy.Editor.Examples
         ///   - Root(): 씬 첫 번째 루트 GO 접근
         ///   - Child(): 직계 자식 인덱스 / 이름으로 탐색
         ///   - GetFloat() / GetString() / GetColor() 등 값 읽기
-        ///   - WithComp&lt;T&gt;(Action): 콜백에서 특정 컴포넌트 편집
+        ///   - WithComp<T>(Action): 콜백에서 특정 컴포넌트 편집
         ///
         /// 이 메서드는 씬에 "A - Scene Edit" 메뉴로 이미 생성된 HUD 계층이 있다고 가정합니다.
         /// </summary>
@@ -218,7 +218,7 @@ namespace Sindy.Editor.Examples
 
             // ── GOFind: 계층 전체를 재귀 탐색 (경로 없이 이름만으로 찾기) ────
             float titleFontSize = s.GOFind("Title").GetFloat("m_fontSize");
-            string versionText  = s.GOFind("VersionLabel").GetString("m_text");
+            string versionText = s.GOFind("VersionLabel").GetString("m_text");
             Debug.Log($"[Example A] Title fontSize: {titleFontSize}, VersionLabel: \"{versionText}\"");
 
             // ── WithComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────

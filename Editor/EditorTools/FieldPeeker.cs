@@ -14,7 +14,7 @@ namespace Sindy.Editor.EditorTools
     /// </para>
     /// <para>
     /// 사용법:
-    ///   1. 코드: <c>FieldPeeker.Print&lt;TextMeshProUGUI&gt;(gameObject);</c>
+    ///   1. 코드: <c>FieldPeeker.Print<TextMeshProUGUI>(gameObject);</c>
     ///   2. 에디터 윈도우: Sindy/Tools/Field Peeker Window
     ///   3. 선택 오브젝트: Sindy/Tools/Print Field Names (Selected)
     /// </para>
@@ -66,9 +66,9 @@ namespace Sindy.Editor.EditorTools
 
         internal static List<(string path, string type)> GetFields(Component comp)
         {
-            var fields  = new List<(string, string)>();
-            var so      = new SerializedObject(comp);
-            var iter    = so.GetIterator();
+            var fields = new List<(string, string)>();
+            var so = new SerializedObject(comp);
+            var iter = so.GetIterator();
 
             if (iter.Next(true))
             {
@@ -161,8 +161,8 @@ namespace Sindy.Editor.EditorTools
             // ── 필드 목록 ─────────────────────────────────────────────────
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
 
-            bool hasFilter  = !string.IsNullOrEmpty(_filter);
-            string lower    = _filter.ToLowerInvariant();
+            bool hasFilter = !string.IsNullOrEmpty(_filter);
+            string lower = _filter.ToLowerInvariant();
 
             foreach (var (path, type) in _fields)
             {

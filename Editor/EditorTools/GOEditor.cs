@@ -21,19 +21,19 @@ namespace Sindy.Editor.EditorTools
     /// <code>
     /// // 기본 패턴
     /// ctx.GO("ShowcaseRunner")
-    ///     .AddComp&lt;ShowcaseRunner&gt;()
+    ///     .AddComp<ShowcaseRunner>()
     ///     .SOFloat("cellWidth", 240f)
     ///     .SOColor("bgColor", Color.black)
     ///     .Apply();
     ///
     /// // using 패턴 (Apply 누락 시 경고)
-    /// using var editor = ctx.GO("Canvas").AddComp&lt;CanvasGroup&gt;();
+    /// using var editor = ctx.GO("Canvas").AddComp<CanvasGroup>();
     /// editor.SOFloat("m_Alpha", 0.8f);
     /// editor.Apply();
     ///
     /// // null-safe 탐색 패턴
     /// ctx.GOFind("Canvas.Panel.Button")
-    ///    ?.WithComp&lt;Image&gt;()
+    ///    ?.WithComp<Image>()
     ///    .SOColor("m_Color", Color.red)
     ///    .Apply();
     /// </code>

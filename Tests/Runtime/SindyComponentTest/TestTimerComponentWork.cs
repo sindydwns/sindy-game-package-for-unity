@@ -7,7 +7,7 @@ namespace Sindy.Test
 {
     /// <summary>
     /// LabelComponent + TimerModel — 카운트다운이 TMP_Text에 반영되는지 확인
-    /// TimerModel은 PropModel&lt;string&gt;을 상속하므로 LabelComponent에 직접 전달 가능합니다.
+    /// TimerModel은 PropModel<string>을 상속하므로 LabelComponent에 직접 전달 가능합니다.
     /// TimerModel은 생성 즉시 EveryUpdate 구독을 시작하므로 반드시 명시적으로 Dispose해야 합니다.
     /// </summary>
     class TestTimerComponentWork : TestCase

@@ -23,7 +23,7 @@ namespace Sindy.View.Components
     }
 
     /// <summary>
-    /// 카운트다운 타이머 모델. PropModel&lt;string&gt;을 상속하므로 LabelComponent에 직접 전달할 수 있습니다.
+    /// 카운트다운 타이머 모델. PropModel<string>을 상속하므로 LabelComponent에 직접 전달할 수 있습니다.
     /// Prop에는 format에 따라 포맷된 남은 시간 문자열이 자동으로 업데이트됩니다.
     /// </summary>
     public class TimerModel : PropModel<string>
@@ -66,7 +66,7 @@ namespace Sindy.View.Components
 
     /// <summary>
     /// 수치 값과 서식 함수를 CombineLatest로 결합해 string으로 변환하는 모델.
-    /// PropModel&lt;string&gt;을 상속하므로 LabelComponent에 직접 전달할 수 있습니다.
+    /// PropModel<string>을 상속하므로 LabelComponent에 직접 전달할 수 있습니다.
     /// </summary>
     public class FormatNumberPropModel<T> : PropModel<string>
     {

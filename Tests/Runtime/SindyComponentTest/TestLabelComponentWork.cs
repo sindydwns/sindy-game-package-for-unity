@@ -4,7 +4,7 @@ using UnityEngine.Assertions;
 namespace Sindy.Test
 {
     /// <summary>
-    /// LabelComponent — PropModel&lt;string&gt; 변경 시 TMP_Text에 반영되는지 확인
+    /// LabelComponent — PropModel<string> 변경 시 TMP_Text에 반영되는지 확인
     /// </summary>
     class TestLabelComponentWork : TestCase
     {

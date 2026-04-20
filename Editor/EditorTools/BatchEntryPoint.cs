@@ -17,14 +17,14 @@ namespace Sindy.Editor.EditorTools
     /// public class MyBatchTask : BatchEntryPoint
     /// {
     ///     // Unity -executeMethod MyBatchTask.Run 으로 호출됨
-    ///     public static void Run() => RunTask&lt;MyBatchTask&gt;();
+    ///     public static void Run() => RunTask<MyBatchTask>();
     ///
     ///     protected override void Execute()
     ///     {
     ///         Log("작업 시작");
     ///
     ///         using var ctx = SceneEditor.Open("Assets/.../MyScene.unity");
-    ///         ctx.GO("SomeObject").AddComp&lt;SomeComp&gt;().Apply();
+    ///         ctx.GO("SomeObject").AddComp<SomeComp>().Apply();
     ///         ctx.MarkDirty();
     ///
     ///         Log("작업 완료");

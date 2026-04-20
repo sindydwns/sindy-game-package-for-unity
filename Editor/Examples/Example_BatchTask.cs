@@ -175,7 +175,7 @@ namespace Sindy.Editor.Examples
     /// <para>
     /// BatchEntryPoint를 상속하여 Execute()만 구현하는 패턴:
     /// <list type="bullet">
-    ///   <item>RunTask&lt;T&gt;()가 예외 처리, AssetDatabase.Refresh, Success/Fail 종료를 자동 처리</item>
+    ///   <item>RunTask<T>()가 예외 처리, AssetDatabase.Refresh, Success/Fail 종료를 자동 처리</item>
     ///   <item>Log(), LogError()로 배치 결과 파일(Logs/batch_result.txt)에도 기록됨</item>
     /// </list>
     /// </para>
@@ -228,17 +228,17 @@ namespace Sindy.Editor.Examples
         private void SetupShowcaseRunner(SceneEditor ctx)
         {
             // 어셈블리 경계: 타입 전체 이름(FullName) 문자열 오버로드 사용
-            var label  = AssetFinder.Prefab("Sindy.View.Components.LabelComponent",  "label");
+            var label = AssetFinder.Prefab("Sindy.View.Components.LabelComponent", "label");
             var button = AssetFinder.Prefab("Sindy.View.Components.ButtonComponent", "button");
 
             ctx.GO("ShowcaseRunner")
                .AddComp("Sindy.Test.ShowcaseRunner")
-               .SORef("labelPrefab",  label,  ignoreNullWarning: true)
+               .SORef("labelPrefab", label, ignoreNullWarning: true)
                .SORef("buttonPrefab", button, ignoreNullWarning: true)
-               .SOFloat("cellWidth",  240f)
+               .SOFloat("cellWidth", 240f)
                .SOFloat("cellHeight", 200f)
-               .SOInt("gridColumns",  3)
-               .SOColor("bgColor",    new Color(0.12f, 0.12f, 0.15f))
+               .SOInt("gridColumns", 3)
+               .SOColor("bgColor", new Color(0.12f, 0.12f, 0.15f))
                .Apply();
 
             Log("ShowcaseRunner 컴포넌트 설정 완료");
@@ -250,7 +250,7 @@ namespace Sindy.Editor.Examples
         {
             ctx.GO("Canvas.HUD.Title")
                .AddComp<TextMeshProUGUI>()
-               .SOStr("m_text",       "ComponentBuilder Showcase")
+               .SOStr("m_text", "ComponentBuilder Showcase")
                .SOFloat("m_fontSize", 28f)
                .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
                .Apply();

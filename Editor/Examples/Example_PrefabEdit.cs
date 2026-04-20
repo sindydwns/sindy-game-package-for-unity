@@ -84,7 +84,7 @@ namespace Sindy.Editor.Examples
         ///
         /// ✅ SindyEdit 변환:
         ///   - GOFind("Fill"): 계층 어디에 있든 이름으로 재귀 탐색
-        ///   - WithComp&lt;Image&gt;(callback): 콜백에서 Set()으로 프로퍼티 편집 후 자동 Apply
+        ///   - WithComp<Image>(callback): 콜백에서 Set()으로 프로퍼티 편집 후 자동 Apply
         ///   - Root(): 프리팹 루트 GO 접근
         ///
         /// ❌ 변환 불가: GO("Background.Border")
@@ -130,10 +130,10 @@ namespace Sindy.Editor.Examples
         ///
         /// ✅ SindyEdit 변환:
         ///   - GOFind("Label"): 재귀 탐색
-        ///   - WithComp&lt;TextMeshProUGUI&gt;(callback): 여러 프로퍼티를 콜백 안에서 Set()으로 설정
+        ///   - WithComp<TextMeshProUGUI>(callback): 여러 프로퍼티를 콜백 안에서 Set()으로 설정
         ///   - Root().Child("Label"): Root 기준 직계 자식 탐색
         ///
-        /// ❌ 변환 불가: GO("Overlay").AddComp&lt;Image&gt;()
+        /// ❌ 변환 불가: GO("Overlay").AddComp<Image>()
         ///   신규 GO 생성 + AddComp + SOColor + Apply 체이닝은 PrefabEditor.GO()를 사용하세요.
         ///
         /// ⚠ TMP 내부 직렬화 필드명:
@@ -147,8 +147,8 @@ namespace Sindy.Editor.Examples
             // ── GOFind: 계층 전체에서 "Label" 재귀 탐색 후 TMP 편집 ───────────
             s.GOFind("Label").WithComp<TextMeshProUGUI>(tmp =>
             {
-                tmp.Set("m_text",      "Default Label");
-                tmp.Set("m_fontSize",  18f);
+                tmp.Set("m_text", "Default Label");
+                tmp.Set("m_fontSize", 18f);
                 tmp.Set("m_fontColor", Color.white);
             });
 
@@ -163,7 +163,7 @@ namespace Sindy.Editor.Examples
             // ── Child(): Root 기준 직계 자식 탐색 ────────────────────────────
             // GOFind와 달리 직계 자식만 탐색합니다 (재귀 없음).
             // Root() 후 Child()로 이동; 다른 GO로 이동하려면 Root()를 다시 호출합니다.
-            s.Root().Child("Label").WithComp<TextMeshProUGUI>(tmp => {});
+            s.Root().Child("Label").WithComp<TextMeshProUGUI>(tmp => { });
 
             // Root()로 위치를 프리팹 루트로 리셋한 뒤 다른 자식으로 이동
             s.Root().Child("Overlay"); // Overlay가 이미 존재하는 경우에만 _currentGO가 설정됩니다.
