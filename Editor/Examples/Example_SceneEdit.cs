@@ -1,7 +1,12 @@
 // ────────────────────────────────────────────────────────────────────────────
-// 예제 A — 씬 편집 (SceneEditor / GOEditor / AssetFinder)
+// 예제 A — 씬 편집 (SceneEditor / SindyEdit / GOEditor / AssetFinder)
 //
-// 구현 파일: Editor/SceneEditor/SceneEditor.cs, GOEditor.cs, AssetFinder.cs
+// 구현 파일: Editor/EditorTools/SindyEdit.cs, SceneEditor.cs, GOEditor.cs, AssetFinder.cs
+//
+// SindyEdit 변환 현황:
+//   ❌ SetupShowcaseRunner: AddComp(string) / SORef 미지원으로 변환 불가
+//   ❌ SetupHUD: SceneEditor.GO()의 GO 신규 생성 기능이 AssetEditSession에 없어 변환 불가
+//   ✅ ReadWithSindyEdit: 신규 API(GOFind, Root, Child, 값 읽기) 시연 전용 메서드 추가
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
@@ -20,11 +25,17 @@ namespace Sindy.Editor.Examples
     ///   _test_component_builder_quick 씬에
     ///   (1) ShowcaseRunner GO에 컴포넌트를 추가하고 AssetFinder로 프리팹 슬롯을 채운다.
     ///   (2) Canvas.HUD.* 계층을 생성하여 TMP / Image 컴포넌트를 설정한다.
+    ///   (3) (SindyEdit) 씬의 기존 GO를 GOFind/Root/Child로 탐색하고 값을 읽는다.
     ///
     /// Menu: Sindy/Examples/A - Scene Edit
     /// </summary>
     public static class Example_SceneEdit
     {
+        // ─── A-1: SceneEditor 기반 씬 편집 ───────────────────────────────────
+        // SetupShowcaseRunner, SetupHUD 모두 GO 신규 생성 / SORef / AddComp(string)을
+        // 사용하므로 AssetEditSession으로 변환할 수 없습니다.
+        // 이 API들이 필요한 경우 SceneEditor / GOEditor를 직접 사용하세요.
+
         [MenuItem("Sindy/Examples/A - Scene Edit")]
         public static void Run()
         {
@@ -62,6 +73,10 @@ namespace Sindy.Editor.Examples
         /// <summary>
         /// "ShowcaseRunner" GO를 찾거나 만들고, 컴포넌트를 추가한 뒤 AssetFinder로
         /// 각 프리팹 슬롯을 채운다.
+        ///
+        /// ❌ 변환 불가 이유:
+        ///   - AddComp(string typeFullName): AssetEditSession 미지원
+        ///   - SORef(path, value): AssetEditSession 미지원
         ///
         /// ⚠ 어셈블리 경계:
         ///   ShowcaseRunner는 Sindy.Tests.Runtime 어셈블리에 있으므로
@@ -109,7 +124,9 @@ namespace Sindy.Editor.Examples
         /// <summary>
         /// Canvas → HUD → Title / Background / Footer.VersionLabel 계층을 자동 생성한다.
         ///
-        /// GO(path): 씬 루트 기준 계층 경로. 각 노드가 없으면 자동 생성됨.
+        /// ❌ 변환 불가 이유:
+        ///   - SceneEditor.GO()는 없으면 GO를 생성합니다. AssetEditSession.GO()는 탐색만 합니다.
+        ///   - GOEditor 체인(SOStr, SOColor, SOFloat, Apply)은 AssetEditSession API와 다릅니다.
         ///
         /// ⚠ Unity 내부 직렬화 필드명 (m_ 접두사):
         ///   TextMeshProUGUI.text     → "m_text"
@@ -168,6 +185,70 @@ namespace Sindy.Editor.Examples
                .AddComp<TextMeshProUGUI>()
                .SOStr("m_text", "Row 2 정보")
                .Apply();
+        }
+
+        // ─── A-2: SindyEdit 신규 API 시연 ────────────────────────────────────
+
+        /// <summary>
+        /// ✅ SindyEdit 신규 API 시연:
+        ///   - SindyEdit.Open()으로 씬 열기
+        ///   - GOFind(): 계층 어디에 있든 이름으로 재귀 탐색
+        ///   - Root(): 씬 첫 번째 루트 GO 접근
+        ///   - Child(): 직계 자식 인덱스 / 이름으로 탐색
+        ///   - GetFloat() / GetString() / GetColor() 등 값 읽기
+        ///   - WithComp&lt;T&gt;(Action): 콜백에서 특정 컴포넌트 편집
+        ///
+        /// 이 메서드는 씬에 "A - Scene Edit" 메뉴로 이미 생성된 HUD 계층이 있다고 가정합니다.
+        /// </summary>
+        [MenuItem("Sindy/Examples/A - Scene Edit (SindyEdit 탐색 및 읽기)")]
+        public static void ReadWithSindyEdit()
+        {
+            var scenePath = PackagePathHelper.Resolve(
+                "Tests/Runtime/ComponentBuilderTest/_test_component_builder_quick.unity");
+
+            if (!System.IO.File.Exists(scenePath))
+            {
+                Debug.LogError($"[Example A] 씬을 찾을 수 없습니다: {scenePath}");
+                return;
+            }
+
+            // Dispose 시 변경사항이 있으면 자동 저장됩니다.
+            using var s = SindyEdit.Open(scenePath);
+            if (s == null) return;
+
+            // ── GOFind: 계층 전체를 재귀 탐색 (경로 없이 이름만으로 찾기) ────
+            float titleFontSize = s.GOFind("Title").GetFloat("m_fontSize");
+            string versionText  = s.GOFind("VersionLabel").GetString("m_text");
+            Debug.Log($"[Example A] Title fontSize: {titleFontSize}, VersionLabel: \"{versionText}\"");
+
+            // ── WithComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
+            // 콜백 종료 후 ApplyModifiedPropertiesWithoutUndo() 자동 호출.
+            s.GOFind("Title").WithComp<TextMeshProUGUI>(tmp =>
+                tmp.Set("m_fontColor", new Color(1f, 0.9f, 0.5f)));
+
+            // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
+            s.Root();
+            Debug.Log($"[Example A] 첫 번째 루트 GO: {s.GetComp<Transform>()?.gameObject.name ?? "null"}");
+
+            // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
+            // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
+            s.GO("Canvas").Child("HUD").Child("Title").WithComp<TextMeshProUGUI>(tmp =>
+                tmp.Set("m_text", "SindyEdit으로 수정됨"));
+
+            // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
+            // HUD의 첫 번째 자식(인덱스 0)으로 이동한 뒤 이름을 읽습니다.
+            s.GO("Canvas").Child("HUD").Child(0);
+            var firstHudChild = s.GetComp<Transform>();
+            if (firstHudChild != null)
+                Debug.Log($"[Example A] HUD 첫 번째 자식: {firstHudChild.gameObject.name}");
+
+            // ── AddComp<T>: 현재 GO에 컴포넌트 추가 (없을 때만) ──────────────
+            s.GO("Canvas").AddComp<CanvasGroup>();
+
+            // ── GetComp<T>: 컴포넌트 인스턴스 직접 획득 ─────────────────────
+            var canvasGroup = s.GO("Canvas").GetComp<CanvasGroup>();
+            if (canvasGroup != null)
+                Debug.Log($"[Example A] CanvasGroup alpha: {canvasGroup.alpha}");
         }
     }
 }

@@ -28,9 +28,13 @@ namespace Sindy.Editor.EditorTools
     /// using var s = SindyEdit.Open("Assets/Config/Game.asset");
     /// s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
     ///
+    /// // SO 신규 생성 후 편집
+    /// using var s = SindyEdit.Create&lt;FloatVariable&gt;("Assets/Data/Speed.asset");
+    /// s.SOFloat("value", 5f);
+    ///
     /// // 이름으로 자동 탐색
     /// using var s = SindyEdit.Find("GaugeBar");
-    /// s.GO("Fill/Image").SOColor("m_Color", Color.green);
+    /// s.GOFind("Fill").WithComp&lt;Image&gt;(img => img.Set("m_Color", Color.green));
     /// </code>
     /// </example>
     /// </summary>
@@ -127,6 +131,32 @@ namespace Sindy.Editor.EditorTools
 
             Debug.LogWarning($"[SindyEdit] '{nameOrPath}' 에셋을 찾을 수 없습니다.");
             return null;
+        }
+
+        /// <summary>
+        /// 새 ScriptableObject를 생성하고 편집 세션을 반환합니다.
+        /// 지정 경로에 파일이 이미 있으면 덮어씁니다.
+        /// </summary>
+        /// <typeparam name="T">생성할 ScriptableObject 타입</typeparam>
+        /// <param name="assetPath">Assets/ 로 시작하는 .asset 파일 경로</param>
+        /// <returns>편집 세션. 생성 실패 시 null.</returns>
+        public static AssetEditSession Create<T>(string assetPath) where T : ScriptableObject
+        {
+            if (string.IsNullOrEmpty(assetPath))
+            {
+                Debug.LogError("[SindyEdit] 경로가 비어있습니다.");
+                return null;
+            }
+
+            string dir = Path.GetDirectoryName(assetPath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            var asset = ScriptableObject.CreateInstance<T>();
+            AssetDatabase.CreateAsset(asset, assetPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"[SindyEdit] ScriptableObject 생성됨: {assetPath}");
+            return AssetEditSession.ForAsset(assetPath);
         }
     }
 
@@ -257,6 +287,198 @@ namespace Sindy.Editor.EditorTools
             return this;
         }
 
+        /// <summary>
+        /// 씬의 첫 번째 루트 GO 또는 프리팹 루트 GO로 이동합니다.
+        /// </summary>
+        public AssetEditSession Root()
+        {
+            if (_disposed) return this;
+
+            _currentGO = null;
+
+            if (_mode == AssetMode.Scene)
+            {
+                var roots = _sceneEditor.Scene.GetRootGameObjects();
+                if (roots.Length == 0)
+                    Debug.LogWarning($"[SindyEdit] 씬에 루트 GO가 없습니다. ({_assetPath})");
+                else
+                    _currentGO = roots[0];
+            }
+            else if (_mode == AssetMode.Prefab)
+            {
+                _currentGO = _prefabEditor?.RootObject;
+                if (_currentGO == null)
+                    Debug.LogWarning($"[SindyEdit] 프리팹 루트 GO가 null입니다. ({_assetPath})");
+            }
+            else
+            {
+                Debug.LogWarning($"[SindyEdit] Root()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// 이름으로 GO를 재귀 탐색합니다. 계층 어디에 있든 이름으로 찾습니다.
+        /// <para>
+        /// 씬: 모든 루트 GO를 기준으로 재귀 탐색<br/>
+        /// 프리팹: 프리팹 루트를 기준으로 재귀 탐색
+        /// </para>
+        /// </summary>
+        /// <param name="name">탐색할 GO 이름 (정확히 일치)</param>
+        public AssetEditSession GOFind(string name)
+        {
+            if (_disposed) return this;
+
+            _currentGO = null;
+
+            if (_mode == AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GOFind()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
+                return this;
+            }
+
+            if (_mode == AssetMode.Scene)
+            {
+                foreach (var root in _sceneEditor.Scene.GetRootGameObjects())
+                {
+                    _currentGO = FindRecursive(root.transform, name);
+                    if (_currentGO != null) break;
+                }
+            }
+            else if (_mode == AssetMode.Prefab && _prefabEditor?.RootObject != null)
+            {
+                _currentGO = FindRecursive(_prefabEditor.RootObject.transform, name);
+            }
+
+            if (_currentGO == null)
+                Debug.LogWarning($"[SindyEdit] GOFind: '{name}'을 찾을 수 없습니다. ({_assetPath})");
+
+            return this;
+        }
+
+        // ── Child 탐색 ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 현재 GO의 인덱스로 직계 자식 GO로 이동합니다.
+        /// </summary>
+        /// <param name="index">자식 인덱스 (0부터 시작)</param>
+        public AssetEditSession Child(int index)
+        {
+            if (_disposed) return this;
+
+            if (_currentGO == null)
+            {
+                Debug.LogWarning($"[SindyEdit] Child({index}): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
+                return this;
+            }
+
+            if (index < 0 || index >= _currentGO.transform.childCount)
+            {
+                Debug.LogWarning(
+                    $"[SindyEdit] Child({index}): 인덱스 범위를 벗어났습니다. " +
+                    $"('{_currentGO.name}' 자식 수: {_currentGO.transform.childCount})");
+                return this;
+            }
+
+            _currentGO = _currentGO.transform.GetChild(index).gameObject;
+            return this;
+        }
+
+        /// <summary>
+        /// 현재 GO의 직계 자식 중 이름이 일치하는 GO로 이동합니다.
+        /// </summary>
+        /// <param name="name">직계 자식 GO 이름</param>
+        public AssetEditSession Child(string name)
+        {
+            if (_disposed) return this;
+
+            if (_currentGO == null)
+            {
+                Debug.LogWarning($"[SindyEdit] Child('{name}'): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
+                return this;
+            }
+
+            var child = _currentGO.transform.Find(name);
+            if (child == null)
+            {
+                Debug.LogWarning(
+                    $"[SindyEdit] Child('{name}'): '{_currentGO.name}'의 직계 자식에서 찾을 수 없습니다.");
+                return this;
+            }
+
+            _currentGO = child.gameObject;
+            return this;
+        }
+
+        // ── 컴포넌트 접근 및 추가 ────────────────────────────────────────────
+
+        /// <summary>
+        /// 현재 GO에서 컴포넌트를 가져옵니다. 없으면 null을 반환합니다.
+        /// </summary>
+        public T GetComp<T>() where T : Component
+        {
+            if (_disposed || _currentGO == null) return null;
+            return _currentGO.GetComponent<T>();
+        }
+
+        /// <summary>
+        /// 현재 GO에 컴포넌트가 없을 때만 추가합니다.
+        /// 추가 시 Undo에 등록됩니다.
+        /// </summary>
+        public AssetEditSession AddComp<T>() where T : Component
+        {
+            if (_disposed) return this;
+
+            if (_currentGO == null)
+            {
+                Debug.LogWarning($"[SindyEdit] AddComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
+                return this;
+            }
+
+            if (_currentGO.GetComponent<T>() == null)
+            {
+                Undo.AddComponent<T>(_currentGO);
+                _changesMade = true;
+                Debug.Log($"[SindyEdit] 컴포넌트 추가됨: {typeof(T).Name} on '{_currentGO.name}'");
+            }
+
+            return this;
+        }
+
+        /// <summary>
+        /// 현재 GO의 컴포넌트를 SerializedObject로 편집합니다.
+        /// 콜백 실행 후 즉시 ApplyModifiedPropertiesWithoutUndo()가 호출됩니다.
+        /// </summary>
+        /// <param name="action">편집 콜백. <see cref="ComponentEditScope"/>를 통해 프로퍼티를 편집하세요.</param>
+        public AssetEditSession WithComp<T>(Action<ComponentEditScope> action) where T : Component
+        {
+            if (_disposed) return this;
+
+            if (_currentGO == null)
+            {
+                Debug.LogWarning($"[SindyEdit] WithComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
+                return this;
+            }
+
+            var comp = _currentGO.GetComponent<T>();
+            if (comp == null)
+            {
+                Debug.LogWarning(
+                    $"[SindyEdit] WithComp<{typeof(T).Name}>: '{_currentGO.name}'에서 " +
+                    $"{typeof(T).Name} 컴포넌트를 찾을 수 없습니다.");
+                return this;
+            }
+
+            var so = GetOrCreateSO(comp);
+            action(new ComponentEditScope(so));
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(comp);
+            _changesMade = true;
+
+            return this;
+        }
+
         // ── SO* 세터 ──────────────────────────────────────────────────────────
 
         /// <summary>SerializedProperty stringValue 세터</summary>
@@ -335,6 +557,23 @@ namespace Sindy.Editor.EditorTools
             }
             sp.vector2Value = value;
         });
+
+        // ── 값 읽기 ───────────────────────────────────────────────────────────
+
+        /// <summary>현재 타깃에서 float 프로퍼티 값을 읽습니다.</summary>
+        public float GetFloat(string prop)  => ReadProperty(prop, sp => sp.floatValue,  0f);
+
+        /// <summary>현재 타깃에서 string 프로퍼티 값을 읽습니다.</summary>
+        public string GetString(string prop) => ReadProperty(prop, sp => sp.stringValue, string.Empty);
+
+        /// <summary>현재 타깃에서 int 프로퍼티 값을 읽습니다.</summary>
+        public int GetInt(string prop)      => ReadProperty(prop, sp => sp.intValue,    0);
+
+        /// <summary>현재 타깃에서 bool 프로퍼티 값을 읽습니다.</summary>
+        public bool GetBool(string prop)    => ReadProperty(prop, sp => sp.boolValue,   false);
+
+        /// <summary>현재 타깃에서 Color 프로퍼티 값을 읽습니다.</summary>
+        public Color GetColor(string prop)  => ReadProperty(prop, sp => sp.colorValue,  Color.clear);
 
         // ── 범용 Set ──────────────────────────────────────────────────────────
 
@@ -510,6 +749,12 @@ namespace Sindy.Editor.EditorTools
             return so;
         }
 
+        private TVal ReadProperty<TVal>(string prop, Func<SerializedProperty, TVal> getter, TVal fallback)
+        {
+            var sp = FindProperty(prop, out _);
+            return sp != null ? getter(sp) : fallback;
+        }
+
         /// <summary>캐시에 있는 모든 SerializedObject의 변경사항을 반영합니다.</summary>
         private void ApplyAll()
         {
@@ -565,6 +810,84 @@ namespace Sindy.Editor.EditorTools
 
         /// <summary>'/' 구분자를 GOEditor 호환 '.' 구분자로 변환합니다.</summary>
         private static string NormalizePath(string path) => path?.Replace('/', '.');
+
+        /// <summary>Transform 계층을 재귀 탐색하여 이름이 일치하는 GameObject를 찾습니다.</summary>
+        private static GameObject FindRecursive(Transform parent, string name)
+        {
+            if (parent.name == name) return parent.gameObject;
+            for (int i = 0; i < parent.childCount; i++)
+            {
+                var found = FindRecursive(parent.GetChild(i), name);
+                if (found != null) return found;
+            }
+            return null;
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // ComponentEditScope
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// <see cref="AssetEditSession.WithComp{T}"/> 콜백에서 사용하는 컴포넌트 편집 컨텍스트.
+    /// <para>
+    /// 특정 컴포넌트의 SerializedObject에 직접 접근하여 프로퍼티를 편집합니다.
+    /// 콜백 종료 후 자동으로 ApplyModifiedPropertiesWithoutUndo()가 호출됩니다.
+    /// </para>
+    /// <example>
+    /// <code>
+    /// session.GO("Player").WithComp&lt;Image&gt;(img =>
+    /// {
+    ///     img.Set("m_Color", new Color(1, 0, 0, 1));
+    /// });
+    /// </code>
+    /// </example>
+    /// </summary>
+    public sealed class ComponentEditScope
+    {
+        private readonly SerializedObject _so;
+
+        internal ComponentEditScope(SerializedObject so) => _so = so;
+
+        /// <summary>
+        /// 타입을 자동 판별하여 SerializedProperty를 설정합니다.
+        /// <para>지원 타입: string, bool, int, float, Color, Vector3, Vector2</para>
+        /// </summary>
+        public ComponentEditScope Set(string prop, object value)
+        {
+            var sp = _so.FindProperty(prop);
+            if (sp == null)
+            {
+                Debug.LogWarning($"[SindyEdit] ComponentEditScope: '{prop}' 프로퍼티를 찾을 수 없습니다.");
+                return this;
+            }
+
+            switch (value)
+            {
+                case string s:   sp.stringValue  = s; break;
+                case bool b:     sp.boolValue    = b; break;
+                case Color c:    sp.colorValue   = c; break;
+                case Vector3 v3: sp.vector3Value = v3; break;
+                case Vector2 v2: sp.vector2Value = v2; break;
+                case int i:
+                    if (sp.propertyType == SerializedPropertyType.Float)
+                        sp.floatValue = i;
+                    else
+                        sp.intValue = i;
+                    break;
+                case float f: sp.floatValue = f; break;
+                case null:
+                    Debug.LogWarning($"[SindyEdit] ComponentEditScope.Set: null 값. prop={prop}");
+                    break;
+                default:
+                    Debug.LogWarning(
+                        $"[SindyEdit] ComponentEditScope.Set: 지원하지 않는 타입 " +
+                        $"{value.GetType().Name}. prop={prop}");
+                    break;
+            }
+
+            return this;
+        }
     }
 }
 #endif
