@@ -285,8 +285,9 @@ namespace Sindy.Editor.Examples
                 tmp.Set("m_fontColor", new Color(1f, 0.9f, 0.5f)));
 
             // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
-            s.Root();
-            Debug.Log($"[Example A] 첫 번째 루트 GO: {s.GetComp<Transform>()?.gameObject.name ?? "null"}");
+            // FP 스타일: Root()는 새 세션을 반환 — 반환값을 변수에 받아야 합니다.
+            var root = s.Root();
+            Debug.Log($"[Example A] 첫 번째 루트 GO: {root.GetComp<Transform>()?.gameObject.name ?? "null"}");
 
             // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
             // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
@@ -294,9 +295,8 @@ namespace Sindy.Editor.Examples
                 tmp.Set("m_text", "SindyEdit으로 수정됨"));
 
             // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
-            // HUD의 첫 번째 자식(인덱스 0)으로 이동한 뒤 이름을 읽습니다.
-            s.GO("Canvas").Child("HUD").Child(0);
-            var firstHudChild = s.GetComp<Transform>();
+            // FP 스타일: 체인 결과를 변수로 받아야 합니다 — s 자체는 변경되지 않습니다.
+            var firstHudChild = s.GO("Canvas").Child("HUD").Child(0).GetComp<Transform>();
             if (firstHudChild != null)
                 Debug.Log($"[Example A] HUD 첫 번째 자식: {firstHudChild.gameObject.name}");
 

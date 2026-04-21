@@ -30,12 +30,18 @@ namespace Sindy.Editor.EditorTools
     /// s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
     ///
     /// // SO 신규 생성 후 편집
-    /// using var s = SindyEdit.Create<FloatVariable>("Assets/Data/Speed.asset");
+    /// using var s = SindyEdit.Create&lt;FloatVariable&gt;("Assets/Data/Speed.asset");
     /// s.SOFloat("value", 5f);
     ///
     /// // 이름으로 자동 탐색
     /// using var s = SindyEdit.Find("GaugeBar");
-    /// s.GOFind("Fill").WithComp<Image>(img => img.Set("m_Color", Color.green));
+    /// s.GOFind("Fill").WithComp&lt;Image&gt;(img =&gt; img.Set("m_Color", Color.green));
+    ///
+    /// // FP 스타일: 탐색은 새 인스턴스 반환 — s는 변경되지 않음
+    /// var player = s.GOFind("Player");
+    /// var hp = player.Child("HpBar");
+    /// hp.SOFloat("value", 100f);
+    /// s.Root().Child("UI").GOFind("Button").SOString("label", "Start");
     /// </code>
     /// </example>
     /// </summary>
@@ -283,46 +289,123 @@ namespace Sindy.Editor.EditorTools
     /// <summary>
     /// 씬·프리팹·ScriptableObject를 동일한 API로 편집하는 컨텍스트 세션.
     /// <para>
+    /// <b>FP 설계:</b> <see cref="Root"/>, <see cref="GOFind"/>, <see cref="Child(int)"/>,
+    /// <see cref="GO"/> 등 탐색 메서드는 <c>this</c>를 변경하지 않고 새로운
+    /// <see cref="AssetEditSession"/> 인스턴스를 반환합니다.
+    /// 세터(<see cref="SOFloat"/> 등)와 <see cref="WithComp{T}"/> 는 <c>this</c>를 반환합니다.
+    /// </para>
+    /// <para>
+    /// <b>소유권:</b> 팩토리(<see cref="SindyEdit.Open"/> 등)가 반환한 루트 세션만
+    /// <see cref="Dispose"/> 시 저장 및 정리를 수행합니다.
+    /// 탐색으로 파생된 세션의 <see cref="Dispose"/>는 no-op입니다.
+    /// </para>
+    /// <para>
     /// using 블록 종료(Dispose) 시 미저장 변경사항을 자동으로 저장합니다.
     /// 명시적으로 <see cref="Save"/>를 호출할 수도 있습니다.
     /// </para>
     /// </summary>
     public sealed class AssetEditSession : IDisposable
     {
-        // ── 내부 타입 ─────────────────────────────────────────────────────────
+        // ── SessionContext: 세션 간 공유되는 가변 상태 ───────────────────────
 
-        private enum AssetMode { Scene, Prefab, Asset }
+        private sealed class SessionContext
+        {
+            internal enum AssetMode { Scene, Prefab, Asset }
 
-        // ── 상태 ──────────────────────────────────────────────────────────────
+            internal readonly AssetMode Mode;
+            internal readonly string AssetPath;
+            internal readonly SceneEditor SceneEditor;
+            internal readonly PrefabEditor PrefabEditor;
+            internal readonly UnityEngine.Object SoAsset;
+            internal readonly Dictionary<UnityEngine.Object, SerializedObject> SoCache = new();
+            internal bool ChangesMade;
+            internal bool Cleaned;
 
-        private readonly AssetMode _mode;
-        private readonly string _assetPath;
+            internal SessionContext(
+                AssetMode mode, string path,
+                SceneEditor se = null, PrefabEditor pe = null, UnityEngine.Object soAsset = null)
+            {
+                Mode = mode;
+                AssetPath = path;
+                SceneEditor = se;
+                PrefabEditor = pe;
+                SoAsset = soAsset;
+            }
 
-        // 위임 객체 (모드별로 하나만 사용)
-        private readonly SceneEditor _sceneEditor;
-        private readonly PrefabEditor _prefabEditor;
-        private readonly UnityEngine.Object _soAsset;
+            internal void ApplyAll()
+            {
+                foreach (var kvp in SoCache)
+                {
+                    if (kvp.Value.hasModifiedProperties)
+                    {
+                        kvp.Value.ApplyModifiedProperties();
+                        EditorUtility.SetDirty(kvp.Key);
+                    }
+                }
+            }
 
-        // 현재 탐색 중인 GO (Scene / Prefab 모드)
-        private GameObject _currentGO;
+            internal void PersistToDisk()
+            {
+                if (!ChangesMade) return;
 
-        // 수정된 SerializedObject 캐시: targetObject → SerializedObject
-        private readonly Dictionary<UnityEngine.Object, SerializedObject> _soCache = new();
+                switch (Mode)
+                {
+                    case AssetMode.Scene:
+                        if (SceneEditor != null)
+                        {
+                            SceneEditor.MarkDirty();
+                            EditorSceneManager.SaveScene(SceneEditor.Scene);
+                            Debug.Log($"[SindyEdit] 씬 저장됨: {AssetPath}");
+                        }
+                        break;
 
-        private bool _changesMade;
+                    case AssetMode.Prefab:
+                        if (PrefabEditor?.RootObject != null)
+                        {
+                            PrefabUtility.SaveAsPrefabAsset(PrefabEditor.RootObject, AssetPath);
+                            Debug.Log($"[SindyEdit] 프리팹 저장됨: {AssetPath}");
+                        }
+                        break;
+
+                    case AssetMode.Asset:
+                        if (SoAsset != null)
+                        {
+                            AssetDatabase.SaveAssets();
+                            Debug.Log($"[SindyEdit] 에셋 저장됨: {AssetPath}");
+                        }
+                        break;
+                }
+            }
+
+            internal void Cleanup()
+            {
+                Cleaned = true;
+                switch (Mode)
+                {
+                    case AssetMode.Scene:
+                        SceneEditor?.Dispose();
+                        break;
+                    case AssetMode.Prefab:
+                        PrefabEditor?.Dispose();
+                        break;
+                }
+            }
+        }
+
+        // ── 필드 ──────────────────────────────────────────────────────────────
+
+        private readonly SessionContext _ctx;
+        private readonly GameObject _currentGO;
+        private readonly bool _isOwner;
         private bool _disposed;
 
         // ── 생성자 ────────────────────────────────────────────────────────────
 
-        private AssetEditSession(
-            AssetMode mode, string path,
-            SceneEditor se = null, PrefabEditor pe = null, UnityEngine.Object soAsset = null)
+        private AssetEditSession(SessionContext ctx, GameObject go, bool isOwner = false)
         {
-            _mode = mode;
-            _assetPath = path;
-            _sceneEditor = se;
-            _prefabEditor = pe;
-            _soAsset = soAsset;
+            _ctx = ctx;
+            _currentGO = go;
+            _isOwner = isOwner;
         }
 
         // ── 내부 팩토리 ───────────────────────────────────────────────────────
@@ -335,7 +418,8 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogError($"[SindyEdit] 씬을 열 수 없습니다: {path}");
                 return null;
             }
-            return new AssetEditSession(AssetMode.Scene, path, se: se);
+            var ctx = new SessionContext(SessionContext.AssetMode.Scene, path, se: se);
+            return new AssetEditSession(ctx, null, isOwner: true);
         }
 
         internal static AssetEditSession ForPrefab(string path)
@@ -346,12 +430,12 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogError($"[SindyEdit] 프리팹을 열 수 없습니다: {path}");
                 return null;
             }
-            return new AssetEditSession(AssetMode.Prefab, path, pe: pe);
+            var ctx = new SessionContext(SessionContext.AssetMode.Prefab, path, pe: pe);
+            return new AssetEditSession(ctx, null, isOwner: true);
         }
 
         internal static AssetEditSession ForAsset(string path)
         {
-            // ScriptableObject 우선, 실패 시 일반 Object로 폴백
             UnityEngine.Object asset = AssetDatabase.LoadAssetAtPath<ScriptableObject>(path)
                                     ?? AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
             if (asset == null)
@@ -359,79 +443,83 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogError($"[SindyEdit] 에셋을 로드할 수 없습니다: {path}");
                 return null;
             }
-            return new AssetEditSession(AssetMode.Asset, path, soAsset: asset);
+            var ctx = new SessionContext(SessionContext.AssetMode.Asset, path, soAsset: asset);
+            return new AssetEditSession(ctx, null, isOwner: true);
         }
 
-        // ── GO 탐색 ───────────────────────────────────────────────────────────
+        // ── Guard ─────────────────────────────────────────────────────────────
+
+        // Cleanup() 호출 이후 파생 세션 포함 모든 메서드 호출을 막습니다.
+        private bool IsInvalid => _ctx.Cleaned;
+
+        // ── GO 탐색 (새 AssetEditSession 인스턴스 반환) ───────────────────────
 
         /// <summary>
         /// '/' 또는 '.' 구분자로 지정한 계층 경로에서 GameObject를 탐색합니다.
         /// <para>
         /// 씬: 씬 루트 기준 경로 (예: "Canvas/Panel/Title")<br/>
         /// 프리팹: 프리팹 루트의 자식 기준 경로 (예: "Fill/Image")<br/>
-        /// .asset: 경고만 출력하고 무시됩니다.
+        /// .asset: 경고만 출력하고 null GO 세션을 반환합니다.
         /// </para>
         /// </summary>
         /// <param name="goPath">계층 경로. '/' 또는 '.' 둘 다 구분자로 허용.</param>
+        /// <returns>지정한 GO를 가리키는 새 세션. 탐색 실패 시 null GO 세션.</returns>
         public AssetEditSession GO(string goPath)
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
-            _currentGO = null;
-
-            if (_mode == AssetMode.Asset)
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
             {
-                Debug.LogWarning($"[SindyEdit] GO()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
-                return this;
+                Debug.LogWarning($"[SindyEdit] GO()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
+                return new AssetEditSession(_ctx, null);
             }
 
             string normalized = NormalizePath(goPath);
             GOEditor goEditor = null;
 
-            if (_mode == AssetMode.Scene)
-                goEditor = GOEditor.FindOnly(_sceneEditor.Scene, normalized);
-            else if (_mode == AssetMode.Prefab && _prefabEditor?.RootObject != null)
-                goEditor = GOEditor.FindOnly(_prefabEditor.RootObject.transform, normalized);
+            if (_ctx.Mode == SessionContext.AssetMode.Scene)
+                goEditor = GOEditor.FindOnly(_ctx.SceneEditor.Scene, normalized);
+            else if (_ctx.Mode == SessionContext.AssetMode.Prefab && _ctx.PrefabEditor?.RootObject != null)
+                goEditor = GOEditor.FindOnly(_ctx.PrefabEditor.RootObject.transform, normalized);
 
             if (goEditor == null)
             {
-                Debug.LogWarning($"[SindyEdit] GO를 찾을 수 없습니다: {goPath} (에셋: {_assetPath})");
-                return this;
+                Debug.LogWarning($"[SindyEdit] GO를 찾을 수 없습니다: {goPath} (에셋: {_ctx.AssetPath})");
+                return new AssetEditSession(_ctx, null);
             }
 
-            _currentGO = goEditor.GameObject;
-            return this;
+            return new AssetEditSession(_ctx, goEditor.GameObject);
         }
 
         /// <summary>
-        /// 씬의 첫 번째 루트 GO 또는 프리팹 루트 GO로 이동합니다.
+        /// 씬의 첫 번째 루트 GO 또는 프리팹 루트 GO를 가리키는 새 세션을 반환합니다.
         /// </summary>
+        /// <returns>루트 GO를 가리키는 새 세션. 실패 시 null GO 세션.</returns>
         public AssetEditSession Root()
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
-            _currentGO = null;
-
-            if (_mode == AssetMode.Scene)
+            GameObject go = null;
+            if (_ctx.Mode == SessionContext.AssetMode.Scene)
             {
-                var roots = _sceneEditor.Scene.GetRootGameObjects();
+                var roots = _ctx.SceneEditor.Scene.GetRootGameObjects();
                 if (roots.Length == 0)
-                    Debug.LogWarning($"[SindyEdit] 씬에 루트 GO가 없습니다. ({_assetPath})");
+                    Debug.LogWarning($"[SindyEdit] 씬에 루트 GO가 없습니다. ({_ctx.AssetPath})");
                 else
-                    _currentGO = roots[0];
+                    go = roots[0];
             }
-            else if (_mode == AssetMode.Prefab)
+            else if (_ctx.Mode == SessionContext.AssetMode.Prefab)
             {
-                _currentGO = _prefabEditor?.RootObject;
-                if (_currentGO == null)
-                    Debug.LogWarning($"[SindyEdit] 프리팹 루트 GO가 null입니다. ({_assetPath})");
+                go = _ctx.PrefabEditor?.RootObject;
+                if (go == null)
+                    Debug.LogWarning($"[SindyEdit] 프리팹 루트 GO가 null입니다. ({_ctx.AssetPath})");
             }
             else
             {
-                Debug.LogWarning($"[SindyEdit] Root()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
+                Debug.LogWarning($"[SindyEdit] Root()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
             }
 
-            return this;
+            return new AssetEditSession(_ctx, go);
         }
 
         /// <summary>
@@ -442,95 +530,52 @@ namespace Sindy.Editor.EditorTools
         /// </para>
         /// </summary>
         /// <param name="name">탐색할 GO 이름 (정확히 일치)</param>
+        /// <returns>찾은 GO를 가리키는 새 세션. 탐색 실패 시 null GO 세션.</returns>
         public AssetEditSession GOFind(string name)
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
-            _currentGO = null;
-
-            if (_mode == AssetMode.Asset)
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
             {
-                Debug.LogWarning($"[SindyEdit] GOFind()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
-                return this;
+                Debug.LogWarning($"[SindyEdit] GOFind()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
+                return new AssetEditSession(_ctx, null);
             }
 
-            if (_mode == AssetMode.Scene)
+            GameObject found = null;
+            if (_ctx.Mode == SessionContext.AssetMode.Scene)
             {
-                foreach (var root in _sceneEditor.Scene.GetRootGameObjects())
+                foreach (var root in _ctx.SceneEditor.Scene.GetRootGameObjects())
                 {
-                    _currentGO = FindRecursive(root.transform, name);
-                    if (_currentGO != null) break;
+                    found = FindRecursive(root.transform, name);
+                    if (found != null) break;
                 }
             }
-            else if (_mode == AssetMode.Prefab && _prefabEditor?.RootObject != null)
+            else if (_ctx.Mode == SessionContext.AssetMode.Prefab && _ctx.PrefabEditor?.RootObject != null)
             {
-                _currentGO = FindRecursive(_prefabEditor.RootObject.transform, name);
+                found = FindRecursive(_ctx.PrefabEditor.RootObject.transform, name);
             }
 
-            if (_currentGO == null)
-                Debug.LogWarning($"[SindyEdit] GOFind: '{name}'을 찾을 수 없습니다. ({_assetPath})");
+            if (found == null)
+                Debug.LogWarning($"[SindyEdit] GOFind: '{name}'을 찾을 수 없습니다. ({_ctx.AssetPath})");
 
-            return this;
-        }
-
-        // ── GO 신규 생성 ──────────────────────────────────────────────────────────
-
-        /// <summary>
-        /// 현재 GO의 자식으로 새 GameObject를 생성합니다.
-        /// <para>
-        /// _currentGO가 null이면 씬/프리팹 루트에 생성합니다.<br/>
-        /// 씬 모드: SceneManager.MoveGameObjectToScene으로 씬에 배치<br/>
-        /// 프리팹 모드: 프리팹 루트 또는 현재 GO의 자식으로 배치<br/>
-        /// .asset 모드: 경고 출력 후 무시됩니다.
-        /// </para>
-        /// <para>생성 후 탐색 컨텍스트가 새 GO로 이동하므로 체이닝이 계속 가능합니다.</para>
-        /// </summary>
-        /// <param name="name">생성할 GameObject 이름</param>
-        public AssetEditSession CreateGO(string name)
-        {
-            if (_disposed) return this;
-
-            if (_mode == AssetMode.Asset)
-            {
-                Debug.LogWarning($"[SindyEdit] CreateGO()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
-                return this;
-            }
-
-            var newGO = new GameObject(name);
-
-            if (_mode == AssetMode.Scene)
-            {
-                if (_currentGO != null)
-                    newGO.transform.SetParent(_currentGO.transform, false);
-                else
-                    SceneManager.MoveGameObjectToScene(newGO, _sceneEditor.Scene);
-            }
-            else // Prefab
-            {
-                var parent = _currentGO != null ? _currentGO.transform : _prefabEditor.RootObject.transform;
-                newGO.transform.SetParent(parent, false);
-            }
-
-            _currentGO = newGO;
-            _changesMade = true;
-            Debug.Log($"[SindyEdit] GO 생성됨: '{name}' (에셋: {_assetPath})");
-            return this;
+            return new AssetEditSession(_ctx, found);
         }
 
         // ── Child 탐색 ────────────────────────────────────────────────────────
 
         /// <summary>
-        /// 현재 GO의 인덱스로 직계 자식 GO로 이동합니다.
+        /// 현재 GO의 인덱스로 직계 자식 GO를 가리키는 새 세션을 반환합니다.
         /// </summary>
         /// <param name="index">자식 인덱스 (0부터 시작)</param>
+        /// <returns>자식 GO를 가리키는 새 세션. 실패 시 null GO 세션.</returns>
         public AssetEditSession Child(int index)
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
             if (_currentGO == null)
             {
                 Debug.LogWarning($"[SindyEdit] Child({index}): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
-                return this;
+                return new AssetEditSession(_ctx, null);
             }
 
             if (index < 0 || index >= _currentGO.transform.childCount)
@@ -538,25 +583,25 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogWarning(
                     $"[SindyEdit] Child({index}): 인덱스 범위를 벗어났습니다. " +
                     $"('{_currentGO.name}' 자식 수: {_currentGO.transform.childCount})");
-                return this;
+                return new AssetEditSession(_ctx, null);
             }
 
-            _currentGO = _currentGO.transform.GetChild(index).gameObject;
-            return this;
+            return new AssetEditSession(_ctx, _currentGO.transform.GetChild(index).gameObject);
         }
 
         /// <summary>
-        /// 현재 GO의 직계 자식 중 이름이 일치하는 GO로 이동합니다.
+        /// 현재 GO의 직계 자식 중 이름이 일치하는 GO를 가리키는 새 세션을 반환합니다.
         /// </summary>
         /// <param name="name">직계 자식 GO 이름</param>
+        /// <returns>자식 GO를 가리키는 새 세션. 실패 시 null GO 세션.</returns>
         public AssetEditSession Child(string name)
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
             if (_currentGO == null)
             {
                 Debug.LogWarning($"[SindyEdit] Child('{name}'): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
-                return this;
+                return new AssetEditSession(_ctx, null);
             }
 
             var child = _currentGO.transform.Find(name);
@@ -564,11 +609,54 @@ namespace Sindy.Editor.EditorTools
             {
                 Debug.LogWarning(
                     $"[SindyEdit] Child('{name}'): '{_currentGO.name}'의 직계 자식에서 찾을 수 없습니다.");
-                return this;
+                return new AssetEditSession(_ctx, null);
             }
 
-            _currentGO = child.gameObject;
-            return this;
+            return new AssetEditSession(_ctx, child.gameObject);
+        }
+
+        // ── GO 신규 생성 ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 현재 GO의 자식으로 새 GameObject를 생성하고 그 GO를 가리키는 새 세션을 반환합니다.
+        /// <para>
+        /// _currentGO가 null이면 씬/프리팹 루트에 생성합니다.<br/>
+        /// 씬 모드: SceneManager.MoveGameObjectToScene으로 씬에 배치<br/>
+        /// 프리팹 모드: 프리팹 루트 또는 현재 GO의 자식으로 배치<br/>
+        /// .asset 모드: 경고 출력 후 null GO 세션을 반환합니다.
+        /// </para>
+        /// <para>반환된 새 세션으로 체이닝을 계속할 수 있습니다.</para>
+        /// </summary>
+        /// <param name="name">생성할 GameObject 이름</param>
+        /// <returns>새 GO를 가리키는 새 세션.</returns>
+        public AssetEditSession CreateGO(string name)
+        {
+            if (IsInvalid) return this;
+
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] CreateGO()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
+                return new AssetEditSession(_ctx, null);
+            }
+
+            var newGO = new GameObject(name);
+
+            if (_ctx.Mode == SessionContext.AssetMode.Scene)
+            {
+                if (_currentGO != null)
+                    newGO.transform.SetParent(_currentGO.transform, false);
+                else
+                    SceneManager.MoveGameObjectToScene(newGO, _ctx.SceneEditor.Scene);
+            }
+            else // Prefab
+            {
+                var parent = _currentGO != null ? _currentGO.transform : _ctx.PrefabEditor.RootObject.transform;
+                newGO.transform.SetParent(parent, false);
+            }
+
+            _ctx.ChangesMade = true;
+            Debug.Log($"[SindyEdit] GO 생성됨: '{name}' (에셋: {_ctx.AssetPath})");
+            return new AssetEditSession(_ctx, newGO);
         }
 
         // ── 컴포넌트 접근 및 추가 ────────────────────────────────────────────
@@ -578,7 +666,7 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         public T GetComp<T>() where T : Component
         {
-            if (_disposed || _currentGO == null) return null;
+            if (IsInvalid || _currentGO == null) return null;
             return _currentGO.GetComponent<T>();
         }
 
@@ -588,7 +676,7 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         public AssetEditSession AddComp<T>() where T : Component
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
             if (_currentGO == null)
             {
@@ -599,7 +687,7 @@ namespace Sindy.Editor.EditorTools
             if (_currentGO.GetComponent<T>() == null)
             {
                 Undo.AddComponent<T>(_currentGO);
-                _changesMade = true;
+                _ctx.ChangesMade = true;
                 Debug.Log($"[SindyEdit] 컴포넌트 추가됨: {typeof(T).Name} on '{_currentGO.name}'");
             }
 
@@ -607,30 +695,29 @@ namespace Sindy.Editor.EditorTools
         }
 
         /// <summary>
-        /// 현재 컨텍스트 GO를 제거합니다.
-        /// 부모 GO가 있으면 부모로 컨텍스트를 이동하고, 없으면 null로 설정합니다.
+        /// 현재 GO를 씬/프리팹에서 제거합니다.
+        /// 부모 GO가 있으면 부모를 가리키는 새 세션을 반환하고, 없으면 null GO 세션을 반환합니다.
         /// </summary>
         public AssetEditSession DeleteGO()
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
-            if (_mode == AssetMode.Asset)
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
             {
-                Debug.LogWarning($"[SindyEdit] DeleteGO()는 .asset 파일에서 사용할 수 없습니다. ({_assetPath})");
-                return this;
+                Debug.LogWarning($"[SindyEdit] DeleteGO()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
+                return new AssetEditSession(_ctx, null);
             }
 
             if (_currentGO == null)
             {
                 Debug.LogWarning($"[SindyEdit] DeleteGO(): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
-                return this;
+                return new AssetEditSession(_ctx, null);
             }
 
-            var parent = _currentGO.transform.parent?.gameObject;
+            var parentGO = _currentGO.transform.parent?.gameObject;
             GameObject.DestroyImmediate(_currentGO);
-            _currentGO = parent;
-            _changesMade = true;
-            return this;
+            _ctx.ChangesMade = true;
+            return new AssetEditSession(_ctx, parentGO);
         }
 
         /// <summary>
@@ -638,7 +725,7 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         public AssetEditSession RemoveComp<T>() where T : Component
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
             if (_currentGO == null)
             {
@@ -656,7 +743,7 @@ namespace Sindy.Editor.EditorTools
             }
 
             GameObject.DestroyImmediate(comp);
-            _changesMade = true;
+            _ctx.ChangesMade = true;
             return this;
         }
 
@@ -667,7 +754,7 @@ namespace Sindy.Editor.EditorTools
         /// <param name="action">편집 콜백. <see cref="ComponentEditScope"/>를 통해 프로퍼티를 편집하세요.</param>
         public AssetEditSession WithComp<T>(Action<ComponentEditScope> action) where T : Component
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
             if (_currentGO == null)
             {
@@ -688,7 +775,7 @@ namespace Sindy.Editor.EditorTools
             action(new ComponentEditScope(so));
             so.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(comp);
-            _changesMade = true;
+            _ctx.ChangesMade = true;
 
             return this;
         }
@@ -816,14 +903,13 @@ namespace Sindy.Editor.EditorTools
 
         /// <summary>
         /// 타입을 자동 판별하여 SerializedProperty를 설정합니다.
-        /// HTTP IPC의 <c>/edit</c> 엔드포인트에서 주로 사용됩니다.
         /// <para>
         /// 지원 타입: string, bool, int, float, Color, Vector3, Vector2
         /// </para>
         /// </summary>
         public AssetEditSession Set(string prop, object value)
         {
-            if (_disposed) return this;
+            if (IsInvalid) return this;
 
             return value switch
             {
@@ -847,9 +933,9 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         public void Save()
         {
-            if (_disposed) return;
-            ApplyAll();
-            PersistToDisk();
+            if (IsInvalid) return;
+            _ctx.ApplyAll();
+            _ctx.PersistToDisk();
         }
 
         /// <summary>
@@ -858,52 +944,36 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         public void DeleteAsset()
         {
-            if (_disposed) return;
+            if (IsInvalid) return;
 
-            if (_mode != AssetMode.Asset)
+            if (_ctx.Mode != SessionContext.AssetMode.Asset)
             {
-                Debug.LogWarning($"[SindyEdit] DeleteAsset()는 .asset 파일에서만 사용할 수 있습니다. ({_assetPath})");
+                Debug.LogWarning($"[SindyEdit] DeleteAsset()는 .asset 파일에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
                 return;
             }
 
-            _soCache.Clear();
-            _changesMade = false;
-            AssetDatabase.DeleteAsset(_assetPath);
-            Debug.Log($"[SindyEdit] 에셋 삭제됨: {_assetPath}");
-            Dispose();
+            _ctx.SoCache.Clear();
+            _ctx.ChangesMade = false;
+            AssetDatabase.DeleteAsset(_ctx.AssetPath);
+            Debug.Log($"[SindyEdit] 에셋 삭제됨: {_ctx.AssetPath}");
+            _ctx.Cleanup();
+            if (_isOwner) _disposed = true;
         }
 
         // ── IDisposable ───────────────────────────────────────────────────────
 
         /// <summary>
-        /// using 블록 종료 시 자동으로 호출됩니다.
-        /// 미저장 변경사항을 적용하고 디스크에 저장한 뒤 내부 리소스를 정리합니다.
+        /// 루트 세션(팩토리 생성)에서만 미저장 변경사항을 적용하고 디스크에 저장합니다.
+        /// 탐색으로 파생된 세션의 Dispose는 no-op입니다.
         /// </summary>
         public void Dispose()
         {
-            if (_disposed) return;
+            if (!_isOwner || _disposed) return;
             _disposed = true;
 
-            // 미적용 변경사항 반영
-            ApplyAll();
-
-            // 변경사항이 있으면 저장
-            PersistToDisk();
-
-            // 내부 리소스 정리
-            switch (_mode)
-            {
-                case AssetMode.Scene:
-                    // SceneEditor.Dispose()는 씬을 닫지 않으므로 호출해도 안전
-                    // MarkDirty가 호출된 경우 SaveScene을 한 번 더 수행함
-                    _sceneEditor?.Dispose();
-                    break;
-                case AssetMode.Prefab:
-                    // PrefabEditor.Dispose()는 SaveAsPrefabAsset + UnloadPrefabContents
-                    // PersistToDisk에서 이미 저장했으므로 중복 저장이 발생하지만 무해함
-                    _prefabEditor?.Dispose();
-                    break;
-            }
+            _ctx.ApplyAll();
+            _ctx.PersistToDisk();
+            _ctx.Cleanup();
         }
 
         // ── 내부 헬퍼 ─────────────────────────────────────────────────────────
@@ -928,9 +998,9 @@ namespace Sindy.Editor.EditorTools
 
         private AssetEditSession SetProperty(string prop, Action<SerializedProperty> setter)
         {
-            if (_disposed)
+            if (IsInvalid)
             {
-                Debug.LogWarning("[SindyEdit] 이미 Dispose된 세션입니다.");
+                Debug.LogWarning("[SindyEdit] 이미 정리된 세션입니다.");
                 return this;
             }
 
@@ -940,11 +1010,11 @@ namespace Sindy.Editor.EditorTools
                 return this;
             }
 
-            var sp = FindProperty(prop, out var owner);
+            var sp = FindProperty(prop, out _);
             if (sp == null) return this;
 
             setter(sp);
-            _changesMade = true;
+            _ctx.ChangesMade = true;
             return this;
         }
 
@@ -956,17 +1026,17 @@ namespace Sindy.Editor.EditorTools
         {
             owner = null;
 
-            if (_mode == AssetMode.Asset)
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
             {
-                if (_soAsset == null)
+                if (_ctx.SoAsset == null)
                 {
                     Debug.LogWarning($"[SindyEdit] SO 에셋이 null입니다. prop={prop}");
                     return null;
                 }
-                owner = GetOrCreateSO(_soAsset);
+                owner = GetOrCreateSO(_ctx.SoAsset);
                 var p = owner.FindProperty(prop);
                 if (p == null)
-                    Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_assetPath})");
+                    Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})");
                 return p;
             }
 
@@ -998,11 +1068,11 @@ namespace Sindy.Editor.EditorTools
 
         private SerializedObject GetOrCreateSO(UnityEngine.Object target)
         {
-            if (!_soCache.TryGetValue(target, out var so))
+            if (!_ctx.SoCache.TryGetValue(target, out var so))
             {
                 so = new SerializedObject(target);
                 so.Update();
-                _soCache[target] = so;
+                _ctx.SoCache[target] = so;
             }
             return so;
         }
@@ -1011,53 +1081,6 @@ namespace Sindy.Editor.EditorTools
         {
             var sp = FindProperty(prop, out _);
             return sp != null ? getter(sp) : fallback;
-        }
-
-        /// <summary>캐시에 있는 모든 SerializedObject의 변경사항을 반영합니다.</summary>
-        private void ApplyAll()
-        {
-            foreach (var kvp in _soCache)
-            {
-                if (kvp.Value.hasModifiedProperties)
-                {
-                    kvp.Value.ApplyModifiedProperties();
-                    EditorUtility.SetDirty(kvp.Key);
-                }
-            }
-        }
-
-        /// <summary>변경사항을 디스크에 저장합니다.</summary>
-        private void PersistToDisk()
-        {
-            if (!_changesMade) return;
-
-            switch (_mode)
-            {
-                case AssetMode.Scene:
-                    if (_sceneEditor != null)
-                    {
-                        _sceneEditor.MarkDirty();
-                        EditorSceneManager.SaveScene(_sceneEditor.Scene);
-                        Debug.Log($"[SindyEdit] 씬 저장됨: {_assetPath}");
-                    }
-                    break;
-
-                case AssetMode.Prefab:
-                    if (_prefabEditor?.RootObject != null)
-                    {
-                        PrefabUtility.SaveAsPrefabAsset(_prefabEditor.RootObject, _assetPath);
-                        Debug.Log($"[SindyEdit] 프리팹 저장됨: {_assetPath}");
-                    }
-                    break;
-
-                case AssetMode.Asset:
-                    if (_soAsset != null)
-                    {
-                        AssetDatabase.SaveAssets();
-                        Debug.Log($"[SindyEdit] 에셋 저장됨: {_assetPath}");
-                    }
-                    break;
-            }
         }
 
         private AssetEditSession LogAndReturn(string msg)
@@ -1094,7 +1117,7 @@ namespace Sindy.Editor.EditorTools
     /// </para>
     /// <example>
     /// <code>
-    /// session.GO("Player").WithComp<Image>(img =>
+    /// session.GO("Player").WithComp&lt;Image&gt;(img =>
     /// {
     ///     img.Set("m_Color", new Color(1, 0, 0, 1));
     /// });
