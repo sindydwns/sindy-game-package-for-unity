@@ -194,7 +194,7 @@ namespace Sindy.Editor.Examples
         ///   - CreateGO(): _currentGO가 null이면 씬 루트에, non-null이면 자식으로 GO 생성
         ///   - 체이닝: GO() 탐색 → CreateGO() → AddComp → SOString / SOColor 가능
         ///   - SORef(): SerializedProperty objectReferenceValue 세터
-        ///   - EditComp 콜백 안에서도 SORef() 사용 가능 (ComponentEditScope.SORef)
+        ///   - GetComp 콜백 안에서도 SORef() 사용 가능 (ComponentScope.SORef)
         ///
         /// SceneEditor.GO()가 없으면 자동 생성했던 패턴을 SindyEdit으로 구현합니다.
         /// </summary>
@@ -221,26 +221,26 @@ namespace Sindy.Editor.Examples
             // GO()로 기존 GO를 찾고, CreateGO()로 자식을 생성하면 _currentGO가 새 GO로 이동합니다.
             s.GO("Canvas").CreateGO("HUD").CreateGO("Title")
                 .AddComp<TextMeshProUGUI>()
-                .SOString("m_text", "ComponentBuilder Showcase")
-                .SOFloat("m_fontSize", 28f)
-                .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f));
+                .SetProp("m_text", "ComponentBuilder Showcase")
+                .SetProp("m_fontSize", 28f)
+                .SetProp("m_fontColor", new Color(0.5f, 1f, 0.9f));
 
             s.GO("Canvas/HUD").CreateGO("Background")
                 .AddComp<Image>()
-                .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f));
+                .SetProp("m_Color", new Color(0f, 0f, 0f, 0.6f));
 
             s.GO("Canvas/HUD").CreateGO("Footer");
 
             s.GO("Canvas/HUD/Footer").CreateGO("VersionLabel")
                 .AddComp<TextMeshProUGUI>()
-                .SOString("m_text", "v1.0.0")
-                .SOFloat("m_fontSize", 11f)
-                .SOColor("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
+                .SetProp("m_text", "v1.0.0")
+                .SetProp("m_fontSize", 11f)
+                .SetProp("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
 
-            // ── SORef: EditComp 콜백 안에서 objectReferenceValue 설정 ────────────
+            // ── SORef: GetComp 콜백 안에서 objectReferenceValue 설정 ────────────
             // session 레벨: s.GOFind("Icon").SORef("m_Sprite", spriteAsset);
-            // ComponentEditScope 레벨:
-            // s.GOFind("Icon").EditComp<Image>(img => img.SORef("m_Sprite", mySprite));
+            // ComponentScope 레벨:
+            // s.GOFind("Icon").GetComp<Image>(img => img.SORef("m_Sprite", mySprite));
 
             // Dispose 시 변경사항이 있으면 자동 저장됩니다.
         }
@@ -254,7 +254,7 @@ namespace Sindy.Editor.Examples
         ///   - Root(): 씬 첫 번째 루트 GO 접근
         ///   - Child(): 직계 자식 인덱스 / 이름으로 탐색
         ///   - GetFloat() / GetString() / GetColor() 등 값 읽기
-        ///   - EditComp<T>(Action): 콜백에서 특정 컴포넌트 편집
+        ///   - GetComp<T>(Action): 콜백에서 특정 컴포넌트 편집
         ///
         /// 이 메서드는 씬에 "A - Scene Edit" 메뉴로 이미 생성된 HUD 계층이 있다고 가정합니다.
         /// </summary>
@@ -279,34 +279,34 @@ namespace Sindy.Editor.Examples
             string versionText = s.GOFind("VersionLabel").GetString("m_text");
             Debug.Log($"[Example A] Title fontSize: {titleFontSize}, VersionLabel: \"{versionText}\"");
 
-            // ── EditComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
-            // 콜백 종료 후 ApplyModifiedPropertiesWithoutUndo() 자동 호출.
-            s.GOFind("Title").EditComp<TextMeshProUGUI>(tmp =>
-                tmp.Set("m_fontColor", new Color(1f, 0.9f, 0.5f)));
+            // ── GetComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
+            // Set() 호출 시 즉시 ApplyModifiedPropertiesWithoutUndo() 실행.
+            s.GOFind("Title").GetComp<TextMeshProUGUI>(tmp =>
+                tmp.SetProp("m_fontColor", new Color(1f, 0.9f, 0.5f)));
 
             // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
             // FP 스타일: Root()는 새 세션을 반환 — 반환값을 변수에 받아야 합니다.
             var root = s.Root();
-            Debug.Log($"[Example A] 첫 번째 루트 GO: {root.GetComp<Transform>()?.gameObject.name ?? "null"}");
+            Debug.Log($"[Example A] 첫 번째 루트 GO Transform 있음: {root.HasComp<Transform>()}");
 
             // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
             // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
-            s.GO("Canvas").Child("HUD").Child("Title").EditComp<TextMeshProUGUI>(tmp =>
-                tmp.Set("m_text", "SindyEdit으로 수정됨"));
+            s.GO("Canvas").Child("HUD").Child("Title").GetComp<TextMeshProUGUI>(tmp =>
+                tmp.SetProp("m_text", "SindyEdit으로 수정됨"));
 
             // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
             // FP 스타일: 체인 결과를 변수로 받아야 합니다 — s 자체는 변경되지 않습니다.
-            var firstHudChild = s.GO("Canvas").Child("HUD").Child(0).GetComp<Transform>();
-            if (firstHudChild != null)
-                Debug.Log($"[Example A] HUD 첫 번째 자식: {firstHudChild.gameObject.name}");
+            var firstHudChild = s.GO("Canvas").Child("HUD").Child(0);
+            if (firstHudChild.HasComp<Transform>())
+                Debug.Log("[Example A] HUD 첫 번째 자식 확인됨");
 
             // ── AddComp<T>: 현재 GO에 컴포넌트 추가 (없을 때만) ──────────────
             s.GO("Canvas").AddComp<CanvasGroup>();
 
-            // ── GetComp<T>: 컴포넌트 인스턴스 직접 획득 ─────────────────────
-            var canvasGroup = s.GO("Canvas").GetComp<CanvasGroup>();
-            if (canvasGroup != null)
-                Debug.Log($"[Example A] CanvasGroup alpha: {canvasGroup.alpha}");
+            // ── GetComp<T>: ComponentScope로 프로퍼티 접근 ──────────────────
+            var cgScope = s.GO("Canvas").GetComp<CanvasGroup>();
+            if (cgScope != null)
+                Debug.Log($"[Example A] CanvasGroup alpha: {cgScope.GetFloat("m_Alpha")}");
         }
     }
 }
