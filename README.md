@@ -51,7 +51,7 @@ UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가
 ```csharp
 // 씬, 프리팹, SO 모두 동일한 패턴
 using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
-s.GOFind("Fill").SOColor("m_Color", Color.green);
+s.GOFind("Fill").SetColor("m_Color", Color.green);
 ```
 
 → [Editor Toolkit 상세](./EDITOR_TOOLKIT.md) · [실용 예시](./SINDY_EDIT_EXAMPLES.md)

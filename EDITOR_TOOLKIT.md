@@ -22,20 +22,20 @@
 ```csharp
 // 씬 편집
 using var s = SindyEdit.Open("Assets/Scenes/Main.unity");
-s.GO("Canvas/Panel/Title").SOString("m_text", "Hello World");
+s.GO("Canvas/Panel/Title").SetString("m_text", "Hello World");
 // Dispose → 자동 저장
 
 // 프리팹 편집 (코드 패턴 완전히 동일)
 using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
-s.GOFind("Fill").SOColor("m_Color", Color.green);
+s.GOFind("Fill").SetColor("m_Color", Color.green);
 
 // ScriptableObject 편집
 using var s = SindyEdit.Open("Assets/Config/Game.asset");
-s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
+s.SetInt("maxHealth", 200).SetFloat("gravity", 9.81f);
 
 // 이름으로 자동 탐색 (프리팹 → 씬 → SO 순서)
 using var s = SindyEdit.Find("GaugeBar");
-s.GOFind("Fill").SOColor("m_Color", Color.cyan);
+s.GOFind("Fill").SetColor("m_Color", Color.cyan);
 ```
 
 ---
@@ -59,7 +59,7 @@ s.GOFind("Fill").SOColor("m_Color", Color.cyan);
 ```csharp
 // ScriptableObject 신규 생성
 using var s = SindyEdit.Create<FloatVariable>("Assets/Data/Speed.asset");
-s.SOFloat("Value", 5f);
+s.SetFloat("Value", 5f);
 
 // 빈 씬 생성
 using var s = SindyEdit.NewScene("Assets/Scenes/Empty.unity");
@@ -112,14 +112,14 @@ s.CreateGO("Label").AddComp<TextMeshProUGUI>();
 
 | 메서드 | 설명 |
 |--------|------|
-| `SOString(string prop, string value)` | `stringValue` 세터 |
-| `SOInt(string prop, int value)` | `intValue` 세터 |
-| `SOFloat(string prop, float value)` | `floatValue` 세터 |
-| `SOBool(string prop, bool value)` | `boolValue` 세터 |
-| `SOColor(string prop, Color value)` | `colorValue` 세터 |
-| `SOVector3(string prop, Vector3 value)` | `vector3Value` 세터 |
-| `SOVector2(string prop, Vector2 value)` | `vector2Value` 세터 |
-| `SORef(string prop, Object value)` | `objectReferenceValue` 세터 |
+| `SetString(string prop, string value)` | `stringValue` 세터 |
+| `SetInt(string prop, int value)` | `intValue` 세터 |
+| `SetFloat(string prop, float value)` | `floatValue` 세터 |
+| `SetBool(string prop, bool value)` | `boolValue` 세터 |
+| `SetColor(string prop, Color value)` | `colorValue` 세터 |
+| `SetVector3(string prop, Vector3 value)` | `vector3Value` 세터 |
+| `SetVector2(string prop, Vector2 value)` | `vector2Value` 세터 |
+| `SetRef(string prop, Object value)` | `objectReferenceValue` 세터 |
 | `Set(string prop, object value)` | 타입 자동 판별 세터. HTTP IPC `/edit` 엔드포인트용 |
 
 SO 세터를 호출하면 현재 GO의 **모든 컴포넌트를 순회**하며 해당 프로퍼티를 가진 첫 번째 컴포넌트를 찾습니다. `.asset` 파일에서는 SO 에셋에서 직접 탐색합니다.
@@ -170,13 +170,13 @@ Unity 내부 필드명은 C# 프로퍼티명과 다릅니다. 모를 때는 `Sin
 | 메서드 | 설명 |
 |--------|------|
 | `Set(string prop, object value)` | 타입 자동 판별 세터. string / bool / int / float / Color / Vector3 / Vector2 지원 |
-| `SORef(string prop, Object value)` | `objectReferenceValue` 세터 |
+| `SetRef(string prop, Object value)` | `objectReferenceValue` 세터 |
 
 ```csharp
 s.GOFind("Icon").EditComp<Image>(img =>
 {
     img.Set("m_Color", new Color(1f, 0.8f, 0.2f, 1f));
-    img.SORef("m_Sprite", mySprite);
+    img.SetRef("m_Sprite", mySprite);
 });
 ```
 
@@ -229,7 +229,7 @@ using (var ctx = SceneEditor.Open("Assets/Scenes/MyScene.unity"))
 | `AddComp(string typeFullName)` | 타입 FullName으로 추가 (어셈블리 경계 우회용) |
 | `Child(string path)` | 현재 GO 기준 상대 경로 자식 탐색/생성 |
 | `ChildFind(string path)` | 현재 GO 기준 탐색만. 없으면 `null` |
-| `SORef / SOStr / SOBool / SOInt / SOFloat / SODouble / SOLong / SOEnum / SOColor / SOVector2/3/4 / SOQuaternion` | SerializedProperty 세터 |
+| `SetRef / SOStr / SetBool / SetInt / SetFloat / SODouble / SOLong / SOEnum / SetColor / SetVector2/3/4 / SOQuaternion` | SerializedProperty 세터 |
 | `Apply()` | `ApplyModifiedProperties()` + `SetDirty()`. **체인 마지막에 반드시 호출** |
 
 > `Apply()` 없이 Dispose하면 변경사항이 저장되지 않습니다.
@@ -404,7 +404,7 @@ public class MyTask : BatchEntryPoint
     {
         using var s = SindyEdit.Open("Assets/Config/Game.asset");
         if (s == null) throw new Exception("에셋 없음");
-        s.SOInt("maxHealth", 300);
+        s.SetInt("maxHealth", 300);
         Log("완료");
     }
 }
@@ -417,7 +417,7 @@ public class MyTask : BatchEntryPoint
 ### 흔한 실수
 
 - `SindyEdit.Open()` 반환값이 `null`일 수 있습니다. 항상 null 체크 후 사용하세요.
-- `.asset` 파일에서 `GO()` 계열을 호출하면 LogWarning 후 무시됩니다. SO 편집은 `GO()` 없이 `SOInt()` 등 직접 호출.
+- `.asset` 파일에서 `GO()` 계열을 호출하면 LogWarning 후 무시됩니다. SO 편집은 `GO()` 없이 `SetInt()` 등 직접 호출.
 - 동일한 이름의 프로퍼티가 여러 컴포넌트에 있으면 첫 번째 컴포넌트만 수정됩니다. 특정 컴포넌트를 명시하려면 `EditComp<T>()` 사용.
 - `SceneEditor`를 직접 사용할 때 `MarkDirty()` 없이 Dispose하면 저장 안 됩니다.
 - `GOEditor`를 직접 사용할 때 `Apply()` 없이 Dispose하면 변경사항이 사라집니다.

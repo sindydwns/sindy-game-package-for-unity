@@ -39,7 +39,7 @@ namespace Sindy.Editor.EditorTools
     /// </code>
     /// </example>
     /// </summary>
-    public sealed class GOEditor : IDisposable
+    public sealed class GameObjectEditor : IDisposable
     {
         private readonly GameObject _go;
         private SerializedObject _so;
@@ -51,7 +51,7 @@ namespace Sindy.Editor.EditorTools
 
         // ── 생성자 (내부 전용) ────────────────────────────────────────────────
 
-        private GOEditor(GameObject go)
+        private GameObjectEditor(GameObject go)
         {
             _go = go;
         }
@@ -59,17 +59,17 @@ namespace Sindy.Editor.EditorTools
         // ── 내부 팩토리: SceneEditor / PrefabEditor / Child() 에서만 사용 ─────
 
         /// <summary>씬 루트 기준 경로로 GO를 탐색하거나 생성합니다.</summary>
-        internal static GOEditor GetOrCreate(Scene scene, string path)
+        internal static GameObjectEditor GetOrCreate(Scene scene, string path)
         {
             var parts = SplitPath(path);
             var current = FindOrCreateRootGO(scene, parts[0]);
             for (int i = 1; i < parts.Length; i++)
                 current = FindOrCreateChildGO(current.transform, parts[i]);
-            return new GOEditor(current);
+            return new GameObjectEditor(current);
         }
 
         /// <summary>씬 루트 기준 경로로 GO를 탐색합니다. 없으면 null 반환.</summary>
-        internal static GOEditor FindOnly(Scene scene, string path)
+        internal static GameObjectEditor FindOnly(Scene scene, string path)
         {
             var parts = SplitPath(path);
             var current = FindRootGO(scene, parts[0]);
@@ -90,21 +90,21 @@ namespace Sindy.Editor.EditorTools
                 }
                 current = child.gameObject;
             }
-            return new GOEditor(current);
+            return new GameObjectEditor(current);
         }
 
         /// <summary>Transform 기준 상대 경로로 GO를 탐색하거나 생성합니다.</summary>
-        internal static GOEditor GetOrCreate(Transform parent, string path)
+        internal static GameObjectEditor GetOrCreate(Transform parent, string path)
         {
             var parts = SplitPath(path);
             var current = parent;
             foreach (var part in parts)
                 current = FindOrCreateChildGO(current, part).transform;
-            return new GOEditor(current.gameObject);
+            return new GameObjectEditor(current.gameObject);
         }
 
         /// <summary>Transform 기준 상대 경로로 GO를 탐색합니다. 없으면 null 반환.</summary>
-        internal static GOEditor FindOnly(Transform parent, string path)
+        internal static GameObjectEditor FindOnly(Transform parent, string path)
         {
             var parts = SplitPath(path);
             var current = parent;
@@ -120,14 +120,14 @@ namespace Sindy.Editor.EditorTools
                 }
                 current = child;
             }
-            return new GOEditor(current.gameObject);
+            return new GameObjectEditor(current.gameObject);
         }
 
         /// <summary>기존 GameObject를 직접 래핑합니다. (PrefabEditor.Root() 용)</summary>
-        internal static GOEditor For(GameObject go)
+        internal static GameObjectEditor For(GameObject go)
         {
             if (go == null) throw new ArgumentNullException(nameof(go));
-            return new GOEditor(go);
+            return new GameObjectEditor(go);
         }
 
         // ── 계층 이동 ─────────────────────────────────────────────────────────
@@ -136,13 +136,13 @@ namespace Sindy.Editor.EditorTools
         /// 현재 GO 기준 상대 경로로 자식 GO를 탐색하거나 생성합니다.
         /// <para>(Hierarchy path) GO() 와 달리 씬/프리팹 루트가 아니라 현재 GO 기준입니다.</para>
         /// </summary>
-        public GOEditor Child(string relativePath)
+        public GameObjectEditor Child(string relativePath)
             => GetOrCreate(_go.transform, relativePath);
 
         /// <summary>
         /// 현재 GO 기준 상대 경로로 자식 GO를 탐색합니다. 없으면 null 반환.
         /// </summary>
-        public GOEditor ChildFind(string relativePath)
+        public GameObjectEditor ChildFind(string relativePath)
             => FindOnly(_go.transform, relativePath);
 
         // ── 컴포넌트 타게팅 ───────────────────────────────────────────────────
@@ -152,7 +152,7 @@ namespace Sindy.Editor.EditorTools
         /// 이후 SO* 호출의 대상이 이 컴포넌트로 설정됩니다.
         /// 추가 시 Undo에 등록됩니다.
         /// </summary>
-        public GOEditor AddComp<T>() where T : Component
+        public GameObjectEditor AddComp<T>() where T : Component
         {
             var comp = _go.GetComponent<T>();
             if (comp == null)
@@ -168,7 +168,7 @@ namespace Sindy.Editor.EditorTools
         /// 기존 컴포넌트를 SO* 편집 대상으로 전환합니다.
         /// 컴포넌트가 없으면 LogWarning 후 이전 대상을 유지합니다.
         /// </summary>
-        public GOEditor WithComp<T>() where T : Component
+        public GameObjectEditor WithComp<T>() where T : Component
         {
             var comp = _go.GetComponent<T>();
             if (comp == null)
@@ -185,7 +185,7 @@ namespace Sindy.Editor.EditorTools
         /// 어셈블리 경계로 인해 제네릭을 쓸 수 없을 때 사용합니다.
         /// </summary>
         /// <param name="typeFullName">예: "Sindy.Test.ShowcaseRunner"</param>
-        public GOEditor AddComp(string typeFullName)
+        public GameObjectEditor AddComp(string typeFullName)
         {
             var type = FindType(typeFullName);
             if (type == null)
@@ -209,7 +209,7 @@ namespace Sindy.Editor.EditorTools
         /// <summary>
         /// 타입 전체 이름(FullName)으로 기존 컴포넌트를 SO* 편집 대상으로 전환합니다.
         /// </summary>
-        public GOEditor WithComp(string typeFullName)
+        public GameObjectEditor WithComp(string typeFullName)
         {
             var type = FindType(typeFullName);
             if (type == null)
@@ -237,47 +237,47 @@ namespace Sindy.Editor.EditorTools
         //   Image.color → "m_Color"
         //   확인 방법: Inspector → Debug 모드 or FieldPeeker (Sindy/Tools/Field Peeker)
 
-        public GOEditor SORef(string path, UnityEngine.Object value, bool ignoreNullWarning = false)
+        public GameObjectEditor SetRef(string path, UnityEngine.Object value, bool ignoreNullWarning = false)
         {
             if (value == null && !ignoreNullWarning)
                 Debug.LogWarning($"[GOEditor] '{_go.name}':{path} — null 참조가 설정됩니다.");
             return SetProperty(path, p => p.objectReferenceValue = value);
         }
 
-        public GOEditor SOStr(string path, string value)
+        public GameObjectEditor SetStr(string path, string value)
             => SetProperty(path, p => p.stringValue = value);
 
-        public GOEditor SOBool(string path, bool value)
+        public GameObjectEditor SetBool(string path, bool value)
             => SetProperty(path, p => p.boolValue = value);
 
-        public GOEditor SOInt(string path, int value)
+        public GameObjectEditor SetInt(string path, int value)
             => SetProperty(path, p => p.intValue = value);
 
-        public GOEditor SOLong(string path, long value)
+        public GameObjectEditor SetLong(string path, long value)
             => SetProperty(path, p => p.longValue = value);
 
-        public GOEditor SOFloat(string path, float value)
+        public GameObjectEditor SetFloat(string path, float value)
             => SetProperty(path, p => p.floatValue = value);
 
-        public GOEditor SODouble(string path, double value)
+        public GameObjectEditor SetDouble(string path, double value)
             => SetProperty(path, p => p.doubleValue = value);
 
-        public GOEditor SOEnum(string path, int value)
+        public GameObjectEditor SetEnum(string path, int value)
             => SetProperty(path, p => p.enumValueIndex = value);
 
-        public GOEditor SOColor(string path, Color value)
+        public GameObjectEditor SetColor(string path, Color value)
             => SetProperty(path, p => p.colorValue = value);
 
-        public GOEditor SOVector2(string path, Vector2 value)
+        public GameObjectEditor SetVector2(string path, Vector2 value)
             => SetProperty(path, p => p.vector2Value = value);
 
-        public GOEditor SOVector3(string path, Vector3 value)
+        public GameObjectEditor SetVector3(string path, Vector3 value)
             => SetProperty(path, p => p.vector3Value = value);
 
-        public GOEditor SOVector4(string path, Vector4 value)
+        public GameObjectEditor SetVector4(string path, Vector4 value)
             => SetProperty(path, p => p.vector4Value = value);
 
-        public GOEditor SOQuaternion(string path, Quaternion value)
+        public GameObjectEditor SetQuaternion(string path, Quaternion value)
             => SetProperty(path, p => p.quaternionValue = value);
 
         // ── 커밋 ──────────────────────────────────────────────────────────────
@@ -328,7 +328,7 @@ namespace Sindy.Editor.EditorTools
                     $"AddComp<T>() 또는 WithComp<T>()를 먼저 호출하세요.");
         }
 
-        private GOEditor SetProperty(string path, Action<SerializedProperty> setter)
+        private GameObjectEditor SetProperty(string path, Action<SerializedProperty> setter)
         {
             EnsureTarget();
             try

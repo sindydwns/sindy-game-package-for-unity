@@ -233,12 +233,12 @@ namespace Sindy.Editor.Examples
 
             ctx.GO("ShowcaseRunner")
                .AddComp("Sindy.Test.ShowcaseRunner")
-               .SORef("labelPrefab", label, ignoreNullWarning: true)
-               .SORef("buttonPrefab", button, ignoreNullWarning: true)
-               .SOFloat("cellWidth", 240f)
-               .SOFloat("cellHeight", 200f)
-               .SOInt("gridColumns", 3)
-               .SOColor("bgColor", new Color(0.12f, 0.12f, 0.15f))
+               .SetRef("labelPrefab", label, ignoreNullWarning: true)
+               .SetRef("buttonPrefab", button, ignoreNullWarning: true)
+               .SetFloat("cellWidth", 240f)
+               .SetFloat("cellHeight", 200f)
+               .SetInt("gridColumns", 3)
+               .SetColor("bgColor", new Color(0.12f, 0.12f, 0.15f))
                .Apply();
 
             Log("ShowcaseRunner 컴포넌트 설정 완료");
@@ -250,14 +250,14 @@ namespace Sindy.Editor.Examples
         {
             ctx.GO("Canvas.HUD.Title")
                .AddComp<TextMeshProUGUI>()
-               .SOStr("m_text", "ComponentBuilder Showcase")
-               .SOFloat("m_fontSize", 28f)
-               .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
+               .SetStr("m_text", "ComponentBuilder Showcase")
+               .SetFloat("m_fontSize", 28f)
+               .SetColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
                .Apply();
 
             ctx.GO("Canvas.HUD.Background")
                .AddComp<Image>()
-               .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
+               .SetColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
                .Apply();
 
             Log("Canvas HUD 계층 설정 완료");

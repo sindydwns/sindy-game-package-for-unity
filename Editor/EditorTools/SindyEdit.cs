@@ -19,19 +19,19 @@ namespace Sindy.Editor.EditorTools
     /// <code>
     /// // 씬 편집
     /// using var s = SindyEdit.Open("Assets/Scenes/Main.unity");
-    /// s.GO("Canvas/Panel/Title").SOString("m_text", "Hello").SOColor("m_Color", Color.white);
+    /// s.GO("Canvas/Panel/Title").SetString("m_text", "Hello").SetColor("m_Color", Color.white);
     ///
     /// // 프리팹 편집
     /// using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
-    /// s.GO("Fill/Image").SOColor("m_Color", Color.green);
+    /// s.GO("Fill/Image").SetColor("m_Color", Color.green);
     ///
     /// // SO 편집
     /// using var s = SindyEdit.Open("Assets/Config/Game.asset");
-    /// s.SOInt("maxHealth", 200).SOFloat("gravity", 9.81f);
+    /// s.SetInt("maxHealth", 200).SetFloat("gravity", 9.81f);
     ///
     /// // SO 신규 생성 후 편집
     /// using var s = SindyEdit.Create&lt;FloatVariable&gt;("Assets/Data/Speed.asset");
-    /// s.SOFloat("value", 5f);
+    /// s.SetFloat("value", 5f);
     ///
     /// // 이름으로 자동 탐색
     /// using var s = SindyEdit.Find("GaugeBar");
@@ -40,8 +40,8 @@ namespace Sindy.Editor.EditorTools
     /// // FP 스타일: 탐색은 새 인스턴스 반환 — s는 변경되지 않음
     /// var player = s.GOFind("Player");
     /// var hp = player.Child("HpBar");
-    /// hp.SOFloat("value", 100f);
-    /// s.Root().Child("UI").GOFind("Button").SOString("label", "Start");
+    /// hp.SetFloat("value", 100f);
+    /// s.Root().Child("UI").GOFind("Button").SetString("label", "Start");
     /// </code>
     /// </example>
     /// </summary>
@@ -246,6 +246,35 @@ namespace Sindy.Editor.EditorTools
         }
 
         /// <summary>
+        /// 새 ScriptableObject 에셋을 생성하고 편집 세션을 반환합니다.
+        /// 지정 경로에 파일이 이미 있으면 <c>InvalidOperationException</c>을 던집니다.
+        /// </summary>
+        /// <typeparam name="T">생성할 ScriptableObject 타입</typeparam>
+        /// <param name="assetPath">Assets/ 로 시작하는 .asset 파일 경로</param>
+        /// <returns>편집 세션.</returns>
+        public static AssetEditSession NewAsset<T>(string assetPath) where T : ScriptableObject
+        {
+            if (!assetPath.EndsWith(".asset", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"[SindyEdit] NewAsset: 경로가 '.asset'으로 끝나야 합니다. ({assetPath})");
+
+            if (File.Exists(assetPath))
+                throw new InvalidOperationException(
+                    $"[SindyEdit] 이미 존재하는 파일입니다: '{assetPath}'. 덮어쓰려면 먼저 파일을 삭제하세요.");
+
+            string dir = Path.GetDirectoryName(assetPath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            var asset = ScriptableObject.CreateInstance<T>();
+            AssetDatabase.CreateAsset(asset, assetPath);
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+            Debug.Log($"[SindyEdit] ScriptableObject 생성됨: {assetPath}");
+            return AssetEditSession.ForAsset(assetPath);
+        }
+
+        /// <summary>
         /// 씬 파일(.unity)을 디스크에서 삭제합니다.
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .unity 파일 경로</param>
@@ -300,7 +329,7 @@ namespace Sindy.Editor.EditorTools
     /// <b>FP 설계:</b> <see cref="Root"/>, <see cref="FindGameObject"/>, <see cref="Child(int)"/>,
     /// <see cref="GO"/> 등 탐색 메서드는 <c>this</c>를 변경하지 않고 새로운
     /// <see cref="AssetEditSession"/> 인스턴스를 반환합니다.
-    /// 세터(<see cref="SOFloat"/> 등)는 <c>this</c>를 반환합니다.
+    /// 세터(<see cref="SetFloat"/> 등)는 <c>this</c>를 반환합니다.
     /// 컴포넌트 접근 메서드(<see cref="GetComponent{T}"/> 등)는 <see cref="ComponentScope"/>를 반환합니다.
     /// </para>
     /// <para>
@@ -485,12 +514,12 @@ namespace Sindy.Editor.EditorTools
             }
 
             string normalized = NormalizePath(goPath);
-            GOEditor goEditor = null;
+            GameObjectEditor goEditor = null;
 
             if (_ctx.Mode == SessionContext.AssetMode.Scene)
-                goEditor = GOEditor.FindOnly(_ctx.SceneEditor.Scene, normalized);
+                goEditor = GameObjectEditor.FindOnly(_ctx.SceneEditor.Scene, normalized);
             else if (_ctx.Mode == SessionContext.AssetMode.Prefab && _ctx.PrefabEditor?.RootObject != null)
-                goEditor = GOEditor.FindOnly(_ctx.PrefabEditor.RootObject.transform, normalized);
+                goEditor = GameObjectEditor.FindOnly(_ctx.PrefabEditor.RootObject.transform, normalized);
 
             if (goEditor == null)
             {
@@ -843,7 +872,7 @@ namespace Sindy.Editor.EditorTools
         // ── SO* 세터 ──────────────────────────────────────────────────────────
 
         /// <summary>SerializedProperty stringValue 세터</summary>
-        public AssetEditSession SOString(string prop, string value) => SetProperty(prop, sp =>
+        public AssetEditSession SetString(string prop, string value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.String)
                 throw new InvalidOperationException(
@@ -852,7 +881,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty intValue 세터</summary>
-        public AssetEditSession SOInt(string prop, int value) => SetProperty(prop, sp =>
+        public AssetEditSession SetInt(string prop, int value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.Integer)
                 throw new InvalidOperationException(
@@ -861,7 +890,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty floatValue 세터</summary>
-        public AssetEditSession SOFloat(string prop, float value) => SetProperty(prop, sp =>
+        public AssetEditSession SetFloat(string prop, float value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.Float)
                 throw new InvalidOperationException(
@@ -870,7 +899,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty boolValue 세터</summary>
-        public AssetEditSession SOBool(string prop, bool value) => SetProperty(prop, sp =>
+        public AssetEditSession SetBool(string prop, bool value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.Boolean)
                 throw new InvalidOperationException(
@@ -879,7 +908,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty colorValue 세터</summary>
-        public AssetEditSession SOColor(string prop, Color value) => SetProperty(prop, sp =>
+        public AssetEditSession SetColor(string prop, Color value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.Color)
                 throw new InvalidOperationException(
@@ -888,7 +917,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty vector3Value 세터</summary>
-        public AssetEditSession SOVector3(string prop, Vector3 value) => SetProperty(prop, sp =>
+        public AssetEditSession SetVector3(string prop, Vector3 value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.Vector3)
                 throw new InvalidOperationException(
@@ -897,7 +926,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty vector2Value 세터</summary>
-        public AssetEditSession SOVector2(string prop, Vector2 value) => SetProperty(prop, sp =>
+        public AssetEditSession SetVector2(string prop, Vector2 value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.Vector2)
                 throw new InvalidOperationException(
@@ -906,7 +935,7 @@ namespace Sindy.Editor.EditorTools
         });
 
         /// <summary>SerializedProperty objectReferenceValue 세터</summary>
-        public AssetEditSession SORef(string prop, UnityEngine.Object value) => SetProperty(prop, sp =>
+        public AssetEditSession SetRef(string prop, UnityEngine.Object value) => SetProperty(prop, sp =>
         {
             if (sp.propertyType != SerializedPropertyType.ObjectReference)
                 throw new InvalidOperationException(
@@ -1066,13 +1095,13 @@ namespace Sindy.Editor.EditorTools
 
             return value switch
             {
-                string s => SOString(prop, s),
-                bool b => SOBool(prop, b),
-                Color c => SOColor(prop, c),
-                Vector3 v3 => SOVector3(prop, v3),
-                Vector2 v2 => SOVector2(prop, v2),
+                string s => SetString(prop, s),
+                bool b => SetBool(prop, b),
+                Color c => SetColor(prop, c),
+                Vector3 v3 => SetVector3(prop, v3),
+                Vector2 v2 => SetVector2(prop, v2),
                 int i => SetIntOrFloat(prop, i),
-                float f => SOFloat(prop, f),
+                float f => SetFloat(prop, f),
                 null => throw new InvalidOperationException($"[SindyEdit] Set: value가 null입니다. prop={prop}"),
                 _ => throw new InvalidOperationException($"[SindyEdit] Set: 지원하지 않는 타입 {value.GetType().Name}. prop={prop}"),
             };
@@ -1261,11 +1290,11 @@ namespace Sindy.Editor.EditorTools
     /// <see cref="AssetEditSession.GetComponent{T}"/>, <see cref="AssetEditSession.GetOrAddComponent{T}"/>,
     /// <see cref="AssetEditSession.AddComponent{T}"/> 에서 반환되는 컴포넌트 접근 컨텍스트.
     /// <para>
-    /// 쓰기: <see cref="SetProperty"/> / <see cref="SORef"/>
+    /// 쓰기: <see cref="SetProperty"/> / <see cref="SetRef"/>
     /// 읽기: <see cref="GetProperty{T}"/> / <see cref="GetFloat"/> / <see cref="GetString"/> 등
     /// </para>
     /// <para>
-    /// <see cref="SetProperty"/>·<see cref="SORef"/> 호출 시 <c>ApplyModifiedPropertiesWithoutUndo()</c>가 즉시 실행됩니다.
+    /// <see cref="SetProperty"/>·<see cref="SetRef"/> 호출 시 <c>ApplyModifiedPropertiesWithoutUndo()</c>가 즉시 실행됩니다.
     /// </para>
     /// <example>
     /// <code>
@@ -1331,7 +1360,7 @@ namespace Sindy.Editor.EditorTools
         /// SerializedProperty objectReferenceValue 세터.
         /// 설정 후 즉시 <c>ApplyModifiedPropertiesWithoutUndo()</c>가 호출됩니다.
         /// </summary>
-        public ComponentScope SORef(string prop, UnityEngine.Object value)
+        public ComponentScope SetRef(string prop, UnityEngine.Object value)
         {
             var sp = _so.FindProperty(prop);
             if (sp == null)

@@ -33,7 +33,7 @@ namespace Sindy.Editor.EditorTools
     /// </code>
     /// </example>
     /// </summary>
-    public sealed class SOEditor<T> : IDisposable where T : ScriptableObject
+    public sealed class ScriptableObjectEditor<T> : IDisposable where T : ScriptableObject
     {
         private readonly T _asset;
         private readonly SerializedObject _so;
@@ -47,7 +47,7 @@ namespace Sindy.Editor.EditorTools
 
         // ── 생성자 ────────────────────────────────────────────────────────────
 
-        private SOEditor(T asset)
+        private ScriptableObjectEditor(T asset)
         {
             _asset = asset;
             _so = new SerializedObject(asset);
@@ -61,7 +61,7 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .asset 파일 경로</param>
         /// <returns>편집 컨텍스트. 로드 실패 시 null.</returns>
-        public static SOEditor<T> Open(string assetPath)
+        public static ScriptableObjectEditor<T> Open(string assetPath)
         {
             var asset = AssetDatabase.LoadAssetAtPath<T>(assetPath);
             if (asset == null)
@@ -71,7 +71,7 @@ namespace Sindy.Editor.EditorTools
                 return null;
             }
             Debug.Log($"[SOEditor] 에셋 로드됨: {assetPath}");
-            return new SOEditor<T>(asset);
+            return new ScriptableObjectEditor<T>(asset);
         }
 
         /// <summary>
@@ -80,12 +80,12 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .asset 파일 경로</param>
         /// <returns>편집 컨텍스트.</returns>
-        public static SOEditor<T> Create(string assetPath)
+        public static ScriptableObjectEditor<T> Create(string assetPath)
         {
             var asset = ScriptableObject.CreateInstance<T>();
             AssetDatabase.CreateAsset(asset, assetPath);
             Debug.Log($"[SOEditor] 에셋 생성됨: {assetPath}");
-            return new SOEditor<T>(asset);
+            return new ScriptableObjectEditor<T>(asset);
         }
 
         // ── 필드 세터 ─────────────────────────────────────────────────────────
@@ -93,47 +93,47 @@ namespace Sindy.Editor.EditorTools
         // public 필드는 선언명 그대로 사용 (예: "Value", "description").
         // [SerializeField] private 필드도 선언명 그대로 사용.
 
-        public SOEditor<T> SORef(string path, UnityEngine.Object value, bool ignoreNullWarning = false)
+        public ScriptableObjectEditor<T> SetRef(string path, UnityEngine.Object value, bool ignoreNullWarning = false)
         {
             if (value == null && !ignoreNullWarning)
                 Debug.LogWarning($"[SOEditor] '{_asset.name}':{path} — null 참조가 설정됩니다.");
             return SetProperty(path, p => p.objectReferenceValue = value);
         }
 
-        public SOEditor<T> SOStr(string path, string value)
+        public ScriptableObjectEditor<T> SetStr(string path, string value)
             => SetProperty(path, p => p.stringValue = value);
 
-        public SOEditor<T> SOBool(string path, bool value)
+        public ScriptableObjectEditor<T> SetBool(string path, bool value)
             => SetProperty(path, p => p.boolValue = value);
 
-        public SOEditor<T> SOInt(string path, int value)
+        public ScriptableObjectEditor<T> SetInt(string path, int value)
             => SetProperty(path, p => p.intValue = value);
 
-        public SOEditor<T> SOLong(string path, long value)
+        public ScriptableObjectEditor<T> SetLong(string path, long value)
             => SetProperty(path, p => p.longValue = value);
 
-        public SOEditor<T> SOFloat(string path, float value)
+        public ScriptableObjectEditor<T> SetFloat(string path, float value)
             => SetProperty(path, p => p.floatValue = value);
 
-        public SOEditor<T> SODouble(string path, double value)
+        public ScriptableObjectEditor<T> SetDouble(string path, double value)
             => SetProperty(path, p => p.doubleValue = value);
 
-        public SOEditor<T> SOEnum(string path, int value)
+        public ScriptableObjectEditor<T> SetEnum(string path, int value)
             => SetProperty(path, p => p.enumValueIndex = value);
 
-        public SOEditor<T> SOColor(string path, Color value)
+        public ScriptableObjectEditor<T> SetColor(string path, Color value)
             => SetProperty(path, p => p.colorValue = value);
 
-        public SOEditor<T> SOVector2(string path, Vector2 value)
+        public ScriptableObjectEditor<T> SetVector2(string path, Vector2 value)
             => SetProperty(path, p => p.vector2Value = value);
 
-        public SOEditor<T> SOVector3(string path, Vector3 value)
+        public ScriptableObjectEditor<T> SetVector3(string path, Vector3 value)
             => SetProperty(path, p => p.vector3Value = value);
 
-        public SOEditor<T> SOVector4(string path, Vector4 value)
+        public ScriptableObjectEditor<T> SetVector4(string path, Vector4 value)
             => SetProperty(path, p => p.vector4Value = value);
 
-        public SOEditor<T> SOQuaternion(string path, Quaternion value)
+        public ScriptableObjectEditor<T> SetQuaternion(string path, Quaternion value)
             => SetProperty(path, p => p.quaternionValue = value);
 
         // ── 커밋 ──────────────────────────────────────────────────────────────
@@ -180,7 +180,7 @@ namespace Sindy.Editor.EditorTools
 
         // ── 내부 헬퍼 ─────────────────────────────────────────────────────────
 
-        private SOEditor<T> SetProperty(string path, Action<SerializedProperty> setter)
+        private ScriptableObjectEditor<T> SetProperty(string path, Action<SerializedProperty> setter)
         {
             try
             {

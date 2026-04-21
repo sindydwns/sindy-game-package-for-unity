@@ -92,8 +92,8 @@ namespace Sindy.Editor.EditorTools
         /// </para>
         /// </summary>
         /// <param name="hierarchyPath">점(.)으로 구분된 계층 경로. 예: "Canvas.Panel.Button"</param>
-        public GOEditor GO(string hierarchyPath)
-            => GOEditor.GetOrCreate(_scene, hierarchyPath);
+        public GameObjectEditor GO(string hierarchyPath)
+            => GameObjectEditor.GetOrCreate(_scene, hierarchyPath);
 
         /// <summary>
         /// 경로로 GameObject를 탐색합니다. 없으면 생성하지 않고 null을 반환합니다.
@@ -103,8 +103,8 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         /// <param name="hierarchyPath">점(.)으로 구분된 계층 경로</param>
         /// <returns>GOEditor. 경로를 찾지 못한 경우 null.</returns>
-        public GOEditor GOFind(string hierarchyPath)
-            => GOEditor.FindOnly(_scene, hierarchyPath);
+        public GameObjectEditor GOFind(string hierarchyPath)
+            => GameObjectEditor.FindOnly(_scene, hierarchyPath);
 
         // ── 씬 저장 ───────────────────────────────────────────────────────────
 

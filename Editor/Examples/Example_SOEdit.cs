@@ -40,26 +40,26 @@ namespace Sindy.Editor.Examples
             // Dispose 시 AssetDatabase.SaveAssets() 자동 호출.
             // Apply() 없이 Dispose하면 LogWarning 출력 (미저장 경고).
 
-            using (var so = SOEditor<IntVariable>.Create($"{SOOutputFolder}/Example_IntVariable.asset"))
+            using (var so = ScriptableObjectEditor<IntVariable>.Create($"{SOOutputFolder}/Example_IntVariable.asset"))
             {
                 // ScriptableObjectVariable<T>.Value  → 직렬화 이름: "Value"  (대문자, public)
                 // ScriptableObjectVariable<T>.description → "description" (소문자, public)
-                so.SOInt("Value", 42)
-                  .SOStr("description", "예제용 카운터 변수")
+                so.SetInt("Value", 42)
+                  .SetStr("description", "예제용 카운터 변수")
                   .Apply();
             }
 
-            using (var so = SOEditor<FloatVariable>.Create($"{SOOutputFolder}/Example_FloatVariable.asset"))
+            using (var so = ScriptableObjectEditor<FloatVariable>.Create($"{SOOutputFolder}/Example_FloatVariable.asset"))
             {
-                so.SOFloat("Value", 0.75f)
-                  .SOStr("description", "예제용 퍼센트 값 (0.0 ~ 1.0)")
+                so.SetFloat("Value", 0.75f)
+                  .SetStr("description", "예제용 퍼센트 값 (0.0 ~ 1.0)")
                   .Apply();
             }
 
-            using (var so = SOEditor<BoolVariable>.Create($"{SOOutputFolder}/Example_BoolVariable.asset"))
+            using (var so = ScriptableObjectEditor<BoolVariable>.Create($"{SOOutputFolder}/Example_BoolVariable.asset"))
             {
-                so.SOBool("Value", true)
-                  .SOStr("description", "예제용 플래그")
+                so.SetBool("Value", true)
+                  .SetStr("description", "예제용 플래그")
                   .Apply();
             }
 
@@ -96,8 +96,8 @@ namespace Sindy.Editor.Examples
                     return;
                 }
 
-                s.SOInt("Value", 100)
-                 .SOString("description", "값이 수정되었습니다.");
+                s.SetInt("Value", 100)
+                 .SetString("description", "값이 수정되었습니다.");
             }
 
             Debug.Log("[Example C] IntVariable 로드 및 수정 완료.");
@@ -122,7 +122,7 @@ namespace Sindy.Editor.Examples
                 {
                     if (s == null) continue;
 
-                    s.SOFloat("Value", 0f); // 모든 FloatVariable 초기화
+                    s.SetFloat("Value", 0f); // 모든 FloatVariable 초기화
                 }
             }
 
@@ -157,8 +157,8 @@ namespace Sindy.Editor.Examples
             {
                 if (s == null) return;
 
-                s.SOBool("healthRef.UseConstant", true)
-                 .SOFloat("healthRef.ConstantValue", 100f);
+                s.SetBool("healthRef.UseConstant", true)
+                 .SetFloat("healthRef.ConstantValue", 100f);
             }
         }
     }

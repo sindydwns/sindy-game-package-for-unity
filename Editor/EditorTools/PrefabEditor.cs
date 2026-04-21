@@ -89,21 +89,21 @@ namespace Sindy.Editor.EditorTools
         /// 루트 GO를 기준으로 경로에 해당하는 자식 GO를 탐색하거나 생성합니다.
         /// <para>(Hierarchy path) 없는 노드는 자동 생성됩니다.</para>
         /// </summary>
-        public GOEditor GO(string hierarchyPath)
-            => GOEditor.GetOrCreate(_root.transform, hierarchyPath);
+        public GameObjectEditor GO(string hierarchyPath)
+            => GameObjectEditor.GetOrCreate(_root.transform, hierarchyPath);
 
         /// <summary>
         /// 루트 GO를 기준으로 경로에 해당하는 자식 GO를 탐색합니다. 없으면 null 반환.
         /// </summary>
-        public GOEditor GOFind(string hierarchyPath)
-            => GOEditor.FindOnly(_root.transform, hierarchyPath);
+        public GameObjectEditor GOFind(string hierarchyPath)
+            => GameObjectEditor.FindOnly(_root.transform, hierarchyPath);
 
         /// <summary>
         /// 프리팹 루트 GO에 대한 GOEditor를 반환합니다.
         /// <para><c>p.GO(p.RootObject.name)</c>의 단축 표현입니다.</para>
         /// </summary>
-        public GOEditor Root()
-            => GOEditor.For(_root);
+        public GameObjectEditor Root()
+            => GameObjectEditor.For(_root);
 
         // ── IDisposable ───────────────────────────────────────────────────────
 

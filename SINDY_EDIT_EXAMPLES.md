@@ -18,9 +18,9 @@ static void EditSceneText()
     if (s == null) return;
 
     s.GO("Canvas/Panel/Title")
-     .SOString("m_text", "Hello World")
-     .SOColor("m_fontColor", Color.white)
-     .SOFloat("m_fontSize", 24f);
+     .SetString("m_text", "Hello World")
+     .SetColor("m_fontColor", Color.white)
+     .SetFloat("m_fontSize", 24f);
 }
 ```
 
@@ -36,8 +36,8 @@ static void DisableButton()
     if (s == null) return;
 
     s.GOFind("SubmitButton")
-     .SOBool("m_Interactable", false)
-     .SOColor("m_Color", new Color(0.5f, 0.5f, 0.5f, 1f));
+     .SetBool("m_Interactable", false)
+     .SetColor("m_Color", new Color(0.5f, 0.5f, 0.5f, 1f));
 }
 ```
 
@@ -59,7 +59,7 @@ static void CreateDimPanel()
     s.GO("Canvas")
      .CreateGO("DimPanel")
      .AddComp<UnityEngine.UI.Image>()
-     .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f));
+     .SetColor("m_Color", new Color(0f, 0f, 0f, 0.6f));
 }
 ```
 
@@ -76,13 +76,13 @@ static void CreateHUDHierarchy()
 
     s.GO("Canvas/HUD").CreateGO("Title")
      .AddComp<TMPro.TextMeshProUGUI>()
-     .SOString("m_text", "스테이지 1")
-     .SOFloat("m_fontSize", 28f)
-     .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f));
+     .SetString("m_text", "스테이지 1")
+     .SetFloat("m_fontSize", 28f)
+     .SetColor("m_fontColor", new Color(0.5f, 1f, 0.9f));
 
     s.GO("Canvas/HUD").CreateGO("Background")
      .AddComp<UnityEngine.UI.Image>()
-     .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f));
+     .SetColor("m_Color", new Color(0f, 0f, 0f, 0.6f));
 }
 ```
 
@@ -172,10 +172,10 @@ static void EditPrefabRoot()
     if (s == null) return;
 
     // Root(): 프리팹 루트 GO로 이동
-    s.Root().SOColor("m_Color", Color.white);
+    s.Root().SetColor("m_Color", Color.white);
 
     // Root 기준 직계 자식으로 이동
-    s.Root().Child("Background").SOColor("m_Color", new Color(0.2f, 0.2f, 0.2f));
+    s.Root().Child("Background").SetColor("m_Color", new Color(0.2f, 0.2f, 0.2f));
 }
 ```
 
@@ -209,8 +209,8 @@ static void SetIconSprite()
     using var s = SindyEdit.Open("Assets/Prefabs/UI/Icon.prefab");
     if (s == null) return;
 
-    // 세션 레벨에서 SORef 사용
-    s.GOFind("Image").SORef("m_Sprite", sprite);
+    // 세션 레벨에서 SetRef 사용
+    s.GOFind("Image").SetRef("m_Sprite", sprite);
 }
 ```
 
@@ -273,10 +273,10 @@ static void EditGameConfig()
     using var s = SindyEdit.Open("Assets/Config/GameConfig.asset");
     if (s == null) return;
 
-    s.SOFloat("gravity", 9.81f)
-     .SOInt("maxHealth", 200)
-     .SOBool("godMode", false)
-     .SOString("gameVersion", "1.2.0");
+    s.SetFloat("gravity", 9.81f)
+     .SetInt("maxHealth", 200)
+     .SetBool("godMode", false)
+     .SetString("gameVersion", "1.2.0");
 }
 ```
 
@@ -291,8 +291,8 @@ static void CreateSpeedSO()
     using var s = SindyEdit.Create<FloatVariable>("Assets/Data/PlayerSpeed.asset");
     if (s == null) return;
 
-    s.SOFloat("Value", 5f)
-     .SOString("description", "플레이어 이동 속도");
+    s.SetFloat("Value", 5f)
+     .SetString("description", "플레이어 이동 속도");
 }
 ```
 
@@ -317,7 +317,7 @@ static void CreateEmptyPrefab()
 
     s.CreateGO("Label")
      .AddComp<TMPro.TextMeshProUGUI>()
-     .SOString("m_text", "버튼");
+     .SetString("m_text", "버튼");
 }
 ```
 
@@ -350,7 +350,7 @@ static void ResetAllFloatVars()
         using var s = SindyEdit.Open(path);
         if (s == null) continue;
 
-        s.SOBool("isEnabled", true);
+        s.SetBool("isEnabled", true);
     }
 }
 ```
@@ -365,8 +365,8 @@ static void EditNestedField()
     if (s == null) return;
 
     // "필드명.서브필드명" 경로로 중첩 구조 접근
-    s.SOBool("healthRef.UseConstant", true)
-     .SOFloat("healthRef.ConstantValue", 100f);
+    s.SetBool("healthRef.UseConstant", true)
+     .SetFloat("healthRef.ConstantValue", 100f);
 }
 ```
 
@@ -384,13 +384,13 @@ static void EditNestedField()
 
 ```csharp
 // GO() — 경로로 직접 접근. 가장 빠름
-s.GO("Canvas/HUD/Title").SOString("m_text", "Ready");
+s.GO("Canvas/HUD/Title").SetString("m_text", "Ready");
 
 // GOFind() — 이름으로 재귀 탐색
-s.GOFind("HealthBar").SOFloat("m_fillAmount", 0.75f);
+s.GOFind("HealthBar").SetFloat("m_fillAmount", 0.75f);
 
 // Root().Child() — 계층을 명시적으로 내려갈 때
-s.Root().Child("Overlay").Child("Panel").Child(0).SOColor("m_Color", Color.red);
+s.Root().Child("Overlay").Child("Panel").Child(0).SetColor("m_Color", Color.red);
 ```
 
 ### Find()로 에셋 이름 자동 탐색
@@ -404,7 +404,7 @@ static void FindByName()
     using var s = SindyEdit.Find("GaugeBar");
     if (s == null) return;
 
-    s.GOFind("Fill").SOColor("m_Color", Color.cyan);
+    s.GOFind("Fill").SetColor("m_Color", Color.cyan);
 }
 ```
 

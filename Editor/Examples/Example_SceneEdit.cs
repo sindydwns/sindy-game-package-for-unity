@@ -5,7 +5,7 @@
 //
 // SindyEdit 변환 현황:
 //   ❌ SetupShowcaseRunner: AddComp(string) 미지원으로 변환 불가 (SORef는 이제 지원됨)
-//   ✅ CreateGOWithSindyEdit: CreateGO + SORef 신규 API 시연 메서드 추가 (SetupHUD의 SindyEdit 변환 버전)
+//   ✅ CreateGOWithSindyEdit: CreateGO + SetRef 신규 API 시연 메서드 추가 (SetupHUD의 SindyEdit 변환 버전)
 //   ✅ ReadWithSindyEdit: 신규 API(GOFind, Root, Child, 값 읽기) 시연 전용 메서드 추가
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
@@ -32,7 +32,7 @@ namespace Sindy.Editor.Examples
     public static class Example_SceneEdit
     {
         // ─── A-1: SceneEditor 기반 씬 편집 ───────────────────────────────────
-        // SetupShowcaseRunner, SetupHUD 모두 GO 신규 생성 / SORef / AddComp(string)을
+        // SetupShowcaseRunner, SetupHUD 모두 GO 신규 생성 / SetRef / AddComp(string)을
         // 사용하므로 AssetEditSession으로 변환할 수 없습니다.
         // 이 API들이 필요한 경우 SceneEditor / GOEditor를 직접 사용하세요.
 
@@ -98,24 +98,24 @@ namespace Sindy.Editor.Examples
             // ── GOEditor 체인 ─────────────────────────────────────────────────
             // GO("ShowcaseRunner") : 씬 루트에서 "ShowcaseRunner" 탐색, 없으면 생성
             // AddComp(typeFullName): 어셈블리 경계를 넘어 컴포넌트를 추가할 때 사용
-            // SORef(path, value)   : objectReferenceValue 설정
+            // SetRef(path, value)   : objectReferenceValue 설정
             // Apply()              : ApplyModifiedProperties + SetDirty. 반드시 호출!
             ctx.GO("ShowcaseRunner")
                 .AddComp("Sindy.Test.ShowcaseRunner") // 문자열 오버로드로 어셈블리 경계 우회
-                .SORef("labelPrefab", label, ignoreNullWarning: true)
-                .SORef("buttonPrefab", button, ignoreNullWarning: true)
-                .SORef("gaugePrefab", gauge, ignoreNullWarning: true)
-                .SORef("togglePrefab", toggle, ignoreNullWarning: true)
-                .SORef("listPrefab", list, ignoreNullWarning: true)
-                .SORef("pagePrefab", page, ignoreNullWarning: true)
-                .SORef("tabPrefab", tab, ignoreNullWarning: true)
-                .SORef("popupPrefab", popup, ignoreNullWarning: true)
-                .SOFloat("cellWidth", 240f)
-                .SOFloat("cellHeight", 200f)
-                .SOInt("gridColumns", 3)
-                .SOFloat("cycleSec", 3.0f)
-                .SOColor("bgColor", new Color(0.12f, 0.12f, 0.15f))
-                .SOColor("cellColor", new Color(0.20f, 0.20f, 0.26f))
+                .SetRef("labelPrefab", label, ignoreNullWarning: true)
+                .SetRef("buttonPrefab", button, ignoreNullWarning: true)
+                .SetRef("gaugePrefab", gauge, ignoreNullWarning: true)
+                .SetRef("togglePrefab", toggle, ignoreNullWarning: true)
+                .SetRef("listPrefab", list, ignoreNullWarning: true)
+                .SetRef("pagePrefab", page, ignoreNullWarning: true)
+                .SetRef("tabPrefab", tab, ignoreNullWarning: true)
+                .SetRef("popupPrefab", popup, ignoreNullWarning: true)
+                .SetFloat("cellWidth", 240f)
+                .SetFloat("cellHeight", 200f)
+                .SetInt("gridColumns", 3)
+                .SetFloat("cycleSec", 3.0f)
+                .SetColor("bgColor", new Color(0.12f, 0.12f, 0.15f))
+                .SetColor("cellColor", new Color(0.20f, 0.20f, 0.26f))
                 .Apply();
         }
 
@@ -142,23 +142,23 @@ namespace Sindy.Editor.Examples
             // ── Canvas.HUD.Title ──────────────────────────────────────────────
             ctx.GO("Canvas.HUD.Title")
                 .AddComp<TextMeshProUGUI>()
-                .SOStr("m_text", "ComponentBuilder Showcase")
-                .SOFloat("m_fontSize", 28f)
-                .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
+                .SetStr("m_text", "ComponentBuilder Showcase")
+                .SetFloat("m_fontSize", 28f)
+                .SetColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
                 .Apply();
 
             // ── Canvas.HUD.Background ────────────────────────────────────────
             ctx.GO("Canvas.HUD.Background")
                 .AddComp<Image>()
-                .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
+                .SetColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
                 .Apply();
 
             // ── Canvas.HUD.Footer.VersionLabel ────────────────────────────────
             ctx.GO("Canvas.HUD.Footer.VersionLabel")
                 .AddComp<TextMeshProUGUI>()
-                .SOStr("m_text", "v1.0.0")
-                .SOFloat("m_fontSize", 11f)
-                .SOColor("m_fontColor", new Color(0.55f, 0.55f, 0.55f))
+                .SetStr("m_text", "v1.0.0")
+                .SetFloat("m_fontSize", 11f)
+                .SetColor("m_fontColor", new Color(0.55f, 0.55f, 0.55f))
                 .Apply();
 
             // ── Canvas.HUD.Footer.QuitButton ─────────────────────────────────
@@ -166,7 +166,7 @@ namespace Sindy.Editor.Examples
             var quitGO = ctx.GO("Canvas.HUD.Footer.QuitButton");
 
             quitGO.AddComp<Image>()
-                  .SOColor("m_Color", new Color(0.7f, 0.2f, 0.2f))
+                  .SetColor("m_Color", new Color(0.7f, 0.2f, 0.2f))
                   .Apply();
 
             quitGO.AddComp<Button>()
@@ -178,27 +178,27 @@ namespace Sindy.Editor.Examples
 
             hud.Child("InfoPanel.Row1")
                .AddComp<TextMeshProUGUI>()
-               .SOStr("m_text", "Row 1 정보")
+               .SetStr("m_text", "Row 1 정보")
                .Apply();
 
             hud.Child("InfoPanel.Row2")
                .AddComp<TextMeshProUGUI>()
-               .SOStr("m_text", "Row 2 정보")
+               .SetStr("m_text", "Row 2 정보")
                .Apply();
         }
 
-        // ─── A-2: SindyEdit CreateGO + SORef 시연 ───────────────────────────────
+        // ─── A-2: SindyEdit CreateGO + SetRef 시연 ───────────────────────────────
 
         /// <summary>
-        /// ✅ CreateGO + SORef 신규 API 시연 (SetupHUD의 SindyEdit 변환 버전):
+        /// ✅ CreateGO + SetRef 신규 API 시연 (SetupHUD의 SindyEdit 변환 버전):
         ///   - CreateGO(): _currentGO가 null이면 씬 루트에, non-null이면 자식으로 GO 생성
-        ///   - 체이닝: GO() 탐색 → CreateGO() → AddComp → SOString / SOColor 가능
-        ///   - SORef(): SerializedProperty objectReferenceValue 세터
-        ///   - GetComp 콜백 안에서도 SORef() 사용 가능 (ComponentScope.SORef)
+        ///   - 체이닝: GO() 탐색 → CreateGO() → AddComp → SetString / SetColor 가능
+        ///   - SetRef(): SerializedProperty objectReferenceValue 세터
+        ///   - GetComp 콜백 안에서도 SetRef() 사용 가능 (ComponentScope.SetRef)
         ///
         /// SceneEditor.GO()가 없으면 자동 생성했던 패턴을 SindyEdit으로 구현합니다.
         /// </summary>
-        [MenuItem("Sindy/Examples/A - Scene Edit (CreateGO + SORef)")]
+        [MenuItem("Sindy/Examples/A - Scene Edit (CreateGO + SetRef)")]
         public static void CreateGOWithSindyEdit()
         {
             var scenePath = PackagePathHelper.Resolve(
@@ -237,10 +237,10 @@ namespace Sindy.Editor.Examples
                 .SetProperty("m_fontSize", 11f)
                 .SetProperty("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
 
-            // ── SORef: GetComp 콜백 안에서 objectReferenceValue 설정 ────────────
-            // session 레벨: s.GOFind("Icon").SORef("m_Sprite", spriteAsset);
+            // ── SetRef: GetComp 콜백 안에서 objectReferenceValue 설정 ────────────
+            // session 레벨: s.GOFind("Icon").SetRef("m_Sprite", spriteAsset);
             // ComponentScope 레벨:
-            // s.GOFind("Icon").GetComp<Image>(img => img.SORef("m_Sprite", mySprite));
+            // s.GOFind("Icon").GetComp<Image>(img => img.SetRef("m_Sprite", mySprite));
 
             // Dispose 시 변경사항이 있으면 자동 저장됩니다.
         }

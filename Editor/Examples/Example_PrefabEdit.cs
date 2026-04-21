@@ -11,7 +11,7 @@
 //   ✅ GOFind + GetComp<T>(Action) 패턴 → SindyEdit으로 완전 변환
 //   ✅ 일괄 편집(BatchEdit) → SindyEdit으로 완전 변환
 //   ✅ GO() 생성 패턴 → CreateGO API 추가로 SindyEdit 변환 완료
-//   ✅ AddComp<T>() 후 SOColor 체이닝 → CreateGO + AddComp + SOColor 패턴으로 SindyEdit 변환 완료
+//   ✅ AddComp<T>() 후 SetColor 체이닝 → CreateGO + AddComp + SetColor 패턴으로 SindyEdit 변환 완료
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
@@ -88,7 +88,7 @@ namespace Sindy.Editor.Examples
         ///   - Root(): 프리팹 루트 GO 접근
         ///
         /// ✅ CreateGO로 변환 가능: GO("Background.Border")
-        ///   GOFind("Background").CreateGO("Border")로 새 GO를 생성하고 AddComp + SOColor 체이닝 가능합니다.
+        ///   GOFind("Background").CreateGO("Border")로 새 GO를 생성하고 AddComp + SetColor 체이닝 가능합니다.
         ///
         /// ⚠ Unity 내부 직렬화 필드명:
         ///   Image.color → "m_Color"
@@ -110,7 +110,7 @@ namespace Sindy.Editor.Examples
 
             // ── CreateGO: "Background" 아래에 "Border" 신규 생성 ─────────────────────────
             // GOFind로 기존 GO를 찾은 뒤 CreateGO로 자식을 생성합니다.
-            // 생성 후 _currentGO가 새 GO로 이동하므로 AddComp + SOColor 체이닝이 바로 가능합니다.
+            // 생성 후 _currentGO가 새 GO로 이동하므로 AddComp + SetColor 체이닝이 바로 가능합니다.
             s.FindGameObject("Background").CreateGameObject("Border")
                 .AddComponent<Image>()
                 .SetProperty("m_Color", new Color(0.3f, 0.3f, 0.3f));
@@ -127,7 +127,7 @@ namespace Sindy.Editor.Examples
         ///   - Root().Child("Label"): Root 기준 직계 자식 탐색
         ///
         /// ✅ CreateGO로 변환 가능: GO("Overlay").AddComp<Image>()
-        ///   Root().CreateGO("Overlay")로 프리팹 루트 자식으로 생성하고 AddComp + SOColor 체이닝 가능합니다.
+        ///   Root().CreateGO("Overlay")로 프리팹 루트 자식으로 생성하고 AddComp + SetColor 체이닝 가능합니다.
         ///
         /// ⚠ TMP 내부 직렬화 필드명:
         ///   text → "m_text" / fontSize → "m_fontSize" / color → "m_fontColor"
