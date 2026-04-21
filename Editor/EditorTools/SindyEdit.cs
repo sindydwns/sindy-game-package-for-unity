@@ -780,6 +780,29 @@ namespace Sindy.Editor.EditorTools
             return this;
         }
 
+        /// <summary>
+        /// 지정한 타입 T의 n번째 컴포넌트를 읽기 전용 스코프로 접근합니다.
+        /// </summary>
+        /// <param name="action">읽기 콜백. <see cref="ComponentReadScope"/>를 통해 프로퍼티를 읽으세요.</param>
+        /// <param name="index">동일 타입 컴포넌트 중 접근할 인덱스 (0부터 시작)</param>
+        public AssetEditSession ReadComp<T>(Action<ComponentReadScope> action, int index = 0)
+            where T : Component
+        {
+            if (IsInvalid) return this;
+
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] ReadComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return this;
+            }
+
+            var so = GetCompSO<T>(index, $"ReadComp<{typeof(T).Name}>");
+            if (so == null) return this;
+
+            action(new ComponentReadScope(so));
+            return this;
+        }
+
         // ── SO* 세터 ──────────────────────────────────────────────────────────
 
         /// <summary>SerializedProperty stringValue 세터</summary>
@@ -898,6 +921,111 @@ namespace Sindy.Editor.EditorTools
                 }
                 return sp.objectReferenceValue as T;
             }, null);
+
+        // ── 타입 지정 읽기 오버로드 (컴포넌트 인덱스 지정) ───────────────────
+
+        /// <summary>지정한 타입 T의 n번째 컴포넌트에서 float 프로퍼티 값을 읽습니다.</summary>
+        public float GetFloat<T>(string prop, int index = 0) where T : Component
+        {
+            if (IsInvalid) return 0f;
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GetFloat<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return 0f;
+            }
+            var so = GetCompSO<T>(index, $"GetFloat<{typeof(T).Name}>");
+            if (so == null) return 0f;
+            var sp = so.FindProperty(prop);
+            if (sp == null) { Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})"); return 0f; }
+            if (sp.propertyType != SerializedPropertyType.Float) { Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Float, 실제: {sp.propertyType})"); return 0f; }
+            return sp.floatValue;
+        }
+
+        /// <summary>지정한 타입 T의 n번째 컴포넌트에서 string 프로퍼티 값을 읽습니다.</summary>
+        public string GetString<T>(string prop, int index = 0) where T : Component
+        {
+            if (IsInvalid) return string.Empty;
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GetString<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return string.Empty;
+            }
+            var so = GetCompSO<T>(index, $"GetString<{typeof(T).Name}>");
+            if (so == null) return string.Empty;
+            var sp = so.FindProperty(prop);
+            if (sp == null) { Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})"); return string.Empty; }
+            if (sp.propertyType != SerializedPropertyType.String) { Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: String, 실제: {sp.propertyType})"); return string.Empty; }
+            return sp.stringValue;
+        }
+
+        /// <summary>지정한 타입 T의 n번째 컴포넌트에서 int 프로퍼티 값을 읽습니다.</summary>
+        public int GetInt<T>(string prop, int index = 0) where T : Component
+        {
+            if (IsInvalid) return 0;
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GetInt<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return 0;
+            }
+            var so = GetCompSO<T>(index, $"GetInt<{typeof(T).Name}>");
+            if (so == null) return 0;
+            var sp = so.FindProperty(prop);
+            if (sp == null) { Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})"); return 0; }
+            if (sp.propertyType != SerializedPropertyType.Integer) { Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Integer, 실제: {sp.propertyType})"); return 0; }
+            return sp.intValue;
+        }
+
+        /// <summary>지정한 타입 T의 n번째 컴포넌트에서 bool 프로퍼티 값을 읽습니다.</summary>
+        public bool GetBool<T>(string prop, int index = 0) where T : Component
+        {
+            if (IsInvalid) return false;
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GetBool<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return false;
+            }
+            var so = GetCompSO<T>(index, $"GetBool<{typeof(T).Name}>");
+            if (so == null) return false;
+            var sp = so.FindProperty(prop);
+            if (sp == null) { Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})"); return false; }
+            if (sp.propertyType != SerializedPropertyType.Boolean) { Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Boolean, 실제: {sp.propertyType})"); return false; }
+            return sp.boolValue;
+        }
+
+        /// <summary>지정한 타입 T의 n번째 컴포넌트에서 Color 프로퍼티 값을 읽습니다.</summary>
+        public Color GetColor<T>(string prop, int index = 0) where T : Component
+        {
+            if (IsInvalid) return Color.clear;
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GetColor<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return Color.clear;
+            }
+            var so = GetCompSO<T>(index, $"GetColor<{typeof(T).Name}>");
+            if (so == null) return Color.clear;
+            var sp = so.FindProperty(prop);
+            if (sp == null) { Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})"); return Color.clear; }
+            if (sp.propertyType != SerializedPropertyType.Color) { Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: Color, 실제: {sp.propertyType})"); return Color.clear; }
+            return sp.colorValue;
+        }
+
+        /// <summary>지정한 타입 TComp의 n번째 컴포넌트에서 ObjectReference 프로퍼티 값을 TRef 타입으로 읽습니다.</summary>
+        public TRef GetRef<TComp, TRef>(string prop, int index = 0)
+            where TComp : Component where TRef : UnityEngine.Object
+        {
+            if (IsInvalid) return null;
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+            {
+                Debug.LogWarning($"[SindyEdit] GetRef<{typeof(TComp).Name}, {typeof(TRef).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+                return null;
+            }
+            var so = GetCompSO<TComp>(index, $"GetRef<{typeof(TComp).Name}, {typeof(TRef).Name}>");
+            if (so == null) return null;
+            var sp = so.FindProperty(prop);
+            if (sp == null) { Debug.LogWarning($"[SindyEdit] Property '{prop}'을 찾을 수 없습니다. ({_ctx.AssetPath})"); return null; }
+            if (sp.propertyType != SerializedPropertyType.ObjectReference) { Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: ObjectReference, 실제: {sp.propertyType})"); return null; }
+            return sp.objectReferenceValue as TRef;
+        }
 
         // ── 범용 Set ──────────────────────────────────────────────────────────
 
@@ -1103,6 +1231,22 @@ namespace Sindy.Editor.EditorTools
             }
             return null;
         }
+
+        private SerializedObject GetCompSO<T>(int index, string context) where T : Component
+        {
+            if (_currentGO == null)
+            {
+                Debug.LogWarning($"[SindyEdit] GetCompSO<{typeof(T).Name}>: GO가 선택되지 않았습니다. ({context})");
+                return null;
+            }
+            var comps = _currentGO.GetComponents<T>();
+            if (index < 0 || index >= comps.Length)
+            {
+                Debug.LogWarning($"[SindyEdit] {typeof(T).Name}[{index}] 범위 초과. 총 {comps.Length}개. ({context})");
+                return null;
+            }
+            return GetOrCreateSO(comps[index]);
+        }
     }
 
     // ────────────────────────────────────────────────────────────────────────────
@@ -1186,6 +1330,85 @@ namespace Sindy.Editor.EditorTools
             }
             sp.objectReferenceValue = value;
             return this;
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // ComponentReadScope
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// <see cref="AssetEditSession.ReadComp{T}"/> 콜백에서 사용하는 컴포넌트 읽기 컨텍스트.
+    /// <para>
+    /// 특정 컴포넌트의 SerializedObject에서 프로퍼티 값을 읽습니다.
+    /// </para>
+    /// <example>
+    /// <code>
+    /// session.GO("Player").ReadComp&lt;Image&gt;(img =>
+    /// {
+    ///     var color = img.GetColor("m_Color");
+    ///     var label = img.GetString("m_text");
+    /// });
+    /// </code>
+    /// </example>
+    /// </summary>
+    public sealed class ComponentReadScope
+    {
+        private readonly SerializedObject _so;
+
+        internal ComponentReadScope(SerializedObject so) => _so = so;
+
+        private TVal Read<TVal>(string prop, SerializedPropertyType expected, Func<SerializedProperty, TVal> getter, TVal fallback)
+        {
+            var sp = _so.FindProperty(prop);
+            if (sp == null)
+            {
+                Debug.LogWarning($"[SindyEdit] ComponentReadScope: '{prop}' 프로퍼티를 찾을 수 없습니다.");
+                return fallback;
+            }
+            if (sp.propertyType != expected)
+            {
+                Debug.LogWarning($"[SindyEdit] ComponentReadScope: '{prop}' 타입 불일치 (기대: {expected}, 실제: {sp.propertyType})");
+                return fallback;
+            }
+            return getter(sp);
+        }
+
+        /// <summary>float 프로퍼티 값을 읽습니다.</summary>
+        public float GetFloat(string prop) =>
+            Read(prop, SerializedPropertyType.Float, sp => sp.floatValue, 0f);
+
+        /// <summary>string 프로퍼티 값을 읽습니다.</summary>
+        public string GetString(string prop) =>
+            Read(prop, SerializedPropertyType.String, sp => sp.stringValue, string.Empty);
+
+        /// <summary>int 프로퍼티 값을 읽습니다.</summary>
+        public int GetInt(string prop) =>
+            Read(prop, SerializedPropertyType.Integer, sp => sp.intValue, 0);
+
+        /// <summary>bool 프로퍼티 값을 읽습니다.</summary>
+        public bool GetBool(string prop) =>
+            Read(prop, SerializedPropertyType.Boolean, sp => sp.boolValue, false);
+
+        /// <summary>Color 프로퍼티 값을 읽습니다.</summary>
+        public Color GetColor(string prop) =>
+            Read(prop, SerializedPropertyType.Color, sp => sp.colorValue, Color.clear);
+
+        /// <summary>ObjectReference 프로퍼티 값을 T 타입으로 읽습니다.</summary>
+        public T GetRef<T>(string prop) where T : UnityEngine.Object
+        {
+            var sp = _so.FindProperty(prop);
+            if (sp == null)
+            {
+                Debug.LogWarning($"[SindyEdit] ComponentReadScope: '{prop}' 프로퍼티를 찾을 수 없습니다.");
+                return null;
+            }
+            if (sp.propertyType != SerializedPropertyType.ObjectReference)
+            {
+                Debug.LogWarning($"[SindyEdit] ComponentReadScope: '{prop}' 타입 불일치 (기대: ObjectReference, 실제: {sp.propertyType})");
+                return null;
+            }
+            return sp.objectReferenceValue as T;
         }
     }
 }
