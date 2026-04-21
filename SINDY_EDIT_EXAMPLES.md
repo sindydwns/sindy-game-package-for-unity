@@ -134,7 +134,7 @@ static void NavigateHierarchy()
 
     // Child(string): 직계 자식 이름으로 이동
     s.GO("Canvas").Child("HUD").Child("Title")
-     .WithComp<TMPro.TextMeshProUGUI>(tmp =>
+     .EditComp<TMPro.TextMeshProUGUI>(tmp =>
          tmp.Set("m_text", "수정된 텍스트"));
 
     // Child(int): 인덱스로 직계 자식 이동
@@ -157,7 +157,7 @@ static void EditGaugeBarFill()
     using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
     if (s == null) return;
 
-    s.GOFind("Fill").WithComp<UnityEngine.UI.Image>(img =>
+    s.GOFind("Fill").EditComp<UnityEngine.UI.Image>(img =>
         img.Set("m_Color", new Color(0.9f, 0.25f, 0.25f)));
 }
 ```
@@ -179,7 +179,7 @@ static void EditPrefabRoot()
 }
 ```
 
-### WithComp\<T\> 콜백으로 특정 컴포넌트 편집
+### EditComp\<T\> 콜백으로 특정 컴포넌트 편집
 
 ```csharp
 [MenuItem("MyGame/Edit/Label 텍스트 초기화")]
@@ -188,7 +188,7 @@ static void ResetLabelText()
     using var s = SindyEdit.Open("Assets/Prefabs/UI/Label.prefab");
     if (s == null) return;
 
-    s.GOFind("Label").WithComp<TMPro.TextMeshProUGUI>(tmp =>
+    s.GOFind("Label").EditComp<TMPro.TextMeshProUGUI>(tmp =>
     {
         tmp.Set("m_text", "기본 텍스트");
         tmp.Set("m_fontSize", 18f);
@@ -252,7 +252,7 @@ static void BatchEditGaugeBars()
         using var s = SindyEdit.Open(path);
         if (s == null) continue;
 
-        s.GOFind("Fill").WithComp<UnityEngine.UI.Image>(img =>
+        s.GOFind("Fill").EditComp<UnityEngine.UI.Image>(img =>
             img.Set("m_Color", new Color(0.2f, 0.8f, 0.4f)));
     }
 

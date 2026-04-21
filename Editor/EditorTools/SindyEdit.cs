@@ -35,7 +35,7 @@ namespace Sindy.Editor.EditorTools
     ///
     /// // 이름으로 자동 탐색
     /// using var s = SindyEdit.Find("GaugeBar");
-    /// s.GOFind("Fill").WithComp&lt;Image&gt;(img =&gt; img.Set("m_Color", Color.green));
+    /// s.GOFind("Fill").EditComp&lt;Image&gt;(img =&gt; img.Set("m_Color", Color.green));
     ///
     /// // FP 스타일: 탐색은 새 인스턴스 반환 — s는 변경되지 않음
     /// var player = s.GOFind("Player");
@@ -292,7 +292,7 @@ namespace Sindy.Editor.EditorTools
     /// <b>FP 설계:</b> <see cref="Root"/>, <see cref="GOFind"/>, <see cref="Child(int)"/>,
     /// <see cref="GO"/> 등 탐색 메서드는 <c>this</c>를 변경하지 않고 새로운
     /// <see cref="AssetEditSession"/> 인스턴스를 반환합니다.
-    /// 세터(<see cref="SOFloat"/> 등)와 <see cref="WithComp{T}"/> 는 <c>this</c>를 반환합니다.
+    /// 세터(<see cref="SOFloat"/> 등)와 <see cref="EditComp{T}"/> 는 <c>this</c>를 반환합니다.
     /// </para>
     /// <para>
     /// <b>소유권:</b> 팩토리(<see cref="SindyEdit.Open"/> 등)가 반환한 루트 세션만
@@ -752,13 +752,13 @@ namespace Sindy.Editor.EditorTools
         /// 콜백 실행 후 즉시 ApplyModifiedPropertiesWithoutUndo()가 호출됩니다.
         /// </summary>
         /// <param name="action">편집 콜백. <see cref="ComponentEditScope"/>를 통해 프로퍼티를 편집하세요.</param>
-        public AssetEditSession WithComp<T>(Action<ComponentEditScope> action) where T : Component
+        public AssetEditSession EditComp<T>(Action<ComponentEditScope> action) where T : Component
         {
             if (IsInvalid) return this;
 
             if (_currentGO == null)
             {
-                Debug.LogWarning($"[SindyEdit] WithComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
+                Debug.LogWarning($"[SindyEdit] EditComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
                 return this;
             }
 
@@ -766,7 +766,7 @@ namespace Sindy.Editor.EditorTools
             if (comp == null)
             {
                 Debug.LogWarning(
-                    $"[SindyEdit] WithComp<{typeof(T).Name}>: '{_currentGO.name}'에서 " +
+                    $"[SindyEdit] EditComp<{typeof(T).Name}>: '{_currentGO.name}'에서 " +
                     $"{typeof(T).Name} 컴포넌트를 찾을 수 없습니다.");
                 return this;
             }
@@ -1254,14 +1254,14 @@ namespace Sindy.Editor.EditorTools
     // ────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// <see cref="AssetEditSession.WithComp{T}"/> 콜백에서 사용하는 컴포넌트 편집 컨텍스트.
+    /// <see cref="AssetEditSession.EditComp{T}"/> 콜백에서 사용하는 컴포넌트 편집 컨텍스트.
     /// <para>
     /// 특정 컴포넌트의 SerializedObject에 직접 접근하여 프로퍼티를 편집합니다.
     /// 콜백 종료 후 자동으로 ApplyModifiedPropertiesWithoutUndo()가 호출됩니다.
     /// </para>
     /// <example>
     /// <code>
-    /// session.GO("Player").WithComp&lt;Image&gt;(img =>
+    /// session.GO("Player").EditComp&lt;Image&gt;(img =>
     /// {
     ///     img.Set("m_Color", new Color(1, 0, 0, 1));
     /// });

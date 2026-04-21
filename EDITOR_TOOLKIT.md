@@ -106,7 +106,7 @@ s.CreateGO("Label").AddComp<TextMeshProUGUI>();
 | `GetComp<T>()` | `T?` | 현재 GO에서 컴포넌트 가져오기. 없으면 null |
 | `AddComp<T>()` | `AssetEditSession` | 없을 때만 추가. Undo 등록 |
 | `RemoveComp<T>()` | `AssetEditSession` | 현재 GO에서 컴포넌트 제거 |
-| `WithComp<T>(Action<ComponentEditScope>)` | `AssetEditSession` | 콜백에서 특정 컴포넌트 직접 편집. 콜백 후 자동 Apply |
+| `EditComp<T>(Action<ComponentEditScope>)` | `AssetEditSession` | 콜백에서 특정 컴포넌트 직접 편집. 콜백 후 자동 Apply |
 
 ### SO 세터 (Write)
 
@@ -165,7 +165,7 @@ Unity 내부 필드명은 C# 프로퍼티명과 다릅니다. 모를 때는 `Sin
 
 ## 4. ComponentEditScope API
 
-`WithComp<T>(action)` 콜백에서 사용하는 컴포넌트 편집 컨텍스트입니다. 콜백 종료 후 `ApplyModifiedPropertiesWithoutUndo()`가 자동 호출됩니다.
+`EditComp<T>(action)` 콜백에서 사용하는 컴포넌트 편집 컨텍스트입니다. 콜백 종료 후 `ApplyModifiedPropertiesWithoutUndo()`가 자동 호출됩니다.
 
 | 메서드 | 설명 |
 |--------|------|
@@ -173,7 +173,7 @@ Unity 내부 필드명은 C# 프로퍼티명과 다릅니다. 모를 때는 `Sin
 | `SORef(string prop, Object value)` | `objectReferenceValue` 세터 |
 
 ```csharp
-s.GOFind("Icon").WithComp<Image>(img =>
+s.GOFind("Icon").EditComp<Image>(img =>
 {
     img.Set("m_Color", new Color(1f, 0.8f, 0.2f, 1f));
     img.SORef("m_Sprite", mySprite);
@@ -225,7 +225,7 @@ using (var ctx = SceneEditor.Open("Assets/Scenes/MyScene.unity"))
 | 메서드 | 설명 |
 |--------|------|
 | `AddComp<T>()` | 없으면 추가, 있으면 재사용. SO* 대상 설정. Undo 등록 |
-| `WithComp<T>()` | 기존 컴포넌트를 SO* 대상으로 전환. 없으면 LogWarning |
+| `EditComp<T>()` | 기존 컴포넌트를 SO* 대상으로 전환. 없으면 LogWarning |
 | `AddComp(string typeFullName)` | 타입 FullName으로 추가 (어셈블리 경계 우회용) |
 | `Child(string path)` | 현재 GO 기준 상대 경로 자식 탐색/생성 |
 | `ChildFind(string path)` | 현재 GO 기준 탐색만. 없으면 `null` |
@@ -418,7 +418,7 @@ public class MyTask : BatchEntryPoint
 
 - `SindyEdit.Open()` 반환값이 `null`일 수 있습니다. 항상 null 체크 후 사용하세요.
 - `.asset` 파일에서 `GO()` 계열을 호출하면 LogWarning 후 무시됩니다. SO 편집은 `GO()` 없이 `SOInt()` 등 직접 호출.
-- 동일한 이름의 프로퍼티가 여러 컴포넌트에 있으면 첫 번째 컴포넌트만 수정됩니다. 특정 컴포넌트를 명시하려면 `WithComp<T>()` 사용.
+- 동일한 이름의 프로퍼티가 여러 컴포넌트에 있으면 첫 번째 컴포넌트만 수정됩니다. 특정 컴포넌트를 명시하려면 `EditComp<T>()` 사용.
 - `SceneEditor`를 직접 사용할 때 `MarkDirty()` 없이 Dispose하면 저장 안 됩니다.
 - `GOEditor`를 직접 사용할 때 `Apply()` 없이 Dispose하면 변경사항이 사라집니다.
 

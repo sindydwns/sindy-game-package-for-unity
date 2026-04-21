@@ -8,7 +8,7 @@
 //   LabelPrefabPath — LabelComponent가 붙은 프리팹
 //
 // SindyEdit 변환 현황:
-//   ✅ GOFind + WithComp<T>(Action) 패턴 → SindyEdit으로 완전 변환
+//   ✅ GOFind + EditComp<T>(Action) 패턴 → SindyEdit으로 완전 변환
 //   ✅ 일괄 편집(BatchEdit) → SindyEdit으로 완전 변환
 //   ✅ GO() 생성 패턴 → CreateGO API 추가로 SindyEdit 변환 완료
 //   ✅ AddComp<T>() 후 SOColor 체이닝 → CreateGO + AddComp + SOColor 패턴으로 SindyEdit 변환 완료
@@ -84,7 +84,7 @@ namespace Sindy.Editor.Examples
         ///
         /// ✅ SindyEdit 변환:
         ///   - GOFind("Fill"): 계층 어디에 있든 이름으로 재귀 탐색
-        ///   - WithComp<Image>(callback): 콜백에서 Set()으로 프로퍼티 편집 후 자동 Apply
+        ///   - EditComp<Image>(callback): 콜백에서 Set()으로 프로퍼티 편집 후 자동 Apply
         ///   - Root(): 프리팹 루트 GO 접근
         ///
         /// ✅ CreateGO로 변환 가능: GO("Background.Border")
@@ -106,7 +106,7 @@ namespace Sindy.Editor.Examples
 
             // ── GOFind: 이름으로 재귀 탐색 (계층 깊이에 무관하게 찾음) ───────
             // ?.에 해당하는 null 안전 처리는 GOFind 내부에서 LogWarning으로 대체됩니다.
-            s.GOFind("Fill").WithComp<Image>(img =>
+            s.GOFind("Fill").EditComp<Image>(img =>
                 img.Set("m_Color", new Color(0.9f, 0.25f, 0.25f)));  // 빨간색
 
             // ── CreateGO: "Background" 아래에 "Border" 신규 생성 ─────────────────────────
@@ -124,7 +124,7 @@ namespace Sindy.Editor.Examples
         ///
         /// ✅ SindyEdit 변환:
         ///   - GOFind("Label"): 재귀 탐색
-        ///   - WithComp<TextMeshProUGUI>(callback): 여러 프로퍼티를 콜백 안에서 Set()으로 설정
+        ///   - EditComp<TextMeshProUGUI>(callback): 여러 프로퍼티를 콜백 안에서 Set()으로 설정
         ///   - Root().Child("Label"): Root 기준 직계 자식 탐색
         ///
         /// ✅ CreateGO로 변환 가능: GO("Overlay").AddComp<Image>()
@@ -139,7 +139,7 @@ namespace Sindy.Editor.Examples
             if (s == null) return;
 
             // ── GOFind: 계층 전체에서 "Label" 재귀 탐색 후 TMP 편집 ───────────
-            s.GOFind("Label").WithComp<TextMeshProUGUI>(tmp =>
+            s.GOFind("Label").EditComp<TextMeshProUGUI>(tmp =>
             {
                 tmp.Set("m_text", "Default Label");
                 tmp.Set("m_fontSize", 18f);
@@ -155,7 +155,7 @@ namespace Sindy.Editor.Examples
             // ── Child(): Root 기준 직계 자식 탐색 ────────────────────────────
             // GOFind와 달리 직계 자식만 탐색합니다 (재귀 없음).
             // FP 스타일: Root()·Child()는 각각 새 세션을 반환 — s 자체는 변경되지 않습니다.
-            s.Root().Child("Label").WithComp<TextMeshProUGUI>(tmp => { });
+            s.Root().Child("Label").EditComp<TextMeshProUGUI>(tmp => { });
 
             // 다른 자식 세션이 필요하면 반환값을 변수로 받습니다.
             var overlay = s.Root().Child("Overlay"); // Overlay가 있으면 해당 GO 세션, 없으면 null GO 세션
@@ -164,7 +164,7 @@ namespace Sindy.Editor.Examples
         // ─── 여러 프리팹 일괄 편집 ────────────────────────────────────────────
 
         /// <summary>
-        /// ✅ SindyEdit으로 완전 변환: GOFind + WithComp 패턴만 사용하므로 변환 가능
+        /// ✅ SindyEdit으로 완전 변환: GOFind + EditComp 패턴만 사용하므로 변환 가능
         /// </summary>
         [MenuItem("Sindy/Examples/B - Prefab Batch Edit")]
         public static void RunBatchEdit()
@@ -180,7 +180,7 @@ namespace Sindy.Editor.Examples
                 if (s == null) continue;
 
                 // GOFind: 계층 어디에 있든 "Fill" GO를 찾아 색상 변경
-                s.GOFind("Fill").WithComp<Image>(img =>
+                s.GOFind("Fill").EditComp<Image>(img =>
                     img.Set("m_Color", new Color(0.2f, 0.8f, 0.4f)));  // 초록색으로 통일
             }
 

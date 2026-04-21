@@ -162,7 +162,7 @@ namespace Sindy.Editor.Examples
                 .Apply();
 
             // ── Canvas.HUD.Footer.QuitButton ─────────────────────────────────
-            // 같은 GO에 AddComp → WithComp 전환으로 두 컴포넌트를 순서대로 설정.
+            // 같은 GO에 AddComp → EditComp 전환으로 두 컴포넌트를 순서대로 설정.
             var quitGO = ctx.GO("Canvas.HUD.Footer.QuitButton");
 
             quitGO.AddComp<Image>()
@@ -194,7 +194,7 @@ namespace Sindy.Editor.Examples
         ///   - CreateGO(): _currentGO가 null이면 씬 루트에, non-null이면 자식으로 GO 생성
         ///   - 체이닝: GO() 탐색 → CreateGO() → AddComp → SOString / SOColor 가능
         ///   - SORef(): SerializedProperty objectReferenceValue 세터
-        ///   - WithComp 콜백 안에서도 SORef() 사용 가능 (ComponentEditScope.SORef)
+        ///   - EditComp 콜백 안에서도 SORef() 사용 가능 (ComponentEditScope.SORef)
         ///
         /// SceneEditor.GO()가 없으면 자동 생성했던 패턴을 SindyEdit으로 구현합니다.
         /// </summary>
@@ -237,10 +237,10 @@ namespace Sindy.Editor.Examples
                 .SOFloat("m_fontSize", 11f)
                 .SOColor("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
 
-            // ── SORef: WithComp 콜백 안에서 objectReferenceValue 설정 ────────────
+            // ── SORef: EditComp 콜백 안에서 objectReferenceValue 설정 ────────────
             // session 레벨: s.GOFind("Icon").SORef("m_Sprite", spriteAsset);
             // ComponentEditScope 레벨:
-            // s.GOFind("Icon").WithComp<Image>(img => img.SORef("m_Sprite", mySprite));
+            // s.GOFind("Icon").EditComp<Image>(img => img.SORef("m_Sprite", mySprite));
 
             // Dispose 시 변경사항이 있으면 자동 저장됩니다.
         }
@@ -254,7 +254,7 @@ namespace Sindy.Editor.Examples
         ///   - Root(): 씬 첫 번째 루트 GO 접근
         ///   - Child(): 직계 자식 인덱스 / 이름으로 탐색
         ///   - GetFloat() / GetString() / GetColor() 등 값 읽기
-        ///   - WithComp<T>(Action): 콜백에서 특정 컴포넌트 편집
+        ///   - EditComp<T>(Action): 콜백에서 특정 컴포넌트 편집
         ///
         /// 이 메서드는 씬에 "A - Scene Edit" 메뉴로 이미 생성된 HUD 계층이 있다고 가정합니다.
         /// </summary>
@@ -279,9 +279,9 @@ namespace Sindy.Editor.Examples
             string versionText = s.GOFind("VersionLabel").GetString("m_text");
             Debug.Log($"[Example A] Title fontSize: {titleFontSize}, VersionLabel: \"{versionText}\"");
 
-            // ── WithComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
+            // ── EditComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
             // 콜백 종료 후 ApplyModifiedPropertiesWithoutUndo() 자동 호출.
-            s.GOFind("Title").WithComp<TextMeshProUGUI>(tmp =>
+            s.GOFind("Title").EditComp<TextMeshProUGUI>(tmp =>
                 tmp.Set("m_fontColor", new Color(1f, 0.9f, 0.5f)));
 
             // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
@@ -291,7 +291,7 @@ namespace Sindy.Editor.Examples
 
             // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
             // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
-            s.GO("Canvas").Child("HUD").Child("Title").WithComp<TextMeshProUGUI>(tmp =>
+            s.GO("Canvas").Child("HUD").Child("Title").EditComp<TextMeshProUGUI>(tmp =>
                 tmp.Set("m_text", "SindyEdit으로 수정됨"));
 
             // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
