@@ -3,10 +3,11 @@
 //
 // 구현 파일: Editor/EditorTools/SindyEdit.cs, SceneEditor.cs, GOEditor.cs, AssetFinder.cs
 //
-// SindyEdit 변환 현황:
-//   ❌ SetupShowcaseRunner: AddComp(string) 미지원으로 변환 불가 (SORef는 이제 지원됨)
-//   ✅ CreateGOWithSindyEdit: CreateGO + SetRef 신규 API 시연 메서드 추가 (SetupHUD의 SindyEdit 변환 버전)
-//   ✅ ReadWithSindyEdit: 신규 API(GOFind, Root, Child, 값 읽기) 시연 전용 메서드 추가
+// 메서드별 구현 방식:
+//   SetupShowcaseRunner : SceneEditor/GOEditor 직접 사용 (AddComp(string) 필요 — 어셈블리 경계 우회)
+//   SetupHUD            : SceneEditor/GOEditor 직접 사용 (GO 탐색+생성 패턴)
+//   CreateGOWithSindyEdit: SindyEdit — CreateGameObject + AddComponent + SetProperty/SetRef 시연
+//   ReadWithSindyEdit   : SindyEdit — FindGameObject / Root / Child / GetComponent / 값 읽기 시연
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
@@ -31,10 +32,10 @@ namespace Sindy.Editor.Examples
     /// </summary>
     public static class Example_SceneEdit
     {
-        // ─── A-1: SceneEditor 기반 씬 편집 ───────────────────────────────────
-        // SetupShowcaseRunner, SetupHUD 모두 GO 신규 생성 / SetRef / AddComp(string)을
-        // 사용하므로 AssetEditSession으로 변환할 수 없습니다.
-        // 이 API들이 필요한 경우 SceneEditor / GOEditor를 직접 사용하세요.
+        // ─── A-1: SceneEditor/GOEditor 직접 사용 ────────────────────────────
+        // SetupShowcaseRunner: AddComp(string typeFullName) — 어셈블리 경계 우회 필요
+        // SetupHUD: GO 탐색+생성 패턴. SindyEdit 버전은 CreateGOWithSindyEdit() 참고.
+        // 위 패턴이 필요한 경우 SceneEditor / GOEditor를 직접 사용하세요.
 
         [MenuItem("Sindy/Examples/A - Scene Edit")]
         public static void Run()
@@ -74,14 +75,11 @@ namespace Sindy.Editor.Examples
         /// "ShowcaseRunner" GO를 찾거나 만들고, 컴포넌트를 추가한 뒤 AssetFinder로
         /// 각 프리팹 슬롯을 채운다.
         ///
-        /// ❌ 변환 불가 이유:
-        ///   - AddComp(string typeFullName): AssetEditSession 미지원 (이 메서드는 SceneEditor 전용 예제로 유지)
-        ///   (SORef는 AssetEditSession에 추가되었습니다)
-        ///
-        /// ⚠ 어셈블리 경계:
+        /// SceneEditor/GOEditor 직접 사용:
         ///   ShowcaseRunner는 Sindy.Tests.Runtime 어셈블리에 있으므로
-        ///   이 파일(Sindy.Editor)에서 AddComp<ShowcaseRunner>()를 직접 쓸 수 없다.
-        ///   대신 타입 전체 이름 문자열을 전달하는 AddComp(string) 오버로드를 사용한다.
+        ///   AddComp(string typeFullName) 오버로드로 어셈블리 경계를 우회한다.
+        ///   SindyEdit(AssetEditSession)은 이 오버로드를 지원하지 않으므로
+        ///   이 메서드는 SceneEditor/GOEditor 패턴으로 유지한다.
         /// </summary>
         private static void SetupShowcaseRunner(SceneEditor ctx)
         {
@@ -124,18 +122,17 @@ namespace Sindy.Editor.Examples
         /// <summary>
         /// Canvas → HUD → Title / Background / Footer.VersionLabel 계층을 자동 생성한다.
         ///
-        /// ✅ SindyEdit 변환 가능:
-        ///   - CreateGO() 추가로 AssetEditSession에서도 GO 신규 생성이 가능합니다.
-        ///   - CreateGOWithSindyEdit() 메서드에서 SindyEdit 변환 버전을 확인하세요.
+        /// SindyEdit 버전은 CreateGOWithSindyEdit()을 참고하세요.
+        /// (CreateGameObject + AddComponent + SetProperty 패턴)
         ///
-        /// ⚠ Unity 내부 직렬화 필드명 (m_ 접두사):
+        /// Unity 내부 직렬화 필드명 (m_ 접두사):
         ///   TextMeshProUGUI.text     → "m_text"
         ///   TextMeshProUGUI.fontSize → "m_fontSize"
         ///   TextMeshProUGUI.color    → "m_fontColor"
         ///   Image.color              → "m_Color"
         ///
-        ///   정확한 필드명을 모를 때: Sindy/Tools/Field Peeker Window (FieldPeeker 도구)
-        ///   또는 코드에서: FieldPeeker.Print<TextMeshProUGUI>(gameObject);
+        ///   정확한 필드명을 모를 때: Sindy/Tools/Field Peeker Window
+        ///   또는 코드에서: FieldPeeker.Print&lt;TextMeshProUGUI&gt;(gameObject)
         /// </summary>
         private static void SetupHUD(SceneEditor ctx)
         {
@@ -162,7 +159,7 @@ namespace Sindy.Editor.Examples
                 .Apply();
 
             // ── Canvas.HUD.Footer.QuitButton ─────────────────────────────────
-            // 같은 GO에 AddComp → EditComp 전환으로 두 컴포넌트를 순서대로 설정.
+            // GOEditor: AddComp → EditComp 전환으로 같은 GO에 두 컴포넌트를 순서대로 설정.
             var quitGO = ctx.GetGameObject("Canvas.HUD.Footer.QuitButton");
 
             quitGO.AddComp<Image>()
@@ -187,16 +184,16 @@ namespace Sindy.Editor.Examples
                .Apply();
         }
 
-        // ─── A-2: SindyEdit CreateGO + SetRef 시연 ───────────────────────────────
+        // ─── A-2: SindyEdit CreateGameObject + SetRef 시연 ──────────────────────
 
         /// <summary>
-        /// ✅ CreateGO + SetRef 신규 API 시연 (SetupHUD의 SindyEdit 변환 버전):
-        ///   - CreateGO(): _currentGO가 null이면 씬 루트에, non-null이면 자식으로 GO 생성
-        ///   - 체이닝: GO() 탐색 → CreateGO() → AddComp → SetString / SetColor 가능
-        ///   - SetRef(): SerializedProperty objectReferenceValue 세터
-        ///   - GetComp 콜백 안에서도 SetRef() 사용 가능 (ComponentScope.SetRef)
+        /// SindyEdit으로 GO 계층을 생성하고 컴포넌트를 설정하는 예시 (SetupHUD의 SindyEdit 버전).
         ///
-        /// SceneEditor.GO()가 없으면 자동 생성했던 패턴을 SindyEdit으로 구현합니다.
+        ///   - CreateGameObject(): _currentGO가 null이면 씬 루트에, non-null이면 자식으로 GO 생성
+        ///   - 체이닝: GO() 탐색 → CreateGameObject() → AddComponent() → SetProperty() 가능
+        ///     AddComponent&lt;T&gt;()는 ComponentScope를 반환하므로 이후 SetProperty로 체이닝
+        ///   - SetRef(): SerializedProperty objectReferenceValue 세터 (세션 레벨)
+        ///   - ComponentScope.SetRef(): GetComponent 콜백 안에서 objectReferenceValue 설정
         /// </summary>
         [MenuItem("Sindy/Examples/A - Scene Edit (CreateGO + SetRef)")]
         public static void CreateGOWithSindyEdit()
@@ -213,12 +210,13 @@ namespace Sindy.Editor.Examples
             using var s = SindyEdit.Open(scenePath);
             if (s == null) return;
 
-            // ── CreateGO: _currentGO null → 씬 루트에 생성 ──────────────────────
-            // GO()로 탐색하지 않은 상태(null)에서 CreateGO를 호출하면 씬 루트에 배치됩니다.
+            // ── CreateGameObject: _currentGO null → 씬 루트에 생성 ───────────────
+            // GO()로 탐색하지 않은 상태(null)에서 CreateGameObject를 호출하면 씬 루트에 배치됩니다.
             s.CreateGameObject("Canvas");
 
-            // ── 체이닝: GO 탐색 후 자식 GO 생성 + AddComp + SO* ──────────────────
-            // GO()로 기존 GO를 찾고, CreateGO()로 자식을 생성하면 _currentGO가 새 GO로 이동합니다.
+            // ── 체이닝: GO 탐색 후 자식 GO 생성 + AddComponent + SetProperty ──────
+            // GO()로 기존 GO를 찾고, CreateGameObject()로 자식을 생성하면 _currentGO가 새 GO로 이동합니다.
+            // AddComponent<T>()는 ComponentScope를 반환하므로 SetProperty로 이어서 체이닝합니다.
             s.GO("Canvas").CreateGameObject("HUD").CreateGameObject("Title")
                 .AddComponent<TextMeshProUGUI>()
                 .SetProperty("m_text", "ComponentBuilder Showcase")
@@ -237,24 +235,24 @@ namespace Sindy.Editor.Examples
                 .SetProperty("m_fontSize", 11f)
                 .SetProperty("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
 
-            // ── SetRef: GetComp 콜백 안에서 objectReferenceValue 설정 ────────────
-            // session 레벨: s.GOFind("Icon").SetRef("m_Sprite", spriteAsset);
+            // ── SetRef: GetComponent 콜백 안에서 objectReferenceValue 설정 ────────
+            // 세션 레벨:  s.FindGameObject("Icon").SetRef("m_Sprite", spriteAsset);
             // ComponentScope 레벨:
-            // s.GOFind("Icon").GetComp<Image>(img => img.SetRef("m_Sprite", mySprite));
+            // s.FindGameObject("Icon").GetComponent<Image>(img => img.SetRef("m_Sprite", mySprite));
 
             // Dispose 시 변경사항이 있으면 자동 저장됩니다.
         }
 
-        // ─── A-4: SindyEdit 신규 API 시연 ────────────────────────────────────
+        // ─── A-4: SindyEdit API 시연 ─────────────────────────────────────────
 
         /// <summary>
-        /// ✅ SindyEdit 신규 API 시연:
+        /// SindyEdit API 사용 시연:
         ///   - SindyEdit.Open()으로 씬 열기
-        ///   - GOFind(): 계층 어디에 있든 이름으로 재귀 탐색
-        ///   - Root(): 씬 첫 번째 루트 GO 접근
-        ///   - Child(): 직계 자식 인덱스 / 이름으로 탐색
-        ///   - GetFloat() / GetString() / GetColor() 등 값 읽기
-        ///   - GetComp<T>(Action): 콜백에서 특정 컴포넌트 편집
+        ///   - FindGameObject(): 계층 어디에 있든 이름으로 재귀 탐색
+        ///   - Root(): 씬 첫 번째 루트 GO를 가리키는 새 세션 반환
+        ///   - Child(): 직계 자식 인덱스 / 이름으로 새 세션 반환
+        ///   - GetFloat() / GetString() 등 값 읽기
+        ///   - GetComponent&lt;T&gt;(Action): 콜백에서 특정 컴포넌트 편집
         ///
         /// 이 메서드는 씬에 "A - Scene Edit" 메뉴로 이미 생성된 HUD 계층이 있다고 가정합니다.
         /// </summary>
@@ -274,36 +272,36 @@ namespace Sindy.Editor.Examples
             using var s = SindyEdit.Open(scenePath);
             if (s == null) return;
 
-            // ── GOFind: 계층 전체를 재귀 탐색 (경로 없이 이름만으로 찾기) ────
+            // ── FindGameObject: 계층 전체를 재귀 탐색 (경로 없이 이름만으로 찾기) ─
             float titleFontSize = s.FindGameObject("Title").GetFloat("m_fontSize");
             string versionText = s.FindGameObject("VersionLabel").GetString("m_text");
             Debug.Log($"[Example A] Title fontSize: {titleFontSize}, VersionLabel: \"{versionText}\"");
 
-            // ── GetComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
-            // Set() 호출 시 즉시 ApplyModifiedPropertiesWithoutUndo() 실행.
+            // ── GetComponent<T>: 콜백 방식으로 특정 컴포넌트 편집 ──────────────
+            // SetProperty() 호출 시 즉시 ApplyModifiedPropertiesWithoutUndo() 실행.
             s.FindGameObject("Title").GetComponent<TextMeshProUGUI>(tmp =>
                 tmp.SetProperty("m_fontColor", new Color(1f, 0.9f, 0.5f)));
 
-            // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
+            // ── Root(): 씬 첫 번째 루트 GO를 가리키는 새 세션 반환 ────────────
             // FP 스타일: Root()는 새 세션을 반환 — 반환값을 변수에 받아야 합니다.
             var root = s.Root();
             Debug.Log($"[Example A] 첫 번째 루트 GO Transform 있음: {root.HasComponent<Transform>()}");
 
-            // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
+            // ── Child(string): 직계 자식을 이름으로 탐색 — 새 세션 반환 ─────────
             // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
             s.GO("Canvas").Child("HUD").Child("Title").GetComponent<TextMeshProUGUI>(tmp =>
                 tmp.SetProperty("m_text", "SindyEdit으로 수정됨"));
 
-            // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
+            // ── Child(int): 인덱스로 직계 자식 접근 — 새 세션 반환 ──────────────
             // FP 스타일: 체인 결과를 변수로 받아야 합니다 — s 자체는 변경되지 않습니다.
             var firstHudChild = s.GO("Canvas").Child("HUD").Child(0);
             if (firstHudChild.HasComponent<Transform>())
                 Debug.Log("[Example A] HUD 첫 번째 자식 확인됨");
 
-            // ── AddComp<T>: 현재 GO에 컴포넌트 추가 (없을 때만) ──────────────
+            // ── AddComponent<T>: 현재 GO에 컴포넌트 추가 — ComponentScope 반환 ──
             s.GO("Canvas").AddComponent<CanvasGroup>();
 
-            // ── GetComp<T>: ComponentScope로 프로퍼티 접근 ──────────────────
+            // ── GetComponent<T>: ComponentScope로 프로퍼티 접근 ───────────────
             var cgScope = s.GO("Canvas").GetComponent<CanvasGroup>();
             if (cgScope != null)
                 Debug.Log($"[Example A] CanvasGroup alpha: {cgScope.GetFloat("m_Alpha")}");

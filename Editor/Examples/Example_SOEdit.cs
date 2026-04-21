@@ -1,7 +1,7 @@
 // ────────────────────────────────────────────────────────────────────────────
-// 예제 C — ScriptableObject 편집 (SOEditor / AssetFinder)
+// 예제 C — ScriptableObject 편집 (SOEditor / SindyEdit / AssetFinder)
 //
-// 구현 파일: Editor/EditorTools/SOEditor.cs, AssetFinder.cs
+// 구현 파일: Editor/EditorTools/SOEditor.cs, SindyEdit.cs, AssetFinder.cs
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
@@ -17,9 +17,9 @@ namespace Sindy.Editor.Examples
     ///
     /// 시나리오:
     ///   (1) SOEditor.Create()로 ScriptableObject 에셋을 새로 생성하고 필드 설정
-    ///       (에셋 생성은 SindyEdit 미지원 → SOEditor.Create() 직접 사용)
+    ///       (SindyEdit.NewAsset&lt;T&gt;()로도 생성 가능. 이미 있으면 throw)
     ///   (2) SindyEdit.Open()으로 기존 에셋을 로드하여 편집
-    ///   (3) AssetFinder.AllAssets<T>()로 탐색 후 SindyEdit으로 일괄 편집
+    ///   (3) AssetFinder.AllAssets&lt;T&gt;()로 탐색 후 SindyEdit으로 일괄 편집
     ///   (4) 중첩 경로(dot notation) 사용 예시
     ///
     /// Menu: Sindy/Examples/C - SO Edit
@@ -30,15 +30,15 @@ namespace Sindy.Editor.Examples
             PackagePathHelper.Resolve("Tests/Runtime");
 
         // ─────────────────────────────────────────────────────────────────────
-        // (1) 새 ScriptableObject 에셋 생성 + SOEditor으로 필드 설정
+        // (1) 새 ScriptableObject 에셋 생성 + SOEditor로 필드 설정
+        //     SindyEdit 대안: SindyEdit.NewAsset<T>(path) — 파일 이미 있으면 InvalidOperationException
         // ─────────────────────────────────────────────────────────────────────
 
         [MenuItem("Sindy/Examples/C - SO Create & Edit")]
         public static void CreateAndEdit()
         {
             // ── SOEditor.Create(): CreateInstance + CreateAsset + SerializedObject.Update 자동 처리 ──
-            // Dispose 시 AssetDatabase.SaveAssets() 자동 호출.
-            // Apply() 없이 Dispose하면 LogWarning 출력 (미저장 경고).
+            // Dispose 시 AssetDatabase.SaveAssets() 자동 호출. Apply() 없이 Dispose하면 LogWarning.
 
             using (var so = ScriptableObjectEditor<IntVariable>.Create($"{SOOutputFolder}/Example_IntVariable.asset"))
             {

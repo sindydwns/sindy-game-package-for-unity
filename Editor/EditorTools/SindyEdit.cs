@@ -29,19 +29,19 @@ namespace Sindy.Editor.EditorTools
     /// using var s = SindyEdit.Open("Assets/Config/Game.asset");
     /// s.SetInt("maxHealth", 200).SetFloat("gravity", 9.81f);
     ///
-    /// // SO 신규 생성 후 편집
-    /// using var s = SindyEdit.Create&lt;FloatVariable&gt;("Assets/Data/Speed.asset");
+    /// // SO 신규 생성 후 편집 (파일이 이미 있으면 InvalidOperationException)
+    /// using var s = SindyEdit.NewAsset&lt;FloatVariable&gt;("Assets/Data/Speed.asset");
     /// s.SetFloat("value", 5f);
     ///
     /// // 이름으로 자동 탐색
     /// using var s = SindyEdit.Find("GaugeBar");
-    /// s.GOFind("Fill").GetComp&lt;Image&gt;(img =&gt; img.Set("m_Color", Color.green));
+    /// s.FindGameObject("Fill").GetComponent&lt;Image&gt;(img =&gt; img.SetProperty("m_Color", Color.green));
     ///
     /// // FP 스타일: 탐색은 새 인스턴스 반환 — s는 변경되지 않음
-    /// var player = s.GOFind("Player");
+    /// var player = s.FindGameObject("Player");
     /// var hp = player.Child("HpBar");
     /// hp.SetFloat("value", 100f);
-    /// s.Root().Child("UI").GOFind("Button").SetString("label", "Start");
+    /// s.Root().Child("UI").FindGameObject("Button").SetString("label", "Start");
     /// </code>
     /// </example>
     /// </summary>
@@ -168,7 +168,7 @@ namespace Sindy.Editor.EditorTools
 
         /// <summary>
         /// 새 씬 파일을 생성하고 편집 세션을 반환합니다.
-        /// 지정 경로에 파일이 이미 있으면 덮어씁니다.
+        /// 지정 경로에 파일이 이미 있으면 <c>InvalidOperationException</c>을 던집니다.
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .unity 파일 경로</param>
         /// <returns>편집 세션. 생성 실패 시 null.</returns>
@@ -216,7 +216,7 @@ namespace Sindy.Editor.EditorTools
 
         /// <summary>
         /// 빈 프리팹 파일을 생성하고 편집 세션을 반환합니다.
-        /// 지정 경로에 파일이 이미 있으면 덮어씁니다.
+        /// 지정 경로에 파일이 이미 있으면 <c>InvalidOperationException</c>을 던집니다.
         /// </summary>
         /// <param name="assetPath">Assets/ 로 시작하는 .prefab 파일 경로</param>
         /// <param name="rootName">프리팹 루트 GameObject 이름</param>
