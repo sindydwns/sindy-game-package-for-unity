@@ -781,6 +781,18 @@ namespace Sindy.Editor.EditorTools
         /// <summary>현재 타깃에서 Color 프로퍼티 값을 읽습니다.</summary>
         public Color GetColor(string prop) => ReadProperty(prop, sp => sp.colorValue, Color.clear);
 
+        /// <summary>지정한 프로퍼티의 objectReferenceValue를 T 타입으로 반환합니다.</summary>
+        public T GetRef<T>(string prop) where T : UnityEngine.Object =>
+            ReadProperty(prop, sp =>
+            {
+                if (sp.propertyType != SerializedPropertyType.ObjectReference)
+                {
+                    Debug.LogWarning($"[SindyEdit] 타입 불일치: '{prop}' (기대: ObjectReference, 실제: {sp.propertyType})");
+                    return null;
+                }
+                return sp.objectReferenceValue as T;
+            }, null);
+
         // ── 범용 Set ──────────────────────────────────────────────────────────
 
         /// <summary>
