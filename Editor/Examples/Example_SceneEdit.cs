@@ -100,7 +100,7 @@ namespace Sindy.Editor.Examples
             // AddComp(typeFullName): 어셈블리 경계를 넘어 컴포넌트를 추가할 때 사용
             // SetRef(path, value)   : objectReferenceValue 설정
             // Apply()              : ApplyModifiedProperties + SetDirty. 반드시 호출!
-            ctx.GO("ShowcaseRunner")
+            ctx.GetGameObject("ShowcaseRunner")
                 .AddComp("Sindy.Test.ShowcaseRunner") // 문자열 오버로드로 어셈블리 경계 우회
                 .SetRef("labelPrefab", label, ignoreNullWarning: true)
                 .SetRef("buttonPrefab", button, ignoreNullWarning: true)
@@ -140,7 +140,7 @@ namespace Sindy.Editor.Examples
         private static void SetupHUD(SceneEditor ctx)
         {
             // ── Canvas.HUD.Title ──────────────────────────────────────────────
-            ctx.GO("Canvas.HUD.Title")
+            ctx.GetGameObject("Canvas.HUD.Title")
                 .AddComp<TextMeshProUGUI>()
                 .SetStr("m_text", "ComponentBuilder Showcase")
                 .SetFloat("m_fontSize", 28f)
@@ -148,13 +148,13 @@ namespace Sindy.Editor.Examples
                 .Apply();
 
             // ── Canvas.HUD.Background ────────────────────────────────────────
-            ctx.GO("Canvas.HUD.Background")
+            ctx.GetGameObject("Canvas.HUD.Background")
                 .AddComp<Image>()
                 .SetColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
                 .Apply();
 
             // ── Canvas.HUD.Footer.VersionLabel ────────────────────────────────
-            ctx.GO("Canvas.HUD.Footer.VersionLabel")
+            ctx.GetGameObject("Canvas.HUD.Footer.VersionLabel")
                 .AddComp<TextMeshProUGUI>()
                 .SetStr("m_text", "v1.0.0")
                 .SetFloat("m_fontSize", 11f)
@@ -163,7 +163,7 @@ namespace Sindy.Editor.Examples
 
             // ── Canvas.HUD.Footer.QuitButton ─────────────────────────────────
             // 같은 GO에 AddComp → EditComp 전환으로 두 컴포넌트를 순서대로 설정.
-            var quitGO = ctx.GO("Canvas.HUD.Footer.QuitButton");
+            var quitGO = ctx.GetGameObject("Canvas.HUD.Footer.QuitButton");
 
             quitGO.AddComp<Image>()
                   .SetColor("m_Color", new Color(0.7f, 0.2f, 0.2f))
@@ -174,7 +174,7 @@ namespace Sindy.Editor.Examples
 
             // ── Child(): 변수로 보관한 GO 기준으로 상대 경로 탐색/생성 ────────
             // GO()는 항상 씬 루트 기준. Child()는 현재 노드 기준.
-            var hud = ctx.GO("Canvas.HUD");
+            var hud = ctx.GetGameObject("Canvas.HUD");
 
             hud.Child("InfoPanel.Row1")
                .AddComp<TextMeshProUGUI>()

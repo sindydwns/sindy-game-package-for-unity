@@ -275,47 +275,25 @@ namespace Sindy.Editor.EditorTools
         }
 
         /// <summary>
-        /// 씬 파일(.unity)을 디스크에서 삭제합니다.
+        /// 에셋 파일(.unity / .prefab / .asset)을 디스크에서 삭제합니다.
         /// </summary>
-        /// <param name="assetPath">Assets/ 로 시작하는 .unity 파일 경로</param>
-        public static void DeleteScene(string assetPath)
+        /// <param name="assetPath">Assets/ 로 시작하는 에셋 파일 경로</param>
+        public static void Delete(string assetPath)
         {
-            if (string.IsNullOrEmpty(assetPath))
-            {
-                Debug.LogError("[SindyEdit] 경로가 비어있습니다.");
-                return;
-            }
+            string ext = Path.GetExtension(assetPath);
+            if (!ext.Equals(".unity",  StringComparison.OrdinalIgnoreCase) &&
+                !ext.Equals(".prefab", StringComparison.OrdinalIgnoreCase) &&
+                !ext.Equals(".asset",  StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"[SindyEdit] Delete: .unity / .prefab / .asset 파일만 삭제할 수 있습니다. ({assetPath})");
 
-            if (!Path.GetExtension(assetPath).Equals(".unity", StringComparison.OrdinalIgnoreCase))
-            {
-                Debug.LogWarning($"[SindyEdit] DeleteScene: .unity 파일이 아닙니다. ({assetPath})");
-                return;
-            }
+            if (!File.Exists(assetPath))
+                throw new InvalidOperationException(
+                    $"[SindyEdit] Delete: 파일이 존재하지 않습니다. ({assetPath})");
 
             AssetDatabase.DeleteAsset(assetPath);
-            Debug.Log($"[SindyEdit] 씬 삭제됨: {assetPath}");
-        }
-
-        /// <summary>
-        /// 프리팹 파일(.prefab)을 디스크에서 삭제합니다.
-        /// </summary>
-        /// <param name="assetPath">Assets/ 로 시작하는 .prefab 파일 경로</param>
-        public static void DeletePrefab(string assetPath)
-        {
-            if (string.IsNullOrEmpty(assetPath))
-            {
-                Debug.LogError("[SindyEdit] 경로가 비어있습니다.");
-                return;
-            }
-
-            if (!Path.GetExtension(assetPath).Equals(".prefab", StringComparison.OrdinalIgnoreCase))
-            {
-                Debug.LogWarning($"[SindyEdit] DeletePrefab: .prefab 파일이 아닙니다. ({assetPath})");
-                return;
-            }
-
-            AssetDatabase.DeleteAsset(assetPath);
-            Debug.Log($"[SindyEdit] 프리팹 삭제됨: {assetPath}");
+            AssetDatabase.Refresh();
+            Debug.Log($"[SindyEdit] 삭제됨: {assetPath}");
         }
     }
 

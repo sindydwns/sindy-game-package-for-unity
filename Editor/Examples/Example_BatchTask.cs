@@ -231,7 +231,7 @@ namespace Sindy.Editor.Examples
             var label = AssetFinder.Prefab("Sindy.View.Components.LabelComponent", "label");
             var button = AssetFinder.Prefab("Sindy.View.Components.ButtonComponent", "button");
 
-            ctx.GO("ShowcaseRunner")
+            ctx.GetGameObject("ShowcaseRunner")
                .AddComp("Sindy.Test.ShowcaseRunner")
                .SetRef("labelPrefab", label, ignoreNullWarning: true)
                .SetRef("buttonPrefab", button, ignoreNullWarning: true)
@@ -248,14 +248,14 @@ namespace Sindy.Editor.Examples
 
         private void SetupHUD(SceneEditor ctx)
         {
-            ctx.GO("Canvas.HUD.Title")
+            ctx.GetGameObject("Canvas.HUD.Title")
                .AddComp<TextMeshProUGUI>()
                .SetStr("m_text", "ComponentBuilder Showcase")
                .SetFloat("m_fontSize", 28f)
                .SetColor("m_fontColor", new Color(0.5f, 1f, 0.9f))
                .Apply();
 
-            ctx.GO("Canvas.HUD.Background")
+            ctx.GetGameObject("Canvas.HUD.Background")
                .AddComp<Image>()
                .SetColor("m_Color", new Color(0f, 0f, 0f, 0.6f))
                .Apply();
