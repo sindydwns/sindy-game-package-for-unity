@@ -28,13 +28,13 @@ R3(Reactive Extensions for Unity) 기반 MVVM 패턴을 중심으로, 에디터 
 
 UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가 자동으로 갱신됩니다. `SindyComponent<T>`가 SetModel → Init → Clear → OnDestroy 생명주기를 표준화하여 구독 누수를 방지합니다. 복합 컴포넌트는 `SetParent(this)`로 연결해 부모-자식 해제를 자동화합니다.
 
-→ [SindyComponent & ViewComponent 상세](./SINDY_COMPONENT.md)
+→ [상세 문서](./SINDY_COMPONENT.md)
 
 ### RedDot 시스템
 
 인벤토리, 메일, 알림처럼 트리 구조로 집계되는 뱃지 카운터입니다. 점 구분 경로(`"inventory.new_item.sword"`)로 노드를 선언하면, 자식 카운트가 바뀔 때 상위 노드에 자동으로 반영됩니다. `RedDotComponent`를 오브젝트에 붙이고 경로만 입력하면 코드 없이도 뱃지가 동작합니다.
 
-→ [RedDot 시스템 상세](./REDDOT.md)
+→ [상세 문서](./REDDOT.md)
 
 ### Inventory 시스템
 
@@ -54,4 +54,15 @@ using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
 s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 ```
 
-→ [Editor Toolkit 상세](./EDITOR_TOOLKIT.md) · [실용 예시](./SINDY_EDIT_EXAMPLES.md)
+→ [API 레퍼런스](./EDITOR_TOOLKIT.md) · [튜토리얼](./SINDY_EDIT_TUTORIAL.md)
+
+---
+
+## 문서 가이드
+
+| 문서 | 내용 |
+|------|------|
+| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | `SindyComponent<T>` 생명주기, SetParent, ViewComponent 바인딩 방법 |
+| [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotComponent 연결 방법 |
+| [EDITOR_TOOLKIT.md](./EDITOR_TOOLKIT.md) | SindyEdit 전체 API 레퍼런스 — 메서드 목록, ComponentScope, HTTP IPC |
+| [SINDY_EDIT_TUTORIAL.md](./SINDY_EDIT_TUTORIAL.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |

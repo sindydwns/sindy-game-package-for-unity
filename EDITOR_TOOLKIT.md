@@ -8,7 +8,7 @@
 
 1. [빠른 시작](#1-빠른-시작)
 2. [SindyEdit — 통합 파사드](#2-sindyedit--통합-파사드)
-3. [AssetEditSession API](#3-asssteditsession-api)
+3. [AssetEditSession API](#3-asseteditsession-api)
 4. [ComponentScope API](#4-componentscope-api)
 5. [개별 클래스 레퍼런스](#5-개별-클래스-레퍼런스)
 6. [HTTP IPC](#6-http-ipc)
@@ -239,7 +239,7 @@ s.Root().CreateGameObject("Overlay")
 
 ## 5. 개별 클래스 레퍼런스
 
-SindyEdit이 내부적으로 위임하는 클래스들입니다. 복잡한 시나리오(어셈블리 경계 우회, `AddComp(string)` 등)에서 직접 사용합니다.
+SindyEdit 파사드가 내부적으로 사용하는 저수준 클래스들입니다. 일반적으로는 SindyEdit을 통해 작업하고, 어셈블리 경계 우회나 문자열 타입 지정(`AddComp(string)`) 같은 특수한 경우에만 직접 접근합니다.
 
 ### SceneEditor
 
@@ -279,8 +279,8 @@ using (var ctx = SceneEditor.Open("Assets/Scenes/MyScene.unity"))
 
 | 메서드 | 설명 |
 |--------|------|
-| `AddComp<T>()` | 없으면 추가, 있으면 재사용. SO* 대상 설정. Undo 등록 |
-| `EditComp<T>()` | 기존 컴포넌트를 SO* 대상으로 전환. 없으면 LogWarning |
+| `AddComp<T>()` | 없으면 추가, 있으면 재사용. SerializedObject 편집 대상으로 설정. Undo 등록 |
+| `EditComp<T>()` | 기존 컴포넌트를 SerializedObject 편집 대상으로 전환. 없으면 LogWarning |
 | `AddComp(string typeFullName)` | 타입 FullName으로 추가 (어셈블리 경계 우회용) |
 | `Child(string path)` | 현재 GO 기준 상대 경로 자식 탐색/생성 |
 | `ChildFind(string path)` | 현재 GO 기준 탐색만. 없으면 `null` |
@@ -313,7 +313,7 @@ ScriptableObject 에셋 편집 컨텍스트.
 |--------|------|
 | `Open(string assetPath)` _(static)_ | 기존 에셋 로드. 실패 시 `null` |
 | `Create(string assetPath)` _(static)_ | 새 에셋 생성. 이미 있으면 덮어씀 |
-| SO* 세터 | GOEditor와 동일 세트 |
+| SetRef / SetStr / SetBool / SetInt / SetFloat / SetColor | GOEditor와 동일한 세터 세트 |
 | `Apply()` | `ApplyModifiedProperties()` + `SetDirty()` |
 | `Dispose()` | `Apply()` 호출 시 `AssetDatabase.SaveAssets()` |
 
