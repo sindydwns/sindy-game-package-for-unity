@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -60,7 +61,7 @@ namespace Sindy.Editor.EditorTools
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 var s = SceneManager.GetSceneAt(i);
-                if (s.path == scenePath)
+                if (s.path == scenePath && File.Exists(scenePath))
                 {
                     Debug.Log($"[SceneEditor] 씬이 이미 열려있어 재사용합니다: {scenePath}");
                     return new SceneEditor(s);

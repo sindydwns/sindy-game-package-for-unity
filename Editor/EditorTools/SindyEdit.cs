@@ -174,13 +174,32 @@ namespace Sindy.Editor.EditorTools
                 return null;
             }
 
+            if (!assetPath.StartsWith("Assets/", StringComparison.OrdinalIgnoreCase))
+            {
+                assetPath = "Assets/" + assetPath;
+                Debug.LogWarning($"[SindyEdit] 경로가 'Assets/'로 시작하지 않아 자동으로 붙였습니다: {assetPath}");
+            }
+
             string dir = Path.GetDirectoryName(assetPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-            EditorSceneManager.SaveScene(scene, assetPath);
+            bool saved = EditorSceneManager.SaveScene(scene, assetPath);
+            if (!saved)
+            {
+                Debug.LogError($"[SindyEdit] 씬 저장 실패: {assetPath}");
+                return null;
+            }
+
             AssetDatabase.Refresh();
+
+            if (!File.Exists(assetPath))
+            {
+                Debug.LogError($"[SindyEdit] 씬 파일이 생성되지 않았습니다: {assetPath}");
+                return null;
+            }
+
             Debug.Log($"[SindyEdit] 씬 생성됨: {assetPath}");
             return AssetEditSession.ForScene(assetPath);
         }
