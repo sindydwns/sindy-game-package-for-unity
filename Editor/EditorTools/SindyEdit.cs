@@ -295,6 +295,13 @@ namespace Sindy.Editor.EditorTools
             AssetDatabase.Refresh();
             Debug.Log($"[SindyEdit] 삭제됨: {assetPath}");
         }
+
+        /// <summary>
+        /// 지정한 경로의 에셋 파일이 디스크에 존재하는지 확인합니다.
+        /// </summary>
+        /// <param name="assetPath">확인할 에셋 파일 경로</param>
+        /// <returns>파일이 존재하면 <c>true</c>.</returns>
+        public static bool Exists(string assetPath) => File.Exists(assetPath);
     }
 
     // ────────────────────────────────────────────────────────────────────────────
