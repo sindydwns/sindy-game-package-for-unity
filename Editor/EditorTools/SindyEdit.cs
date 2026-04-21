@@ -186,6 +186,10 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogWarning($"[SindyEdit] 경로가 'Assets/'로 시작하지 않아 자동으로 붙였습니다: {assetPath}");
             }
 
+            if (System.IO.File.Exists(assetPath))
+                throw new InvalidOperationException(
+                    $"[SindyEdit] 이미 존재하는 파일입니다: '{assetPath}'. 덮어쓰려면 먼저 파일을 삭제하세요.");
+
             string dir = Path.GetDirectoryName(assetPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
@@ -224,6 +228,10 @@ namespace Sindy.Editor.EditorTools
                 Debug.LogError("[SindyEdit] 경로가 비어있습니다.");
                 return null;
             }
+
+            if (System.IO.File.Exists(assetPath))
+                throw new InvalidOperationException(
+                    $"[SindyEdit] 이미 존재하는 파일입니다: '{assetPath}'. 덮어쓰려면 먼저 파일을 삭제하세요.");
 
             string dir = Path.GetDirectoryName(assetPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
@@ -1052,7 +1060,7 @@ namespace Sindy.Editor.EditorTools
         /// 지원 타입: string, bool, int, float, Color, Vector3, Vector2
         /// </para>
         /// </summary>
-        public AssetEditSession Set(string prop, object value)
+        public AssetEditSession SetProperty(string prop, object value)
         {
             if (IsInvalid) return this;
 
@@ -1253,11 +1261,11 @@ namespace Sindy.Editor.EditorTools
     /// <see cref="AssetEditSession.GetComponent{T}"/>, <see cref="AssetEditSession.GetOrAddComponent{T}"/>,
     /// <see cref="AssetEditSession.AddComponent{T}"/> 에서 반환되는 컴포넌트 접근 컨텍스트.
     /// <para>
-    /// 쓰기: <see cref="SetProp"/> / <see cref="SORef"/>
-    /// 읽기: <see cref="GetProp{T}"/> / <see cref="GetFloat"/> / <see cref="GetString"/> 등
+    /// 쓰기: <see cref="SetProperty"/> / <see cref="SORef"/>
+    /// 읽기: <see cref="GetProperty{T}"/> / <see cref="GetFloat"/> / <see cref="GetString"/> 등
     /// </para>
     /// <para>
-    /// <see cref="SetProp"/>·<see cref="SORef"/> 호출 시 <c>ApplyModifiedPropertiesWithoutUndo()</c>가 즉시 실행됩니다.
+    /// <see cref="SetProperty"/>·<see cref="SORef"/> 호출 시 <c>ApplyModifiedPropertiesWithoutUndo()</c>가 즉시 실행됩니다.
     /// </para>
     /// <example>
     /// <code>
@@ -1284,7 +1292,7 @@ namespace Sindy.Editor.EditorTools
         /// 설정 후 즉시 <c>ApplyModifiedPropertiesWithoutUndo()</c>가 호출됩니다.
         /// <para>지원 타입: string, bool, int, float, Color, Vector3, Vector2</para>
         /// </summary>
-        public ComponentScope SetProp(string prop, object value)
+        public ComponentScope SetProperty(string prop, object value)
         {
             var sp = _so.FindProperty(prop);
             if (sp == null)
@@ -1342,7 +1350,7 @@ namespace Sindy.Editor.EditorTools
         /// SerializedPropertyType을 판별하여 지정한 프로퍼티를 T 타입으로 읽습니다.
         /// 프로퍼티가 없거나 타입 불일치 시 <c>InvalidOperationException</c>을 던집니다.
         /// </summary>
-        public T GetProp<T>(string prop)
+        public T GetProperty<T>(string prop)
         {
             var sp = _so.FindProperty(prop);
             if (sp == null)

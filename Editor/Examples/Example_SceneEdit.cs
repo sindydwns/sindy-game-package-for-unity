@@ -221,21 +221,21 @@ namespace Sindy.Editor.Examples
             // GO()로 기존 GO를 찾고, CreateGO()로 자식을 생성하면 _currentGO가 새 GO로 이동합니다.
             s.GO("Canvas").CreateGameObject("HUD").CreateGameObject("Title")
                 .AddComponent<TextMeshProUGUI>()
-                .SetProp("m_text", "ComponentBuilder Showcase")
-                .SetProp("m_fontSize", 28f)
-                .SetProp("m_fontColor", new Color(0.5f, 1f, 0.9f));
+                .SetProperty("m_text", "ComponentBuilder Showcase")
+                .SetProperty("m_fontSize", 28f)
+                .SetProperty("m_fontColor", new Color(0.5f, 1f, 0.9f));
 
             s.GO("Canvas/HUD").CreateGameObject("Background")
                 .AddComponent<Image>()
-                .SetProp("m_Color", new Color(0f, 0f, 0f, 0.6f));
+                .SetProperty("m_Color", new Color(0f, 0f, 0f, 0.6f));
 
             s.GO("Canvas/HUD").CreateGameObject("Footer");
 
             s.GO("Canvas/HUD/Footer").CreateGameObject("VersionLabel")
                 .AddComponent<TextMeshProUGUI>()
-                .SetProp("m_text", "v1.0.0")
-                .SetProp("m_fontSize", 11f)
-                .SetProp("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
+                .SetProperty("m_text", "v1.0.0")
+                .SetProperty("m_fontSize", 11f)
+                .SetProperty("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
 
             // ── SORef: GetComp 콜백 안에서 objectReferenceValue 설정 ────────────
             // session 레벨: s.GOFind("Icon").SORef("m_Sprite", spriteAsset);
@@ -282,7 +282,7 @@ namespace Sindy.Editor.Examples
             // ── GetComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
             // Set() 호출 시 즉시 ApplyModifiedPropertiesWithoutUndo() 실행.
             s.FindGameObject("Title").GetComponent<TextMeshProUGUI>(tmp =>
-                tmp.SetProp("m_fontColor", new Color(1f, 0.9f, 0.5f)));
+                tmp.SetProperty("m_fontColor", new Color(1f, 0.9f, 0.5f)));
 
             // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
             // FP 스타일: Root()는 새 세션을 반환 — 반환값을 변수에 받아야 합니다.
@@ -292,7 +292,7 @@ namespace Sindy.Editor.Examples
             // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
             // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
             s.GO("Canvas").Child("HUD").Child("Title").GetComponent<TextMeshProUGUI>(tmp =>
-                tmp.SetProp("m_text", "SindyEdit으로 수정됨"));
+                tmp.SetProperty("m_text", "SindyEdit으로 수정됨"));
 
             // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
             // FP 스타일: 체인 결과를 변수로 받아야 합니다 — s 자체는 변경되지 않습니다.

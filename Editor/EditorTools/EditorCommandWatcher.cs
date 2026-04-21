@@ -37,7 +37,7 @@ namespace Sindy.Editor.EditorTools
         private class ResultDto
         {
             public string id;
-            public bool   success;
+            public bool success;
             public string message;
             public string timestamp;
         }
@@ -139,7 +139,8 @@ namespace Sindy.Editor.EditorTools
                     }
                     catch (Exception) { /* 리스너 중지 시 발생하는 예외 무시 */ }
                 }
-            }) { IsBackground = true };
+            })
+            { IsBackground = true };
             _listenerThread.Start();
         }
 
@@ -161,9 +162,9 @@ namespace Sindy.Editor.EditorTools
                 {
                     result = new ResultDto
                     {
-                        id        = "",
-                        success   = true,
-                        message   = "pong",
+                        id = "",
+                        success = true,
+                        message = "pong",
                         timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss")
                     };
                 }
@@ -185,9 +186,9 @@ namespace Sindy.Editor.EditorTools
         {
             try
             {
-                var json  = JsonUtility.ToJson(result);
+                var json = JsonUtility.ToJson(result);
                 var bytes = Encoding.UTF8.GetBytes(json);
-                context.Response.ContentType     = "application/json";
+                context.Response.ContentType = "application/json";
                 context.Response.ContentLength64 = bytes.Length;
                 context.Response.OutputStream.Write(bytes, 0, bytes.Length);
                 context.Response.Close();
@@ -216,7 +217,7 @@ namespace Sindy.Editor.EditorTools
                 return new ResultDto { success = false, message = msg, timestamp = timestamp };
             }
 
-            string typeName   = fullMethodName.Substring(0, lastDot);
+            string typeName = fullMethodName.Substring(0, lastDot);
             string methodName = fullMethodName.Substring(lastDot + 1);
 
             // 모든 로드된 어셈블리에서 타입 탐색
@@ -296,8 +297,8 @@ namespace Sindy.Editor.EditorTools
                 if (session == null)
                     return new ResultDto
                     {
-                        success   = false,
-                        message   = $"에셋을 열 수 없습니다: {dto.asset}",
+                        success = false,
+                        message = $"에셋을 열 수 없습니다: {dto.asset}",
                         timestamp = timestamp
                     };
 
@@ -306,14 +307,14 @@ namespace Sindy.Editor.EditorTools
                     if (!string.IsNullOrEmpty(dto.go))
                         session.GO(dto.go);
 
-                    session.Set(dto.prop, value);
+                    session.SetProperty(dto.prop, value);
                 }
 
                 string goDesc = string.IsNullOrEmpty(dto.go) ? "" : $".GO({dto.go})";
                 return new ResultDto
                 {
-                    success   = true,
-                    message   = $"OK — {dto.asset}{goDesc}.{dto.prop}",
+                    success = true,
+                    message = $"OK — {dto.asset}{goDesc}.{dto.prop}",
                     timestamp = timestamp
                 };
             }
@@ -409,9 +410,9 @@ namespace Sindy.Editor.EditorTools
 
             string token = rawJson.Substring(pos, tokEnd - pos).Trim();
 
-            if (token == "true")  return true;
+            if (token == "true") return true;
             if (token == "false") return false;
-            if (token == "null")  return null;
+            if (token == "null") return null;
 
             // 소수점 또는 지수 표기가 있으면 float
             if (token.Contains('.') || token.Contains('e') || token.Contains('E'))

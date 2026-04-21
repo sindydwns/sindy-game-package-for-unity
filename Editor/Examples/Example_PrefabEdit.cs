@@ -106,14 +106,14 @@ namespace Sindy.Editor.Examples
             // ── GOFind: 이름으로 재귀 탐색 (계층 깊이에 무관하게 찾음) ───────
             // ?.에 해당하는 null 안전 처리는 GOFind 내부에서 LogWarning으로 대체됩니다.
             s.FindGameObject("Fill").GetComponent<Image>(img =>
-                img.SetProp("m_Color", new Color(0.9f, 0.25f, 0.25f)));  // 빨간색
+                img.SetProperty("m_Color", new Color(0.9f, 0.25f, 0.25f)));  // 빨간색
 
             // ── CreateGO: "Background" 아래에 "Border" 신규 생성 ─────────────────────────
             // GOFind로 기존 GO를 찾은 뒤 CreateGO로 자식을 생성합니다.
             // 생성 후 _currentGO가 새 GO로 이동하므로 AddComp + SOColor 체이닝이 바로 가능합니다.
             s.FindGameObject("Background").CreateGameObject("Border")
                 .AddComponent<Image>()
-                .SetProp("m_Color", new Color(0.3f, 0.3f, 0.3f));
+                .SetProperty("m_Color", new Color(0.3f, 0.3f, 0.3f));
         }
 
         // ─── LabelComponent 프리팹 편집 ─────────────────────────────────────
@@ -140,16 +140,16 @@ namespace Sindy.Editor.Examples
             // ── GOFind: 계층 전체에서 "Label" 재귀 탐색 후 TMP 편집 ───────────
             s.FindGameObject("Label").GetComponent<TextMeshProUGUI>(tmp =>
             {
-                tmp.SetProp("m_text", "Default Label");
-                tmp.SetProp("m_fontSize", 18f);
-                tmp.SetProp("m_fontColor", Color.white);
+                tmp.SetProperty("m_text", "Default Label");
+                tmp.SetProperty("m_fontSize", 18f);
+                tmp.SetProperty("m_fontColor", Color.white);
             });
 
             // ── CreateGO: 프리팹 루트에 "Overlay" 신규 생성 ──────────────────────────────
             // Root()로 프리팹 루트를 _currentGO로 설정한 뒤 CreateGO()로 자식을 생성합니다.
             s.Root().CreateGameObject("Overlay")
                 .AddComponent<Image>()
-                .SetProp("m_Color", new Color(1f, 1f, 1f, 0.05f));
+                .SetProperty("m_Color", new Color(1f, 1f, 1f, 0.05f));
 
             // ── Child(): Root 기준 직계 자식 탐색 ────────────────────────────
             // GOFind와 달리 직계 자식만 탐색합니다 (재귀 없음).
@@ -180,7 +180,7 @@ namespace Sindy.Editor.Examples
 
                 // GOFind: 계층 어디에 있든 "Fill" GO를 찾아 색상 변경
                 s.FindGameObject("Fill").GetComponent<Image>(img =>
-                    img.SetProp("m_Color", new Color(0.2f, 0.8f, 0.4f)));  // 초록색으로 통일
+                    img.SetProperty("m_Color", new Color(0.2f, 0.8f, 0.4f)));  // 초록색으로 통일
             }
 
             Debug.Log($"[Example B] GaugeComponent 프리팹 {allGaugePrefabs.Count}개 색상 통일 완료.");
