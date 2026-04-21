@@ -432,7 +432,8 @@ namespace Sindy.Editor.EditorTools
                 return null;
             }
             var ctx = new SessionContext(SessionContext.AssetMode.Prefab, path, pe: pe);
-            return new AssetEditSession(ctx, null, isOwner: true);
+            var root = ctx.PrefabEditor?.RootObject;
+            return new AssetEditSession(ctx, root, isOwner: true);
         }
 
         internal static AssetEditSession ForAsset(string path)
