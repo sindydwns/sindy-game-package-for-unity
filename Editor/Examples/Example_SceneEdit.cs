@@ -4,8 +4,8 @@
 // 구현 파일: Editor/EditorTools/SindyEdit.cs, SceneEditor.cs, GOEditor.cs, AssetFinder.cs
 //
 // SindyEdit 변환 현황:
-//   ❌ SetupShowcaseRunner: AddComp(string) / SORef 미지원으로 변환 불가
-//   ❌ SetupHUD: SceneEditor.GO()의 GO 신규 생성 기능이 AssetEditSession에 없어 변환 불가
+//   ❌ SetupShowcaseRunner: AddComp(string) 미지원으로 변환 불가 (SORef는 이제 지원됨)
+//   ✅ CreateGOWithSindyEdit: CreateGO + SORef 신규 API 시연 메서드 추가 (SetupHUD의 SindyEdit 변환 버전)
 //   ✅ ReadWithSindyEdit: 신규 API(GOFind, Root, Child, 값 읽기) 시연 전용 메서드 추가
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
@@ -75,8 +75,8 @@ namespace Sindy.Editor.Examples
         /// 각 프리팹 슬롯을 채운다.
         ///
         /// ❌ 변환 불가 이유:
-        ///   - AddComp(string typeFullName): AssetEditSession 미지원
-        ///   - SORef(path, value): AssetEditSession 미지원
+        ///   - AddComp(string typeFullName): AssetEditSession 미지원 (이 메서드는 SceneEditor 전용 예제로 유지)
+        ///   (SORef는 AssetEditSession에 추가되었습니다)
         ///
         /// ⚠ 어셈블리 경계:
         ///   ShowcaseRunner는 Sindy.Tests.Runtime 어셈블리에 있으므로
@@ -124,9 +124,9 @@ namespace Sindy.Editor.Examples
         /// <summary>
         /// Canvas → HUD → Title / Background / Footer.VersionLabel 계층을 자동 생성한다.
         ///
-        /// ❌ 변환 불가 이유:
-        ///   - SceneEditor.GO()는 없으면 GO를 생성합니다. AssetEditSession.GO()는 탐색만 합니다.
-        ///   - GOEditor 체인(SOStr, SOColor, SOFloat, Apply)은 AssetEditSession API와 다릅니다.
+        /// ✅ SindyEdit 변환 가능:
+        ///   - CreateGO() 추가로 AssetEditSession에서도 GO 신규 생성이 가능합니다.
+        ///   - CreateGOWithSindyEdit() 메서드에서 SindyEdit 변환 버전을 확인하세요.
         ///
         /// ⚠ Unity 내부 직렬화 필드명 (m_ 접두사):
         ///   TextMeshProUGUI.text     → "m_text"
@@ -187,7 +187,65 @@ namespace Sindy.Editor.Examples
                .Apply();
         }
 
-        // ─── A-2: SindyEdit 신규 API 시연 ────────────────────────────────────
+        // ─── A-2: SindyEdit CreateGO + SORef 시연 ───────────────────────────────
+
+        /// <summary>
+        /// ✅ CreateGO + SORef 신규 API 시연 (SetupHUD의 SindyEdit 변환 버전):
+        ///   - CreateGO(): _currentGO가 null이면 씬 루트에, non-null이면 자식으로 GO 생성
+        ///   - 체이닝: GO() 탐색 → CreateGO() → AddComp → SOString / SOColor 가능
+        ///   - SORef(): SerializedProperty objectReferenceValue 세터
+        ///   - WithComp 콜백 안에서도 SORef() 사용 가능 (ComponentEditScope.SORef)
+        ///
+        /// SceneEditor.GO()가 없으면 자동 생성했던 패턴을 SindyEdit으로 구현합니다.
+        /// </summary>
+        [MenuItem("Sindy/Examples/A - Scene Edit (CreateGO + SORef)")]
+        public static void CreateGOWithSindyEdit()
+        {
+            var scenePath = PackagePathHelper.Resolve(
+                "Tests/Runtime/ComponentBuilderTest/_test_component_builder_quick.unity");
+
+            if (!System.IO.File.Exists(scenePath))
+            {
+                Debug.LogError($"[Example A] 씬을 찾을 수 없습니다: {scenePath}");
+                return;
+            }
+
+            using var s = SindyEdit.Open(scenePath);
+            if (s == null) return;
+
+            // ── CreateGO: _currentGO null → 씬 루트에 생성 ──────────────────────
+            // GO()로 탐색하지 않은 상태(null)에서 CreateGO를 호출하면 씬 루트에 배치됩니다.
+            s.CreateGO("Canvas");
+
+            // ── 체이닝: GO 탐색 후 자식 GO 생성 + AddComp + SO* ──────────────────
+            // GO()로 기존 GO를 찾고, CreateGO()로 자식을 생성하면 _currentGO가 새 GO로 이동합니다.
+            s.GO("Canvas").CreateGO("HUD").CreateGO("Title")
+                .AddComp<TextMeshProUGUI>()
+                .SOString("m_text", "ComponentBuilder Showcase")
+                .SOFloat("m_fontSize", 28f)
+                .SOColor("m_fontColor", new Color(0.5f, 1f, 0.9f));
+
+            s.GO("Canvas/HUD").CreateGO("Background")
+                .AddComp<Image>()
+                .SOColor("m_Color", new Color(0f, 0f, 0f, 0.6f));
+
+            s.GO("Canvas/HUD").CreateGO("Footer");
+
+            s.GO("Canvas/HUD/Footer").CreateGO("VersionLabel")
+                .AddComp<TextMeshProUGUI>()
+                .SOString("m_text", "v1.0.0")
+                .SOFloat("m_fontSize", 11f)
+                .SOColor("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
+
+            // ── SORef: WithComp 콜백 안에서 objectReferenceValue 설정 ────────────
+            // session 레벨: s.GOFind("Icon").SORef("m_Sprite", spriteAsset);
+            // ComponentEditScope 레벨:
+            // s.GOFind("Icon").WithComp<Image>(img => img.SORef("m_Sprite", mySprite));
+
+            // Dispose 시 변경사항이 있으면 자동 저장됩니다.
+        }
+
+        // ─── A-4: SindyEdit 신규 API 시연 ────────────────────────────────────
 
         /// <summary>
         /// ✅ SindyEdit 신규 API 시연:

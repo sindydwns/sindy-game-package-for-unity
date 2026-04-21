@@ -10,8 +10,8 @@
 // SindyEdit 변환 현황:
 //   ✅ GOFind + WithComp<T>(Action) 패턴 → SindyEdit으로 완전 변환
 //   ✅ 일괄 편집(BatchEdit) → SindyEdit으로 완전 변환
-//   ❌ GO() 생성 패턴 → AssetEditSession.GO()는 탐색 전용이므로 PrefabEditor 직접 사용 필요
-//   ❌ AddComp<T>() 후 SOColor 체이닝 + Apply() → GOEditor 체인 패턴은 PrefabEditor 직접 사용 필요
+//   ✅ GO() 생성 패턴 → CreateGO API 추가로 SindyEdit 변환 완료
+//   ✅ AddComp<T>() 후 SOColor 체이닝 → CreateGO + AddComp + SOColor 패턴으로 SindyEdit 변환 완료
 // ────────────────────────────────────────────────────────────────────────────
 #if UNITY_EDITOR
 
@@ -87,9 +87,8 @@ namespace Sindy.Editor.Examples
         ///   - WithComp<Image>(callback): 콜백에서 Set()으로 프로퍼티 편집 후 자동 Apply
         ///   - Root(): 프리팹 루트 GO 접근
         ///
-        /// ❌ 변환 불가: GO("Background.Border")
-        ///   AssetEditSession.GO()는 탐색 전용입니다.
-        ///   GO가 없을 때 신규 생성이 필요한 경우 PrefabEditor.Open()을 직접 사용하세요.
+        /// ✅ CreateGO로 변환 가능: GO("Background.Border")
+        ///   GOFind("Background").CreateGO("Border")로 새 GO를 생성하고 AddComp + SOColor 체이닝 가능합니다.
         ///
         /// ⚠ Unity 내부 직렬화 필드명:
         ///   Image.color → "m_Color"
@@ -110,17 +109,12 @@ namespace Sindy.Editor.Examples
             s.GOFind("Fill").WithComp<Image>(img =>
                 img.Set("m_Color", new Color(0.9f, 0.25f, 0.25f)));  // 빨간색
 
-            // ── 변환 불가 케이스 ──────────────────────────────────────────────
-            // 아래 패턴은 "Background.Border"가 없으면 새로 생성하는 의도입니다.
-            // AssetEditSession.GO()는 탐색만 하므로, 생성이 필요하면 아래처럼 PrefabEditor를 사용하세요:
-            //
-            // using (var p = PrefabEditor.Open(prefabPath))
-            // {
-            //     p.GO("Background.Border")
-            //         .AddComp<Image>()
-            //         .SOColor("m_Color", new Color(0.3f, 0.3f, 0.3f))
-            //         .Apply();
-            // }
+            // ── CreateGO: "Background" 아래에 "Border" 신규 생성 ─────────────────────────
+            // GOFind로 기존 GO를 찾은 뒤 CreateGO로 자식을 생성합니다.
+            // 생성 후 _currentGO가 새 GO로 이동하므로 AddComp + SOColor 체이닝이 바로 가능합니다.
+            s.GOFind("Background").CreateGO("Border")
+                .AddComp<Image>()
+                .SOColor("m_Color", new Color(0.3f, 0.3f, 0.3f));
         }
 
         // ─── LabelComponent 프리팹 편집 ─────────────────────────────────────
@@ -133,8 +127,8 @@ namespace Sindy.Editor.Examples
         ///   - WithComp<TextMeshProUGUI>(callback): 여러 프로퍼티를 콜백 안에서 Set()으로 설정
         ///   - Root().Child("Label"): Root 기준 직계 자식 탐색
         ///
-        /// ❌ 변환 불가: GO("Overlay").AddComp<Image>()
-        ///   신규 GO 생성 + AddComp + SOColor + Apply 체이닝은 PrefabEditor.GO()를 사용하세요.
+        /// ✅ CreateGO로 변환 가능: GO("Overlay").AddComp<Image>()
+        ///   Root().CreateGO("Overlay")로 프리팹 루트 자식으로 생성하고 AddComp + SOColor 체이닝 가능합니다.
         ///
         /// ⚠ TMP 내부 직렬화 필드명:
         ///   text → "m_text" / fontSize → "m_fontSize" / color → "m_fontColor"
@@ -152,13 +146,11 @@ namespace Sindy.Editor.Examples
                 tmp.Set("m_fontColor", Color.white);
             });
 
-            // ── 변환 불가: "Overlay" 신규 생성 + AddComp<Image> ──────────────
-            // 아래처럼 PrefabEditor를 직접 사용하세요:
-            //
-            // using (var p = PrefabEditor.Open(prefabPath))
-            // {
-            //     p.GO("Overlay").AddComp<Image>().SOColor("m_Color", new Color(1f, 1f, 1f, 0.05f)).Apply();
-            // }
+            // ── CreateGO: 프리팹 루트에 "Overlay" 신규 생성 ──────────────────────────────
+            // Root()로 프리팹 루트를 _currentGO로 설정한 뒤 CreateGO()로 자식을 생성합니다.
+            s.Root().CreateGO("Overlay")
+                .AddComp<Image>()
+                .SOColor("m_Color", new Color(1f, 1f, 1f, 0.05f));
 
             // ── Child(): Root 기준 직계 자식 탐색 ────────────────────────────
             // GOFind와 달리 직계 자식만 탐색합니다 (재귀 없음).
