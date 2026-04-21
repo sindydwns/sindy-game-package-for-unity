@@ -215,24 +215,24 @@ namespace Sindy.Editor.Examples
 
             // ── CreateGO: _currentGO null → 씬 루트에 생성 ──────────────────────
             // GO()로 탐색하지 않은 상태(null)에서 CreateGO를 호출하면 씬 루트에 배치됩니다.
-            s.CreateGO("Canvas");
+            s.CreateGameObject("Canvas");
 
             // ── 체이닝: GO 탐색 후 자식 GO 생성 + AddComp + SO* ──────────────────
             // GO()로 기존 GO를 찾고, CreateGO()로 자식을 생성하면 _currentGO가 새 GO로 이동합니다.
-            s.GO("Canvas").CreateGO("HUD").CreateGO("Title")
-                .AddComp<TextMeshProUGUI>()
+            s.GO("Canvas").CreateGameObject("HUD").CreateGameObject("Title")
+                .AddComponent<TextMeshProUGUI>()
                 .SetProp("m_text", "ComponentBuilder Showcase")
                 .SetProp("m_fontSize", 28f)
                 .SetProp("m_fontColor", new Color(0.5f, 1f, 0.9f));
 
-            s.GO("Canvas/HUD").CreateGO("Background")
-                .AddComp<Image>()
+            s.GO("Canvas/HUD").CreateGameObject("Background")
+                .AddComponent<Image>()
                 .SetProp("m_Color", new Color(0f, 0f, 0f, 0.6f));
 
-            s.GO("Canvas/HUD").CreateGO("Footer");
+            s.GO("Canvas/HUD").CreateGameObject("Footer");
 
-            s.GO("Canvas/HUD/Footer").CreateGO("VersionLabel")
-                .AddComp<TextMeshProUGUI>()
+            s.GO("Canvas/HUD/Footer").CreateGameObject("VersionLabel")
+                .AddComponent<TextMeshProUGUI>()
                 .SetProp("m_text", "v1.0.0")
                 .SetProp("m_fontSize", 11f)
                 .SetProp("m_fontColor", new Color(0.55f, 0.55f, 0.55f));
@@ -275,36 +275,36 @@ namespace Sindy.Editor.Examples
             if (s == null) return;
 
             // ── GOFind: 계층 전체를 재귀 탐색 (경로 없이 이름만으로 찾기) ────
-            float titleFontSize = s.GOFind("Title").GetFloat("m_fontSize");
-            string versionText = s.GOFind("VersionLabel").GetString("m_text");
+            float titleFontSize = s.FindGameObject("Title").GetFloat("m_fontSize");
+            string versionText = s.FindGameObject("VersionLabel").GetString("m_text");
             Debug.Log($"[Example A] Title fontSize: {titleFontSize}, VersionLabel: \"{versionText}\"");
 
             // ── GetComp<T>: 콜백 방식으로 특정 컴포넌트 편집 ───────────────
             // Set() 호출 시 즉시 ApplyModifiedPropertiesWithoutUndo() 실행.
-            s.GOFind("Title").GetComp<TextMeshProUGUI>(tmp =>
+            s.FindGameObject("Title").GetComponent<TextMeshProUGUI>(tmp =>
                 tmp.SetProp("m_fontColor", new Color(1f, 0.9f, 0.5f)));
 
             // ── Root(): 씬 첫 번째 루트 GO로 이동 ────────────────────────────
             // FP 스타일: Root()는 새 세션을 반환 — 반환값을 변수에 받아야 합니다.
             var root = s.Root();
-            Debug.Log($"[Example A] 첫 번째 루트 GO Transform 있음: {root.HasComp<Transform>()}");
+            Debug.Log($"[Example A] 첫 번째 루트 GO Transform 있음: {root.HasComponent<Transform>()}");
 
             // ── Child(string): 직계 자식을 이름으로 탐색 ─────────────────────
             // GO()가 씬 루트 기준 경로 탐색이라면, Child()는 현재 GO 기준 직계 자식 탐색입니다.
-            s.GO("Canvas").Child("HUD").Child("Title").GetComp<TextMeshProUGUI>(tmp =>
+            s.GO("Canvas").Child("HUD").Child("Title").GetComponent<TextMeshProUGUI>(tmp =>
                 tmp.SetProp("m_text", "SindyEdit으로 수정됨"));
 
             // ── Child(int): 인덱스로 직계 자식 접근 ──────────────────────────
             // FP 스타일: 체인 결과를 변수로 받아야 합니다 — s 자체는 변경되지 않습니다.
             var firstHudChild = s.GO("Canvas").Child("HUD").Child(0);
-            if (firstHudChild.HasComp<Transform>())
+            if (firstHudChild.HasComponent<Transform>())
                 Debug.Log("[Example A] HUD 첫 번째 자식 확인됨");
 
             // ── AddComp<T>: 현재 GO에 컴포넌트 추가 (없을 때만) ──────────────
-            s.GO("Canvas").AddComp<CanvasGroup>();
+            s.GO("Canvas").AddComponent<CanvasGroup>();
 
             // ── GetComp<T>: ComponentScope로 프로퍼티 접근 ──────────────────
-            var cgScope = s.GO("Canvas").GetComp<CanvasGroup>();
+            var cgScope = s.GO("Canvas").GetComponent<CanvasGroup>();
             if (cgScope != null)
                 Debug.Log($"[Example A] CanvasGroup alpha: {cgScope.GetFloat("m_Alpha")}");
         }

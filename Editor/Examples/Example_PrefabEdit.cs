@@ -100,19 +100,19 @@ namespace Sindy.Editor.Examples
             if (s == null) return;
 
             // ── Root(): 프리팹 루트 GO 접근 + HasComp<T>()로 컴포넌트 유무 확인 ──
-            if (s.Root().HasComp<GaugeComponent>())
+            if (s.Root().HasComponent<GaugeComponent>())
                 Debug.Log("[Example B] GaugeComponent 확인됨");
 
             // ── GOFind: 이름으로 재귀 탐색 (계층 깊이에 무관하게 찾음) ───────
             // ?.에 해당하는 null 안전 처리는 GOFind 내부에서 LogWarning으로 대체됩니다.
-            s.GOFind("Fill").GetComp<Image>(img =>
+            s.FindGameObject("Fill").GetComponent<Image>(img =>
                 img.SetProp("m_Color", new Color(0.9f, 0.25f, 0.25f)));  // 빨간색
 
             // ── CreateGO: "Background" 아래에 "Border" 신규 생성 ─────────────────────────
             // GOFind로 기존 GO를 찾은 뒤 CreateGO로 자식을 생성합니다.
             // 생성 후 _currentGO가 새 GO로 이동하므로 AddComp + SOColor 체이닝이 바로 가능합니다.
-            s.GOFind("Background").CreateGO("Border")
-                .AddComp<Image>()
+            s.FindGameObject("Background").CreateGameObject("Border")
+                .AddComponent<Image>()
                 .SetProp("m_Color", new Color(0.3f, 0.3f, 0.3f));
         }
 
@@ -138,7 +138,7 @@ namespace Sindy.Editor.Examples
             if (s == null) return;
 
             // ── GOFind: 계층 전체에서 "Label" 재귀 탐색 후 TMP 편집 ───────────
-            s.GOFind("Label").GetComp<TextMeshProUGUI>(tmp =>
+            s.FindGameObject("Label").GetComponent<TextMeshProUGUI>(tmp =>
             {
                 tmp.SetProp("m_text", "Default Label");
                 tmp.SetProp("m_fontSize", 18f);
@@ -147,14 +147,14 @@ namespace Sindy.Editor.Examples
 
             // ── CreateGO: 프리팹 루트에 "Overlay" 신규 생성 ──────────────────────────────
             // Root()로 프리팹 루트를 _currentGO로 설정한 뒤 CreateGO()로 자식을 생성합니다.
-            s.Root().CreateGO("Overlay")
-                .AddComp<Image>()
+            s.Root().CreateGameObject("Overlay")
+                .AddComponent<Image>()
                 .SetProp("m_Color", new Color(1f, 1f, 1f, 0.05f));
 
             // ── Child(): Root 기준 직계 자식 탐색 ────────────────────────────
             // GOFind와 달리 직계 자식만 탐색합니다 (재귀 없음).
             // FP 스타일: Root()·Child()는 각각 새 세션을 반환 — s 자체는 변경되지 않습니다.
-            s.Root().Child("Label").GetComp<TextMeshProUGUI>(tmp => { });
+            s.Root().Child("Label").GetComponent<TextMeshProUGUI>(tmp => { });
 
             // 다른 자식 세션이 필요하면 반환값을 변수로 받습니다.
             var overlay = s.Root().Child("Overlay"); // Overlay가 있으면 해당 GO 세션, 없으면 null GO 세션
@@ -179,7 +179,7 @@ namespace Sindy.Editor.Examples
                 if (s == null) continue;
 
                 // GOFind: 계층 어디에 있든 "Fill" GO를 찾아 색상 변경
-                s.GOFind("Fill").GetComp<Image>(img =>
+                s.FindGameObject("Fill").GetComponent<Image>(img =>
                     img.SetProp("m_Color", new Color(0.2f, 0.8f, 0.4f)));  // 초록색으로 통일
             }
 

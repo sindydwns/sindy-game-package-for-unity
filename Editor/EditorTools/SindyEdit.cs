@@ -289,11 +289,11 @@ namespace Sindy.Editor.EditorTools
     /// <summary>
     /// 씬·프리팹·ScriptableObject를 동일한 API로 편집하는 컨텍스트 세션.
     /// <para>
-    /// <b>FP 설계:</b> <see cref="Root"/>, <see cref="GOFind"/>, <see cref="Child(int)"/>,
+    /// <b>FP 설계:</b> <see cref="Root"/>, <see cref="FindGameObject"/>, <see cref="Child(int)"/>,
     /// <see cref="GO"/> 등 탐색 메서드는 <c>this</c>를 변경하지 않고 새로운
     /// <see cref="AssetEditSession"/> 인스턴스를 반환합니다.
     /// 세터(<see cref="SOFloat"/> 등)는 <c>this</c>를 반환합니다.
-    /// 컴포넌트 접근 메서드(<see cref="GetComp{T}"/> 등)는 <see cref="ComponentScope"/>를 반환합니다.
+    /// 컴포넌트 접근 메서드(<see cref="GetComponent{T}"/> 등)는 <see cref="ComponentScope"/>를 반환합니다.
     /// </para>
     /// <para>
     /// <b>소유권:</b> 팩토리(<see cref="SindyEdit.Open"/> 등)가 반환한 루트 세션만
@@ -493,34 +493,32 @@ namespace Sindy.Editor.EditorTools
         }
 
         /// <summary>
-        /// 씬의 첫 번째 루트 GO 또는 프리팹 루트 GO를 가리키는 새 세션을 반환합니다.
+        /// 씬 루트 레벨 또는 프리팹 루트 GO를 가리키는 새 세션을 반환합니다.
+        /// <para>
+        /// 씬 모드: <c>_currentGO = null</c>인 세션을 반환합니다. 이 세션에서 <see cref="CreateGameObject"/>를
+        /// 호출하면 씬 루트 레벨 오브젝트가 생성되고, <see cref="Child(string)"/>/<see cref="Child(int)"/>는
+        /// 씬 루트 GO를 직접 탐색합니다.<br/>
+        /// 프리팹 모드: 프리팹 루트 GO를 가리키는 세션을 반환합니다.
+        /// </para>
         /// </summary>
-        /// <returns>루트 GO를 가리키는 새 세션. 실패 시 null GO 세션.</returns>
+        /// <returns>루트 레벨 세션. 실패 시 null GO 세션.</returns>
         public AssetEditSession Root()
         {
             if (IsInvalid) return this;
 
-            GameObject go = null;
             if (_ctx.Mode == SessionContext.AssetMode.Scene)
+                return new AssetEditSession(_ctx, null);
+
+            if (_ctx.Mode == SessionContext.AssetMode.Prefab)
             {
-                var roots = _ctx.SceneEditor.Scene.GetRootGameObjects();
-                if (roots.Length == 0)
-                    Debug.LogWarning($"[SindyEdit] 씬에 루트 GO가 없습니다. ({_ctx.AssetPath})");
-                else
-                    go = roots[0];
-            }
-            else if (_ctx.Mode == SessionContext.AssetMode.Prefab)
-            {
-                go = _ctx.PrefabEditor?.RootObject;
+                var go = _ctx.PrefabEditor?.RootObject;
                 if (go == null)
                     Debug.LogWarning($"[SindyEdit] 프리팹 루트 GO가 null입니다. ({_ctx.AssetPath})");
-            }
-            else
-            {
-                Debug.LogWarning($"[SindyEdit] Root()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
+                return new AssetEditSession(_ctx, go);
             }
 
-            return new AssetEditSession(_ctx, go);
+            Debug.LogWarning($"[SindyEdit] Root()는 .asset 파일에서 사용할 수 없습니다. ({_ctx.AssetPath})");
+            return new AssetEditSession(_ctx, null);
         }
 
         /// <summary>
@@ -532,7 +530,7 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         /// <param name="name">탐색할 GO 이름 (정확히 일치)</param>
         /// <returns>찾은 GO를 가리키는 새 세션. 탐색 실패 시 null GO 세션.</returns>
-        public AssetEditSession GOFind(string name)
+        public AssetEditSession FindGameObject(string name)
         {
             if (IsInvalid) return this;
 
@@ -575,6 +573,17 @@ namespace Sindy.Editor.EditorTools
 
             if (_currentGO == null)
             {
+                if (_ctx.Mode == SessionContext.AssetMode.Scene)
+                {
+                    var roots = _ctx.SceneEditor.Scene.GetRootGameObjects();
+                    if (index < 0 || index >= roots.Length)
+                    {
+                        Debug.LogWarning(
+                            $"[SindyEdit] Child({index}): 씬 루트 GO 인덱스 범위 초과 (루트 수: {roots.Length}).");
+                        return new AssetEditSession(_ctx, null);
+                    }
+                    return new AssetEditSession(_ctx, roots[index]);
+                }
                 Debug.LogWarning($"[SindyEdit] Child({index}): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
                 return new AssetEditSession(_ctx, null);
             }
@@ -601,6 +610,18 @@ namespace Sindy.Editor.EditorTools
 
             if (_currentGO == null)
             {
+                if (_ctx.Mode == SessionContext.AssetMode.Scene)
+                {
+                    var roots = _ctx.SceneEditor.Scene.GetRootGameObjects();
+                    var match = System.Array.Find(roots, r => r.name == name);
+                    if (match == null)
+                    {
+                        Debug.LogWarning(
+                            $"[SindyEdit] Child('{name}'): 씬 루트 GO에서 '{name}'을 찾을 수 없습니다.");
+                        return new AssetEditSession(_ctx, null);
+                    }
+                    return new AssetEditSession(_ctx, match);
+                }
                 Debug.LogWarning($"[SindyEdit] Child('{name}'): GO가 선택되지 않았습니다. GO()를 먼저 호출하세요.");
                 return new AssetEditSession(_ctx, null);
             }
@@ -630,7 +651,7 @@ namespace Sindy.Editor.EditorTools
         /// </summary>
         /// <param name="name">생성할 GameObject 이름</param>
         /// <returns>새 GO를 가리키는 새 세션.</returns>
-        public AssetEditSession CreateGO(string name)
+        public AssetEditSession CreateGameObject(string name)
         {
             if (IsInvalid) return this;
 
@@ -651,8 +672,11 @@ namespace Sindy.Editor.EditorTools
             }
             else // Prefab
             {
-                var parent = _currentGO != null ? _currentGO.transform : _ctx.PrefabEditor.RootObject.transform;
-                newGO.transform.SetParent(parent, false);
+                if (_currentGO == null)
+                    throw new InvalidOperationException(
+                        $"[SindyEdit] CreateGO('{name}'): Prefab 모드에서 GO가 선택되지 않았습니다. " +
+                        "Root() 또는 GOFind()로 부모 GO를 먼저 선택하세요.");
+                newGO.transform.SetParent(_currentGO.transform, false);
             }
 
             _ctx.ChangesMade = true;
@@ -660,49 +684,13 @@ namespace Sindy.Editor.EditorTools
             return new AssetEditSession(_ctx, newGO);
         }
 
-        // ── 컴포넌트 접근 및 추가 ────────────────────────────────────────────
-
-        /// <summary>
-        /// 현재 GO에 지정한 타입 T의 컴포넌트가 있는지 확인합니다.
-        /// </summary>
-        /// <param name="index">동일 타입 컴포넌트 중 확인할 인덱스 (0부터 시작)</param>
-        public bool HasComp<T>(int index = 0) where T : Component
-        {
-            if (IsInvalid || _currentGO == null) return false;
-            var comps = _currentGO.GetComponents<T>();
-            return index >= 0 && index < comps.Length;
-        }
-
-        /// <summary>
-        /// 현재 GO에 컴포넌트가 없을 때만 추가하고 <see cref="ComponentScope"/>를 반환합니다.
-        /// Scene/Prefab 모드에서만 동작합니다.
-        /// </summary>
-        public ComponentScope AddComp<T>() where T : Component
-        {
-            if (IsInvalid) return null;
-
-            if (_ctx.Mode == SessionContext.AssetMode.Asset)
-                throw new InvalidOperationException(
-                    $"[SindyEdit] AddComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
-
-            if (_currentGO == null)
-                throw new InvalidOperationException(
-                    $"[SindyEdit] AddComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
-
-            var comp = Undo.AddComponent<T>(_currentGO);
-            _ctx.ChangesMade = true;
-            Debug.Log($"[SindyEdit] 컴포넌트 추가됨: {typeof(T).Name} on '{_currentGO.name}'");
-
-            var so = GetOrCreateSO(comp);
-            var captured = comp;
-            return new ComponentScope(so, () => { EditorUtility.SetDirty(captured); _ctx.ChangesMade = true; });
-        }
+        // ── GO 삭제 ──────────────────────────────────────────────────────────
 
         /// <summary>
         /// 현재 GO를 씬/프리팹에서 제거합니다.
         /// 부모 GO가 있으면 부모를 가리키는 새 세션을 반환하고, 없으면 null GO 세션을 반환합니다.
         /// </summary>
-        public AssetEditSession DeleteGO()
+        public AssetEditSession DeleteGameObject()
         {
             if (IsInvalid) return this;
 
@@ -724,11 +712,107 @@ namespace Sindy.Editor.EditorTools
             return new AssetEditSession(_ctx, parentGO);
         }
 
+        // ── 컴포넌트 조회 ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 현재 GO에 지정한 타입 T의 컴포넌트가 있는지 확인합니다.
+        /// </summary>
+        /// <param name="index">동일 타입 컴포넌트 중 확인할 인덱스 (0부터 시작)</param>
+        public bool HasComponent<T>(int index = 0) where T : Component
+        {
+            if (IsInvalid || _currentGO == null) return false;
+            var comps = _currentGO.GetComponents<T>();
+            return index >= 0 && index < comps.Length;
+        }
+
+        // ── 컴포넌트 접근 ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 현재 GO의 지정한 타입 T의 n번째 컴포넌트를 <see cref="ComponentScope"/>로 접근합니다.
+        /// Scene/Prefab 모드에서만 동작합니다.
+        /// </summary>
+        /// <param name="action">선택적 편집/읽기 콜백. 전달 시 즉시 실행됩니다.</param>
+        /// <param name="index">동일 타입 컴포넌트 중 접근할 인덱스 (0부터 시작)</param>
+        public ComponentScope GetComponent<T>(Action<ComponentScope> action = null, int index = 0)
+            where T : Component
+        {
+            if (IsInvalid) return null;
+
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+                throw new InvalidOperationException(
+                    $"[SindyEdit] GetComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+
+            var so = GetCompSO<T>(index, nameof(GetComponent));
+            if (so == null) return null;
+
+            var comp = _currentGO.GetComponents<T>()[index];
+            var captured = comp;
+            var scope = new ComponentScope(so, () => { EditorUtility.SetDirty(captured); _ctx.ChangesMade = true; });
+            action?.Invoke(scope);
+            return scope;
+        }
+
+        /// <summary>
+        /// 현재 GO에서 지정한 타입 T의 n번째 컴포넌트를 가져오거나, 없으면 추가합니다.
+        /// Scene/Prefab 모드에서만 동작합니다.
+        /// </summary>
+        /// <param name="action">선택적 편집/읽기 콜백. 전달 시 즉시 실행됩니다.</param>
+        /// <param name="index">동일 타입 컴포넌트 중 접근할 인덱스 (0부터 시작)</param>
+        public ComponentScope GetOrAddComponent<T>(Action<ComponentScope> action = null, int index = 0)
+            where T : Component
+        {
+            if (IsInvalid) return null;
+
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+                throw new InvalidOperationException(
+                    $"[SindyEdit] GetOrAddComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+
+            if (_currentGO == null)
+                throw new InvalidOperationException(
+                    $"[SindyEdit] GetOrAddComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
+
+            if (!HasComponent<T>(index))
+            {
+                Undo.AddComponent<T>(_currentGO);
+                _ctx.ChangesMade = true;
+                Debug.Log($"[SindyEdit] 컴포넌트 추가됨: {typeof(T).Name} on '{_currentGO.name}'");
+            }
+
+            return GetComponent<T>(action, index);
+        }
+
+        // ── 컴포넌트 추가/제거 ───────────────────────────────────────────────
+
+        /// <summary>
+        /// 현재 GO에 컴포넌트가 없을 때만 추가하고 <see cref="ComponentScope"/>를 반환합니다.
+        /// Scene/Prefab 모드에서만 동작합니다.
+        /// </summary>
+        public ComponentScope AddComponent<T>() where T : Component
+        {
+            if (IsInvalid) return null;
+
+            if (_ctx.Mode == SessionContext.AssetMode.Asset)
+                throw new InvalidOperationException(
+                    $"[SindyEdit] AddComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
+
+            if (_currentGO == null)
+                throw new InvalidOperationException(
+                    $"[SindyEdit] AddComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
+
+            var comp = Undo.AddComponent<T>(_currentGO);
+            _ctx.ChangesMade = true;
+            Debug.Log($"[SindyEdit] 컴포넌트 추가됨: {typeof(T).Name} on '{_currentGO.name}'");
+
+            var so = GetOrCreateSO(comp);
+            var captured = comp;
+            return new ComponentScope(so, () => { EditorUtility.SetDirty(captured); _ctx.ChangesMade = true; });
+        }
+
         /// <summary>
         /// 현재 GO에서 지정한 타입 T의 n번째 컴포넌트를 제거합니다.
         /// </summary>
         /// <param name="index">제거할 컴포넌트 인덱스 (0부터 시작)</param>
-        public AssetEditSession RemoveComp<T>(int index = 0) where T : Component
+        public AssetEditSession RemoveComponent<T>(int index = 0) where T : Component
         {
             if (IsInvalid) return this;
 
@@ -745,60 +829,6 @@ namespace Sindy.Editor.EditorTools
             GameObject.DestroyImmediate(comps[index]);
             _ctx.ChangesMade = true;
             return this;
-        }
-
-        /// <summary>
-        /// 현재 GO의 지정한 타입 T의 n번째 컴포넌트를 <see cref="ComponentScope"/>로 접근합니다.
-        /// Scene/Prefab 모드에서만 동작합니다.
-        /// </summary>
-        /// <param name="action">선택적 편집/읽기 콜백. 전달 시 즉시 실행됩니다.</param>
-        /// <param name="index">동일 타입 컴포넌트 중 접근할 인덱스 (0부터 시작)</param>
-        public ComponentScope GetComp<T>(Action<ComponentScope> action = null, int index = 0)
-            where T : Component
-        {
-            if (IsInvalid) return null;
-
-            if (_ctx.Mode == SessionContext.AssetMode.Asset)
-                throw new InvalidOperationException(
-                    $"[SindyEdit] GetComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
-
-            var so = GetCompSO<T>(index, nameof(GetComp));
-            if (so == null) return null;
-
-            var comp = _currentGO.GetComponents<T>()[index];
-            var captured = comp;
-            var scope = new ComponentScope(so, () => { EditorUtility.SetDirty(captured); _ctx.ChangesMade = true; });
-            action?.Invoke(scope);
-            return scope;
-        }
-
-        /// <summary>
-        /// 현재 GO에서 지정한 타입 T의 n번째 컴포넌트를 가져오거나, 없으면 추가합니다.
-        /// Scene/Prefab 모드에서만 동작합니다.
-        /// </summary>
-        /// <param name="action">선택적 편집/읽기 콜백. 전달 시 즉시 실행됩니다.</param>
-        /// <param name="index">동일 타입 컴포넌트 중 접근할 인덱스 (0부터 시작)</param>
-        public ComponentScope GetOrAddComp<T>(Action<ComponentScope> action = null, int index = 0)
-            where T : Component
-        {
-            if (IsInvalid) return null;
-
-            if (_ctx.Mode == SessionContext.AssetMode.Asset)
-                throw new InvalidOperationException(
-                    $"[SindyEdit] GetOrAddComp<{typeof(T).Name}>: Scene/Prefab 모드에서만 사용할 수 있습니다. ({_ctx.AssetPath})");
-
-            if (_currentGO == null)
-                throw new InvalidOperationException(
-                    $"[SindyEdit] GetOrAddComp<{typeof(T).Name}>: GO가 선택되지 않았습니다.");
-
-            if (!HasComp<T>(index))
-            {
-                Undo.AddComponent<T>(_currentGO);
-                _ctx.ChangesMade = true;
-                Debug.Log($"[SindyEdit] 컴포넌트 추가됨: {typeof(T).Name} on '{_currentGO.name}'");
-            }
-
-            return GetComp<T>(action, index);
         }
 
         // ── SO* 세터 ──────────────────────────────────────────────────────────
@@ -1219,8 +1249,8 @@ namespace Sindy.Editor.EditorTools
     // ────────────────────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// <see cref="AssetEditSession.GetComp{T}"/>, <see cref="AssetEditSession.GetOrAddComp{T}"/>,
-    /// <see cref="AssetEditSession.AddComp{T}"/> 에서 반환되는 컴포넌트 접근 컨텍스트.
+    /// <see cref="AssetEditSession.GetComponent{T}"/>, <see cref="AssetEditSession.GetOrAddComponent{T}"/>,
+    /// <see cref="AssetEditSession.AddComponent{T}"/> 에서 반환되는 컴포넌트 접근 컨텍스트.
     /// <para>
     /// 쓰기: <see cref="SetProp"/> / <see cref="SORef"/>
     /// 읽기: <see cref="GetProp{T}"/> / <see cref="GetFloat"/> / <see cref="GetString"/> 등
