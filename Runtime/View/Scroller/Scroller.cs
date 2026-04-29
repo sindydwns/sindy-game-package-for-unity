@@ -503,48 +503,131 @@ namespace Sindy.View.Scroller
             inst.SetModel(vm);
         }
 
+        // 셀 RectTransform은 컨테이너 가로 너비(W) 변동에 대해 Unity의 layout 시스템이
+        // 자동으로 셀 크기/위치를 재조정하도록 W-무관 anchor + offset 표현을 사용한다.
+        // 이로써 FR-GRID-03 (보강)의 "컬럼 수 동일 시 후속 작업 미수행" 정책을 어기지 않으면서도
+        // Stretch/Center 정렬에서 cellWidth/StartOffset이 W에 의존하는 문제(L223 우려)가 해소된다.
+        //
+        // 모든 셀: pivot = top-left, Y는 항상 top anchor (anchorMin.y = anchorMax.y = 1).
+        // X anchor는 정렬 모드에 따라:
+        //   - Stretch (기본 또는 cellMax 미초과): 분수 앵커 (col/N ~ (col+1)/N) → cellWidth = W에서 자동 도출
+        //   - Header/Footer: anchor (0, 1) ~ (1, 1), padding만 픽셀 offset
+        //   - Empty: 0.5 anchor (X 중앙)
+        //   - Left (cellMax 초과): 좌측 픽셀 앵커, cellWidth = cellMax 고정
+        //   - Center (cellMax 초과): 0.5 anchor + ±rowWidth/2 픽셀 offset
         private void PositionCell(CellKey k, SindyComponent inst)
         {
             ref var L = ref layouts[k.Section];
             var rt = inst.transform as RectTransform;
             if (rt == null) return;
 
-            // 모든 셀: top-left 앵커, top-left 피벗으로 통일.
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
 
             var opt = sections[k.Section].Option;
             var paddingLeft = opt.HorizontalPadding != null ? opt.HorizontalPadding.left : 0;
             var paddingRight = opt.HorizontalPadding != null ? opt.HorizontalPadding.right : 0;
-            var fullWidth = Mathf.Max(0f, lastContainerWidth - paddingLeft - paddingRight);
 
-            float x, y, w, h;
             switch (k.Slot)
             {
                 case CellKey.HeaderSlot:
-                    x = paddingLeft; y = L.HeaderTopY; w = fullWidth; h = L.HeaderHeight; break;
+                    SetStretchXFullWidth(rt, paddingLeft, paddingRight, L.HeaderTopY, L.HeaderHeight);
+                    break;
                 case CellKey.FooterSlot:
-                    x = paddingLeft; y = L.FooterTopY; w = fullWidth; h = L.FooterHeight; break;
+                    SetStretchXFullWidth(rt, paddingLeft, paddingRight, L.FooterTopY, L.FooterHeight);
+                    break;
                 case CellKey.EmptySlot:
-                    // FR-EMPTY-03. 가로/세로 중앙 배치.
-                    w = L.EmptyPrefabSize.x;
-                    h = L.EmptyPrefabSize.y;
-                    x = paddingLeft + (fullWidth - w) * 0.5f;
-                    y = L.ContentTopY + (L.ContentHeight - h) * 0.5f;
-                    break;
+                    {
+                        // FR-EMPTY-03. 가로/세로 중앙 배치, prefab 자체 크기.
+                        var emptyTopY = L.ContentTopY + (L.ContentHeight - L.EmptyPrefabSize.y) * 0.5f;
+                        SetCenterXFixedWidth(rt, L.EmptyPrefabSize.x, emptyTopY, L.EmptyPrefabSize.y);
+                        break;
+                    }
                 default:
-                    var col = k.Slot % L.Grid.Columns;
-                    var row = k.Slot / L.Grid.Columns;
-                    x = L.Grid.CellX(col);
-                    y = L.ContentTopY + row * (L.CellHeight + opt.VerticalGap);
-                    w = L.Grid.CellWidth;
-                    h = L.CellHeight;
-                    break;
+                    {
+                        var col = k.Slot % L.Grid.Columns;
+                        var row = k.Slot / L.Grid.Columns;
+                        var yTop = L.ContentTopY + row * (L.CellHeight + opt.VerticalGap);
+                        SetGridCellAnchors(rt, L.Grid, col, paddingLeft, paddingRight, yTop, L.CellHeight);
+                        break;
+                    }
             }
+        }
 
-            rt.sizeDelta = new Vector2(w, h);
-            rt.anchoredPosition = new Vector2(x, -y);
+        // Header/Footer: 부모(content) 가로폭 전체에 stretch, padding만 픽셀 offset.
+        // Unity가 부모 폭 변동 시 자식 폭을 자동 재조정한다.
+        private static void SetStretchXFullWidth(RectTransform rt, int padL, int padR, float yTop, float cellH)
+        {
+            rt.anchorMin = new Vector2(0f, 1f);
+            rt.anchorMax = new Vector2(1f, 1f);
+            rt.offsetMin = new Vector2(padL, -yTop - cellH);
+            rt.offsetMax = new Vector2(-padR, -yTop);
+        }
+
+        // Empty 콘텐츠: X 중앙(0.5 anchor) + 고정 폭 / Y는 콘텐츠 영역 중앙으로 사전 산출된 yTop 사용.
+        private static void SetCenterXFixedWidth(RectTransform rt, float width, float yTop, float cellH)
+        {
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            var halfW = width * 0.5f;
+            rt.offsetMin = new Vector2(-halfW, -yTop - cellH);
+            rt.offsetMax = new Vector2(halfW, -yTop);
+        }
+
+        // 그리드 셀의 anchor/offset을 effective alignment에 따라 W-무관 식으로 산출한다.
+        // 수식 도출:
+        //   Stretch (cellMax 미초과 또는 옵션 Stretch):
+        //     anchorX = (col/N, (col+1)/N)
+        //     cellLeft(col) = padL + col*(cellWidth + gap)
+        //     anchor band의 좌측 = col*W/N
+        //     offsetMinX = cellLeft - col*W/N
+        //                = padL + col*(cellWidth + gap - W/N)
+        //                = padL + col*((W - padL - padR + gap)/N - W/N)
+        //                = padL + col*(-padL - padR + gap)/N         (W가 소거됨)
+        //     동일 방식으로 offsetMaxX 도 W 무관 형태로 정리.
+        //   Left (cellMax 초과): anchorX = (0, 0), offset에 padL + col*(cellMax+gap), cellMax 고정.
+        //   Center (cellMax 초과): anchorX = (0.5, 0.5), offset에 ±rowWidth/2 + col*(cellMax+gap).
+        private static void SetGridCellAnchors(RectTransform rt, GridLayout grid, int col, int padL, int padR,
+            float yTop, float cellH)
+        {
+            switch (grid.EffectiveAlignment)
+            {
+                case GridHorizontalAlignment.Stretch:
+                    {
+                        var n = (float)grid.Columns;
+                        var aMinX = col / n;
+                        var aMaxX = (col + 1) / n;
+                        var pad = padL + padR;
+                        // W-무관 식 (위 수식 도출 결과)
+                        var offMinX = padL + col * (-pad + grid.Gap) / n;
+                        var offMaxX = padL + col * grid.Gap - (col + 1) * (pad + (grid.Columns - 1) * grid.Gap) / n;
+
+                        rt.anchorMin = new Vector2(aMinX, 1f);
+                        rt.anchorMax = new Vector2(aMaxX, 1f);
+                        rt.offsetMin = new Vector2(offMinX, -yTop - cellH);
+                        rt.offsetMax = new Vector2(offMaxX, -yTop);
+                        break;
+                    }
+                case GridHorizontalAlignment.Left:
+                    {
+                        var x = padL + col * (grid.CellWidth + grid.Gap);
+                        rt.anchorMin = new Vector2(0f, 1f);
+                        rt.anchorMax = new Vector2(0f, 1f);
+                        rt.offsetMin = new Vector2(x, -yTop - cellH);
+                        rt.offsetMax = new Vector2(x + grid.CellWidth, -yTop);
+                        break;
+                    }
+                case GridHorizontalAlignment.Center:
+                    {
+                        var rowWidth = grid.Columns * grid.CellWidth + (grid.Columns - 1) * grid.Gap;
+                        var leftOfRow = -rowWidth * 0.5f;
+                        var x = leftOfRow + col * (grid.CellWidth + grid.Gap);
+                        rt.anchorMin = new Vector2(0.5f, 1f);
+                        rt.anchorMax = new Vector2(0.5f, 1f);
+                        rt.offsetMin = new Vector2(x, -yTop - cellH);
+                        rt.offsetMax = new Vector2(x + grid.CellWidth, -yTop);
+                        break;
+                    }
+            }
         }
 
         private void ReleaseAllActive()

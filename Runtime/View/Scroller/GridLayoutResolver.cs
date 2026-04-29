@@ -11,13 +11,18 @@ namespace Sindy.View.Scroller
         public readonly float CellWidth;
         public readonly float StartOffset; // 컨텐츠 영역 안 row의 좌측 시작 X
         public readonly float Gap;
+        // 부록 A. alignment는 cellWidth > cellMax일 때만 의미가 있다 (FR-GRID-02).
+        // cellMax 미초과 시에는 옵션의 정렬 모드와 무관하게 Stretch로 동작한다고 보는 것이 자연스럽다.
+        // 이 필드는 그 의미를 명시화한 것으로, PositionCell이 anchor/offset 산출 시 분기 기준으로 사용한다.
+        public readonly GridHorizontalAlignment EffectiveAlignment;
 
-        public GridLayout(int columns, float cellWidth, float startOffset, float gap)
+        public GridLayout(int columns, float cellWidth, float startOffset, float gap, GridHorizontalAlignment effectiveAlignment)
         {
             Columns = columns;
             CellWidth = cellWidth;
             StartOffset = startOffset;
             Gap = gap;
+            EffectiveAlignment = effectiveAlignment;
         }
 
         public float CellX(int colIndex) => StartOffset + colIndex * (CellWidth + Gap);
@@ -67,10 +72,12 @@ namespace Sindy.View.Scroller
                 break;
             }
 
-            // 3) cellMax 초과 시 정렬 정책 적용
+            // 3) cellMax 초과 시 정렬 정책 적용. cellMax 미초과면 옵션과 무관하게 Stretch로 간주한다.
             var startOffset = (float)paddingLeft;
+            var effectiveAlignment = GridHorizontalAlignment.Stretch;
             if (cellWidth > opt.CellMaxWidth)
             {
+                effectiveAlignment = opt.HorizontalAlignment;
                 switch (opt.HorizontalAlignment)
                 {
                     case GridHorizontalAlignment.Stretch:
@@ -89,7 +96,7 @@ namespace Sindy.View.Scroller
                 }
             }
 
-            return new GridLayout(cols, cellWidth, startOffset, gap);
+            return new GridLayout(cols, cellWidth, startOffset, gap, effectiveAlignment);
         }
 
         public static int RowCount(int itemCount, int columns)

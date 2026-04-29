@@ -22,6 +22,8 @@ namespace Sindy.Test
             RowCount_IsCeilOfItemsOverColumns();
             ZeroItems_ProducesZeroRows();
             AlwaysAtLeastOneColumn();
+            EffectiveAlignment_IsStretchWhenWithinMax();
+            EffectiveAlignment_PreservesOptionWhenExceedsMax();
         }
 
         private static SectionOption MakeOption(
@@ -144,6 +146,36 @@ namespace Sindy.Test
             var opt = MakeOption(min: 1000, pref: 1000, max: 1000);
             var g = GridLayoutResolver.Resolve(50f, opt);
             Assert.AreEqual(1, g.Columns);
+        }
+
+        // 부록 A의 의미: alignment는 cellWidth > cellMax일 때만 의미가 있고,
+        // 미초과 시에는 옵션과 무관하게 Stretch로 동작한다 (PositionCell이 이를 분기 기준으로 사용).
+        private void EffectiveAlignment_IsStretchWhenWithinMax()
+        {
+            var opt = MakeOption(min: 80, pref: 100, max: 200, align: GridHorizontalAlignment.Center);
+            // cellWidth = 100 < max 200 → effective는 Stretch
+            var g = GridLayoutResolver.Resolve(600f, opt);
+            Assert.AreEqual(GridHorizontalAlignment.Stretch, g.EffectiveAlignment);
+
+            var opt2 = MakeOption(min: 80, pref: 100, max: 200, align: GridHorizontalAlignment.Left);
+            var g2 = GridLayoutResolver.Resolve(600f, opt2);
+            Assert.AreEqual(GridHorizontalAlignment.Stretch, g2.EffectiveAlignment);
+        }
+
+        // cellWidth > cellMax일 때만 옵션 alignment가 effective로 적용된다.
+        private void EffectiveAlignment_PreservesOptionWhenExceedsMax()
+        {
+            var optC = MakeOption(min: 80, pref: 100, max: 110, align: GridHorizontalAlignment.Center);
+            var gC = GridLayoutResolver.Resolve(480f, optC);
+            Assert.AreEqual(GridHorizontalAlignment.Center, gC.EffectiveAlignment);
+
+            var optL = MakeOption(min: 80, pref: 100, max: 110, align: GridHorizontalAlignment.Left);
+            var gL = GridLayoutResolver.Resolve(480f, optL);
+            Assert.AreEqual(GridHorizontalAlignment.Left, gL.EffectiveAlignment);
+
+            var optS = MakeOption(min: 80, pref: 100, max: 110, align: GridHorizontalAlignment.Stretch);
+            var gS = GridLayoutResolver.Resolve(480f, optS);
+            Assert.AreEqual(GridHorizontalAlignment.Stretch, gS.EffectiveAlignment);
         }
     }
 }
