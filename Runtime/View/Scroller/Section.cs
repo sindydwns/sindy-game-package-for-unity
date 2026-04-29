@@ -35,9 +35,31 @@ namespace Sindy.View.Scroller
         public ObservableList<TVM> Content { get; }
         public SectionOption Option { get; }
 
-        public TVM Header { get; set; }
-        public TVM Footer { get; set; }
-        public TVM EmptyContent { get; set; }
+        private TVM header;
+        private TVM footer;
+        private TVM emptyContent;
+        private bool isAttached;
+
+        /// <summary>
+        /// 섹션 헤더 VM. SetSections에 전달되기 전(아직 Scroller에 부착되지 않은 상태)에만 설정 가능.
+        /// 부착 이후 변경은 InvalidOperationException을 던진다 (FR-CELL-06: prefab은 SetSections
+        /// 시점에 검증·캐시되며 사후 재해상되지 않으므로 silent하게 무시되는 일관성 깨짐을 방지).
+        /// </summary>
+        public TVM Header
+        {
+            get => header;
+            set { ThrowIfAttached(nameof(Header)); header = value; }
+        }
+        public TVM Footer
+        {
+            get => footer;
+            set { ThrowIfAttached(nameof(Footer)); footer = value; }
+        }
+        public TVM EmptyContent
+        {
+            get => emptyContent;
+            set { ThrowIfAttached(nameof(EmptyContent)); emptyContent = value; }
+        }
 
         public event Action<ListChange<object>> OnContentChanged;
 
@@ -52,12 +74,29 @@ namespace Sindy.View.Scroller
         public object GetContentVMAt(int index) => Content[index];
         public int IndexOfContentVM(object vm) => vm is TVM typed ? Content.IndexOf(typed) : -1;
 
-        object ISection.Header => Header;
-        object ISection.Footer => Footer;
-        object ISection.EmptyContent => EmptyContent;
+        object ISection.Header => header;
+        object ISection.Footer => footer;
+        object ISection.EmptyContent => emptyContent;
 
-        public void AttachListener() => Content.OnChanged += OnContentChangedInternal;
-        public void DetachListener() => Content.OnChanged -= OnContentChangedInternal;
+        public void AttachListener()
+        {
+            Content.OnChanged += OnContentChangedInternal;
+            isAttached = true;
+        }
+        public void DetachListener()
+        {
+            Content.OnChanged -= OnContentChangedInternal;
+            isAttached = false;
+        }
+
+        private void ThrowIfAttached(string property)
+        {
+            if (isAttached)
+                throw new InvalidOperationException(
+                    $"Section.{property} cannot be modified after the section is attached to a Scroller " +
+                    $"via SetSections. Configure all section fields before calling SetSections, or call " +
+                    $"Scroller.SetSections again to rebuild.");
+        }
 
         private void OnContentChangedInternal(ListChange<TVM> e)
         {

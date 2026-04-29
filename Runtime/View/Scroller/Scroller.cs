@@ -168,6 +168,25 @@ namespace Sindy.View.Scroller
                 if (viewport == null) viewport = scrollRect.viewport;
                 if (content == null) content = scrollRect.content;
             }
+            ValidateWiring();
+        }
+
+        /// <summary>
+        /// 필수 UI 와이어링이 모두 설정되었는지 검증한다.
+        /// ScrollRect/Viewport/Content 중 하나라도 누락되어 있으면 명확한 예외를 던져
+        /// 추후 ScrollTo·LateUpdate 등에서 발생할 수 있는 NullReferenceException을 방지한다.
+        /// </summary>
+        private void ValidateWiring()
+        {
+            if (scrollRect == null || viewport == null || content == null)
+            {
+                throw new InvalidOperationException(
+                    $"Scroller on '{name}' is missing required wiring. " +
+                    $"Assign ScrollRect/Viewport/Content in the Inspector, or attach a ScrollRect to the same GameObject. " +
+                    $"(scrollRect={(scrollRect == null ? "null" : "OK")}, " +
+                    $"viewport={(viewport == null ? "null" : "OK")}, " +
+                    $"content={(content == null ? "null" : "OK")})");
+            }
         }
 
         protected virtual void OnEnable()
@@ -362,11 +381,12 @@ namespace Sindy.View.Scroller
             ref var L = ref layouts[sectionIndex];
             if (!L.IsVisible) return;
 
-            // 그리는 영역(헤더 시작 ~ 푸터 끝)만 viewport와 겹치는지 확인.
-            // 마진 영역은 빈 공간이라 셀을 그리지 않으므로 범위에 포함하지 않는다.
+            // OverlapsRange는 half-open 구간(`y + h > top && y < bottom`)을 사용한다.
+            // 같은 의미가 되도록 섹션·콘텐츠 early-out도 `<=` / `>=`로 통일한다.
+            // (경계에서만 닿는 섹션·콘텐츠는 invisible로 처리되어 불필요한 셀 인스턴스화를 막는다.)
             var sectionTop = L.HeaderTopY;
             var sectionBottom = L.FooterTopY + L.FooterHeight;
-            if (sectionBottom < top || sectionTop > bottom) return;
+            if (sectionBottom <= top || sectionTop >= bottom) return;
 
             if (L.ShowHeader && OverlapsRange(L.HeaderTopY, L.HeaderHeight, top, bottom))
                 needed.Add(new CellKey(sectionIndex, CellKey.HeaderSlot));
@@ -380,7 +400,7 @@ namespace Sindy.View.Scroller
             if (L.RowCount > 0)
             {
                 var contentBottom = L.ContentTopY + L.ContentHeight;
-                if (contentBottom < top || L.ContentTopY > bottom) return;
+                if (contentBottom <= top || L.ContentTopY >= bottom) return;
 
                 var rowStride = L.CellHeight + sections[sectionIndex].Option.VerticalGap;
                 var firstRow = Mathf.Max(0, Mathf.FloorToInt((top - L.ContentTopY) / Mathf.Max(0.0001f, rowStride)));
