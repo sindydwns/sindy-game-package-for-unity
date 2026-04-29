@@ -211,17 +211,17 @@ namespace Sindy.View.Scroller
         {
             if (viewport == null || content == null) return;
 
-            // FR-GRID-03 (보강) + 실용 보정.
-            // 명세는 "컬럼 수가 같으면 후속 작업 없음"이라고 기술하지만, 실제로는
-            // Stretch/Center 정렬에서 cellWidth와 StartOffset이 너비에 의존하므로
-            // 컬럼 수가 같더라도 너비가 변하면 셀 위치·크기를 갱신해야 정확한 표시가 된다.
-            // 따라서 가로 너비 변동이 감지되면 항상 레이아웃을 invalidate한다.
-            // 세로 크기 변경은 그리드 산출과 무관하므로 트리거하지 않는다 — 스크롤바 등장/사라짐에
-            // 따른 가로 너비 미세 변동만이 이 분기를 통과하며, RecomputeLayout은 O(섹션 수)로 가볍다.
+            // FR-GRID-03 (보강). 가드 경로:
+            //   1) 새 컨테이너 가로 너비로 그리드 컬럼 수를 재산출
+            //   2) 컬럼 수가 직전과 같으면 어떤 후속 작업도 수행하지 않는다
+            //   3) 컬럼 수가 다른 경우에만 레이아웃 재계산 + 활성 셀 RectTransform 갱신
+            // 가드 목적: 스크롤바 등장/사라짐에 따른 가로 너비 미세 변동에서도 매 프레임
+            // 재레이아웃이 발생하지 않도록 보호한다.
+            // 세로 크기 변경은 viewport 가시 영역만 영향을 미치고 그리드 산출과 무관하므로 트리거하지 않는다.
             var width = viewport.rect.width;
             if (!Mathf.Approximately(width, lastContainerWidth))
             {
-                InvalidateLayout();
+                if (WouldColumnCountChange(width)) InvalidateLayout();
                 lastContainerWidth = width;
             }
 
@@ -333,6 +333,20 @@ namespace Sindy.View.Scroller
 
             totalContentHeight = yCursor;
             content.sizeDelta = new Vector2(content.sizeDelta.x, totalContentHeight);
+        }
+
+        // FR-GRID-03 (보강) 1단계. 새 너비로 모든 섹션의 컬럼 수를 재산출하고, 하나라도 달라지면 true.
+        // 명세는 "컬럼 수가 같으면 어떤 후속 작업도 수행하지 않는다"고 정의하므로, false인 경우 호출자는
+        // 레이아웃을 invalidate하지 않는다.
+        private bool WouldColumnCountChange(float newWidth)
+        {
+            for (var i = 0; i < sections.Count; i++)
+            {
+                if (!layouts[i].IsVisible || sections[i].ContentCount == 0) continue;
+                var grid = GridLayoutResolver.Resolve(newWidth, sections[i].Option);
+                if (grid.Columns != layouts[i].Grid.Columns) return true;
+            }
+            return false;
         }
 
         private static float GetPrefabHeight(SindyComponent prefab)
