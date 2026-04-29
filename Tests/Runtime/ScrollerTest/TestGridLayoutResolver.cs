@@ -70,7 +70,7 @@ namespace Sindy.Test
             var opt = MakeOption(min: 80, pref: 100, max: 200);
             var g = GridLayoutResolver.Resolve(600f, opt);
             Assert.AreEqual(6, g.Columns);
-            Assert.AreEqual(100f, g.CellWidth, 0.01f);
+            Assert.AreApproximatelyEqual(100f, g.CellWidth, 0.01f);
         }
 
         // 가용너비가 cellMin보다 작아도 컬럼은 1 (FR-GRID-04). 셀은 가용너비에 맞춰 축소된다.
@@ -80,7 +80,7 @@ namespace Sindy.Test
             var g = GridLayoutResolver.Resolve(120f, opt);
             Assert.AreEqual(1, g.Columns);
             // cellMin보다 작더라도 컬럼 1 + 가용너비 그대로
-            Assert.AreEqual(120f, g.CellWidth, 0.01f);
+            Assert.AreApproximatelyEqual(120f, g.CellWidth, 0.01f);
         }
 
         // Stretch 정렬에서 cellWidth가 cellMax를 초과해도 그대로 사용한다 (FR-GRID-02).
@@ -90,7 +90,7 @@ namespace Sindy.Test
             // 가용너비 480, 선호 100 → 4 컬럼, cellWidth = 120 (max 110 초과)
             var g = GridLayoutResolver.Resolve(480f, opt);
             Assert.AreEqual(4, g.Columns);
-            Assert.AreEqual(120f, g.CellWidth, 0.01f); // Stretch는 max 무시
+            Assert.AreApproximatelyEqual(120f, g.CellWidth, 0.01f); // Stretch는 max 무시
         }
 
         // Left 정렬은 cellWidth를 cellMax로 고정하고 좌측 패딩에서 시작한다.
@@ -100,12 +100,12 @@ namespace Sindy.Test
                 align: GridHorizontalAlignment.Left);
             var g = GridLayoutResolver.Resolve(480f, opt);
             Assert.AreEqual(4, g.Columns);
-            Assert.AreEqual(110f, g.CellWidth, 0.01f);
-            Assert.AreEqual(0f, g.StartOffset, 0.01f);
+            Assert.AreApproximatelyEqual(110f, g.CellWidth, 0.01f);
+            Assert.AreApproximatelyEqual(0f, g.StartOffset, 0.01f);
             // 0번째 셀 x = 0
-            Assert.AreEqual(0f, g.CellX(0), 0.01f);
+            Assert.AreApproximatelyEqual(0f, g.CellX(0), 0.01f);
             // 1번째 셀 x = 110
-            Assert.AreEqual(110f, g.CellX(1), 0.01f);
+            Assert.AreApproximatelyEqual(110f, g.CellX(1), 0.01f);
         }
 
         // Center 정렬은 cellWidth를 cellMax로 고정하고 남은 공간을 좌우 균등 분배.
@@ -116,10 +116,10 @@ namespace Sindy.Test
             // 가용너비 480, 4 컬럼, cellMax 110 → 행 너비 440, slack 40 → 좌우 20씩
             var g = GridLayoutResolver.Resolve(480f, opt);
             Assert.AreEqual(4, g.Columns);
-            Assert.AreEqual(110f, g.CellWidth, 0.01f);
-            Assert.AreEqual(20f, g.StartOffset, 0.01f);
-            Assert.AreEqual(20f, g.CellX(0), 0.01f);
-            Assert.AreEqual(130f, g.CellX(1), 0.01f);
+            Assert.AreApproximatelyEqual(110f, g.CellWidth, 0.01f);
+            Assert.AreApproximatelyEqual(20f, g.StartOffset, 0.01f);
+            Assert.AreApproximatelyEqual(20f, g.CellX(0), 0.01f);
+            Assert.AreApproximatelyEqual(130f, g.CellX(1), 0.01f);
         }
 
         // 가로 간격이 있으면 셀 너비가 그만큼 줄어든다.
@@ -130,10 +130,10 @@ namespace Sindy.Test
             // cellWidth = (600 - 20*4) / 5 = 520/5 = 104
             var g = GridLayoutResolver.Resolve(600f, opt);
             Assert.AreEqual(5, g.Columns);
-            Assert.AreEqual(104f, g.CellWidth, 0.01f);
-            Assert.AreEqual(20f, g.Gap, 0.01f);
-            Assert.AreEqual(0f, g.CellX(0), 0.01f);
-            Assert.AreEqual(124f, g.CellX(1), 0.01f); // 104 + 20
+            Assert.AreApproximatelyEqual(104f, g.CellWidth, 0.01f);
+            Assert.AreApproximatelyEqual(20f, g.Gap, 0.01f);
+            Assert.AreApproximatelyEqual(0f, g.CellX(0), 0.01f);
+            Assert.AreApproximatelyEqual(124f, g.CellX(1), 0.01f); // 104 + 20
         }
 
         // 좌우 패딩은 가용너비에서 빠진다.
@@ -143,8 +143,8 @@ namespace Sindy.Test
             // 가용 = 600 - 50 - 50 = 500. 선호 100 → 5 컬럼, cellWidth = 100
             var g = GridLayoutResolver.Resolve(600f, opt);
             Assert.AreEqual(5, g.Columns);
-            Assert.AreEqual(100f, g.CellWidth, 0.01f);
-            Assert.AreEqual(50f, g.StartOffset, 0.01f);
+            Assert.AreApproximatelyEqual(100f, g.CellWidth, 0.01f);
+            Assert.AreApproximatelyEqual(50f, g.StartOffset, 0.01f);
         }
 
         private void RowCount_IsCeilOfItemsOverColumns()
