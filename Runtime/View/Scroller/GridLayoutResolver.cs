@@ -63,7 +63,8 @@ namespace Sindy.View.Scroller
                 cellWidth = (available - gap * (cols - 1)) / cols;
 
                 // FR-GRID-04. 최소 1개의 컬럼은 보장. cellMin보다 작더라도 1로 유지하며 가용너비에 맞춰 축소.
-                if (cellWidth < opt.CellMinWidth && cols > 1)
+                // safeMin(>=1f)을 사용하여 opt.CellMinWidth가 0 또는 음수일 때도 가드가 일관되게 적용되도록 한다.
+                if (cellWidth < safeMin && cols > 1)
                 {
                     cols--;
                     continue;

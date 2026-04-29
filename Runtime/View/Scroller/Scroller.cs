@@ -242,6 +242,14 @@ namespace Sindy.View.Scroller
 
         // 한 섹션의 모든 prefab을 해상하여 layout slot에 채운다.
         // 어느 하나라도 등록되지 않으면 registry.Resolve가 즉시 throw — FR-CELL-04, FR-CELL-06.
+        //
+        // 콘텐츠 prefab은 Section<TVM>의 선언 타입 typeof(TVM)을 사용하므로 ObservableList가
+        // 비어 있어도 검증 가능하고, 파생 인스턴스가 컬렉션에 들어와도 일관된 prefab을 사용한다.
+        //
+        // Header/Footer/EmptyContent는 Section의 콘텐츠 TVM과 다른 VM 타입이 자유롭게 할당되므로
+        // 선언 타입 정보가 없다(컴파일 타임에 object). 따라서 인스턴스의 런타임 타입(GetType())을
+        // 키로 사용한다. 사용자는 실제로 사용하는 leaf VM 타입에 대해 RegisterCellType(또는
+        // SectionOption.HeaderPrefab override)을 등록해야 한다 (FR-CELL-05).
         private void ResolveSectionPrefabs(ISection s, ref SectionLayout L)
         {
             var opt = s.Option;
@@ -537,9 +545,10 @@ namespace Sindy.View.Scroller
                     break;
                 case CellKey.EmptySlot:
                     {
-                        // FR-EMPTY-03. 가로/세로 중앙 배치, prefab 자체 크기.
+                        // FR-EMPTY-03. 가로/세로 중앙 배치, prefab 자체 크기. padding 비대칭이 있으면
+                        // padded area 안에서 중앙 정렬되도록 (padL - padR)/2 만큼 shift 한다.
                         var emptyTopY = L.ContentTopY + (L.ContentHeight - L.EmptyPrefabSize.y) * 0.5f;
-                        SetCenterXFixedWidth(rt, L.EmptyPrefabSize.x, emptyTopY, L.EmptyPrefabSize.y);
+                        SetCenterXFixedWidth(rt, L.EmptyPrefabSize.x, paddingLeft, paddingRight, emptyTopY, L.EmptyPrefabSize.y);
                         break;
                     }
                 default:
@@ -564,13 +573,15 @@ namespace Sindy.View.Scroller
         }
 
         // Empty 콘텐츠: X 중앙(0.5 anchor) + 고정 폭 / Y는 콘텐츠 영역 중앙으로 사전 산출된 yTop 사용.
-        private static void SetCenterXFixedWidth(RectTransform rt, float width, float yTop, float cellH)
+        // padded area의 중앙(부모 중앙으로부터 (padL - padR)/2 만큼 shift된 위치)에 정렬되도록 한다.
+        private static void SetCenterXFixedWidth(RectTransform rt, float width, int padL, int padR, float yTop, float cellH)
         {
             rt.anchorMin = new Vector2(0.5f, 1f);
             rt.anchorMax = new Vector2(0.5f, 1f);
             var halfW = width * 0.5f;
-            rt.offsetMin = new Vector2(-halfW, -yTop - cellH);
-            rt.offsetMax = new Vector2(halfW, -yTop);
+            var paddingShift = (padL - padR) * 0.5f;
+            rt.offsetMin = new Vector2(-halfW + paddingShift, -yTop - cellH);
+            rt.offsetMax = new Vector2(halfW + paddingShift, -yTop);
         }
 
         // 그리드 셀의 anchor/offset을 effective alignment에 따라 W-무관 식으로 산출한다.
@@ -618,8 +629,12 @@ namespace Sindy.View.Scroller
                     }
                 case GridHorizontalAlignment.Center:
                     {
+                        // padding 비대칭이 있을 때 row를 padded area 안에서 중앙 정렬하기 위해
+                        // 부모 중앙 anchor로부터 (padL - padR)/2 만큼 row 전체를 shift 한다.
+                        // (GridLayoutResolver.StartOffset = padL + slack/2 와 동치가 되도록.)
                         var rowWidth = grid.Columns * grid.CellWidth + (grid.Columns - 1) * grid.Gap;
-                        var leftOfRow = -rowWidth * 0.5f;
+                        var paddingShift = (padL - padR) * 0.5f;
+                        var leftOfRow = -rowWidth * 0.5f + paddingShift;
                         var x = leftOfRow + col * (grid.CellWidth + grid.Gap);
                         rt.anchorMin = new Vector2(0.5f, 1f);
                         rt.anchorMax = new Vector2(0.5f, 1f);

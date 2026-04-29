@@ -35,27 +35,29 @@ namespace Sindy.View.Scroller
         public ObservableList<TVM> Content { get; }
         public SectionOption Option { get; }
 
-        private TVM header;
-        private TVM footer;
-        private TVM emptyContent;
+        private object header;
+        private object footer;
+        private object emptyContent;
         private bool isAttached;
 
         /// <summary>
-        /// 섹션 헤더 VM. SetSections에 전달되기 전(아직 Scroller에 부착되지 않은 상태)에만 설정 가능.
+        /// 섹션 헤더 VM. spec 7.3 예시처럼 콘텐츠 TVM과 다른 VM 타입을 자유롭게 할당할 수 있도록
+        /// `object`로 선언한다 (예: `Section&lt;ItemVM&gt; { Header = new HeaderVM(...) }`).
+        /// SetSections에 전달되기 전(아직 Scroller에 부착되지 않은 상태)에만 설정 가능.
         /// 부착 이후 변경은 InvalidOperationException을 던진다 (FR-CELL-06: prefab은 SetSections
         /// 시점에 검증·캐시되며 사후 재해상되지 않으므로 silent하게 무시되는 일관성 깨짐을 방지).
         /// </summary>
-        public TVM Header
+        public object Header
         {
             get => header;
             set { ThrowIfAttached(nameof(Header)); header = value; }
         }
-        public TVM Footer
+        public object Footer
         {
             get => footer;
             set { ThrowIfAttached(nameof(Footer)); footer = value; }
         }
-        public TVM EmptyContent
+        public object EmptyContent
         {
             get => emptyContent;
             set { ThrowIfAttached(nameof(EmptyContent)); emptyContent = value; }

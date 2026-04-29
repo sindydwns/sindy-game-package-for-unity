@@ -24,6 +24,7 @@ namespace Sindy.Test
             AlwaysAtLeastOneColumn();
             EffectiveAlignment_IsStretchWhenWithinMax();
             EffectiveAlignment_PreservesOptionWhenExceedsMax();
+            InvalidConfig_DoesNotProduceTinyCells();
         }
 
         private static SectionOption MakeOption(
@@ -176,6 +177,25 @@ namespace Sindy.Test
             var optS = MakeOption(min: 80, pref: 100, max: 110, align: GridHorizontalAlignment.Stretch);
             var gS = GridLayoutResolver.Resolve(480f, optS);
             Assert.AreEqual(GridHorizontalAlignment.Stretch, gS.EffectiveAlignment);
+        }
+
+        // 디자이너가 SectionOption을 잘못 설정해 min/pref/gap이 0 또는 음수가 된 경우에도
+        // while 루프가 발산하거나 의미 없이 작은 셀이 양산되지 않아야 한다.
+        // safeMin(>=1f)이 while 루프 비교에도 일관되게 적용되어, cellWidth가 1f 이상으로 수렴한다.
+        private void InvalidConfig_DoesNotProduceTinyCells()
+        {
+            var opt = MakeOption(min: 0, pref: 0, max: 0);
+            var g = GridLayoutResolver.Resolve(600f, opt);
+
+            // safeMin = 1f로 가드되어 cellWidth가 1f 미만이 되지 않는다.
+            Assert.IsTrue(g.CellWidth >= 1f - 0.01f, $"cellWidth too small: {g.CellWidth}");
+            // cols가 폭주하지 않는다 (available / safeMin = 600).
+            Assert.IsTrue(g.Columns <= 600, $"cols too large: {g.Columns}");
+
+            var optNeg = MakeOption(min: -10, pref: -5, max: 0);
+            var gN = GridLayoutResolver.Resolve(600f, optNeg);
+            Assert.IsTrue(gN.CellWidth >= 1f - 0.01f);
+            Assert.IsTrue(gN.Columns <= 600);
         }
     }
 }
