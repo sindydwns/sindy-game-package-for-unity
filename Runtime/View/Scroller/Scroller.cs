@@ -68,6 +68,7 @@ namespace Sindy.View.Scroller
         {
             if (pool == null)
             {
+                EnsureWiring();
                 if (poolRoot == null) poolRoot = CreateChildRect("__Pool", false);
                 pool = new ViewComponentPool(poolRoot, content);
             }
@@ -210,23 +211,24 @@ namespace Sindy.View.Scroller
         {
             if (viewport == null || content == null) return;
 
-            // FR-GRID-03 (보강). 가드 경로:
-            //   1) 컨테이너 가로 너비가 변했을 때만 컬럼 수를 재산출
-            //   2) 새 컬럼 수와 기존 컬럼 수를 비교
-            //   3) 다른 경우에만 레이아웃 재계산 / 활성 셀의 RectTransform 갱신
-            // 세로 크기 변경은 viewport만 영향을 미치고 그리드 산출에는 영향이 없으므로
-            // 의도적으로 가로 너비 변동에만 트리거를 걸어 스크롤바 등장/사라짐에 따른
-            // 픽셀 단위 미세 변동에서도 매 프레임 재레이아웃이 발생하지 않도록 한다.
+            // FR-GRID-03 (보강) + 실용 보정.
+            // 명세는 "컬럼 수가 같으면 후속 작업 없음"이라고 기술하지만, 실제로는
+            // Stretch/Center 정렬에서 cellWidth와 StartOffset이 너비에 의존하므로
+            // 컬럼 수가 같더라도 너비가 변하면 셀 위치·크기를 갱신해야 정확한 표시가 된다.
+            // 따라서 가로 너비 변동이 감지되면 항상 레이아웃을 invalidate한다.
+            // 세로 크기 변경은 그리드 산출과 무관하므로 트리거하지 않는다 — 스크롤바 등장/사라짐에
+            // 따른 가로 너비 미세 변동만이 이 분기를 통과하며, RecomputeLayout은 O(섹션 수)로 가볍다.
             var width = viewport.rect.width;
             if (!Mathf.Approximately(width, lastContainerWidth))
             {
-                if (WouldColumnCountChange(width)) InvalidateLayout();
+                InvalidateLayout();
                 lastContainerWidth = width;
             }
 
             if (layoutDirty)
             {
                 RecomputeLayout(width);
+                RepositionAllActiveCells();
                 layoutDirty = false;
             }
 
@@ -333,17 +335,6 @@ namespace Sindy.View.Scroller
             content.sizeDelta = new Vector2(content.sizeDelta.x, totalContentHeight);
         }
 
-        private bool WouldColumnCountChange(float newWidth)
-        {
-            for (var i = 0; i < sections.Count; i++)
-            {
-                if (!layouts[i].IsVisible || sections[i].ContentCount == 0) continue;
-                var grid = GridLayoutResolver.Resolve(newWidth, sections[i].Option);
-                if (grid.Columns != layouts[i].Grid.Columns) return true;
-            }
-            return false;
-        }
-
         private static float GetPrefabHeight(SindyComponent prefab)
         {
             if (prefab == null) return 0f;
@@ -402,9 +393,11 @@ namespace Sindy.View.Scroller
                 var contentBottom = L.ContentTopY + L.ContentHeight;
                 if (contentBottom <= top || L.ContentTopY >= bottom) return;
 
-                var rowStride = L.CellHeight + sections[sectionIndex].Option.VerticalGap;
-                var firstRow = Mathf.Max(0, Mathf.FloorToInt((top - L.ContentTopY) / Mathf.Max(0.0001f, rowStride)));
-                var lastRow = Mathf.Min(L.RowCount - 1, Mathf.FloorToInt((bottom - L.ContentTopY) / Mathf.Max(0.0001f, rowStride)));
+                var rowStride = Mathf.Max(0.0001f, L.CellHeight + sections[sectionIndex].Option.VerticalGap);
+                // half-open 의미를 row 단위에서도 유지하기 위해 lastRow는 ceil-minus-one로 계산한다.
+                // 예: bottom == ContentTopY + 1*stride 인 경계에서 row 1은 y == bottom이라 그릴 수 없으므로 lastRow=0이 되어야 한다.
+                var firstRow = Mathf.Max(0, Mathf.FloorToInt((top - L.ContentTopY) / rowStride));
+                var lastRow = Mathf.Min(L.RowCount - 1, Mathf.CeilToInt((bottom - L.ContentTopY) / rowStride) - 1);
 
                 var count = sections[sectionIndex].ContentCount;
                 for (var r = firstRow; r <= lastRow; r++)
@@ -444,13 +437,12 @@ namespace Sindy.View.Scroller
 
         private void AcquireMissing()
         {
+            // 이미 활성인 셀은 콘텐츠 좌표가 바뀌지 않으므로 매 프레임 PositionCell을 호출하지 않는다.
+            // (스크롤은 Content RectTransform 자체가 움직이는 것이므로 자식 셀 좌표는 그대로.)
+            // 레이아웃이 갱신될 때만 RepositionAllActiveCells가 일괄 갱신한다.
             foreach (var key in needed)
             {
-                if (active.ContainsKey(key))
-                {
-                    PositionCell(key, active[key].Instance);
-                    continue;
-                }
+                if (active.ContainsKey(key)) continue;
 
                 var prefab = ResolvePrefabFor(key);
                 if (prefab == null) continue;
@@ -458,6 +450,16 @@ namespace Sindy.View.Scroller
                 active[key] = new ActiveCell { Instance = inst, Prefab = prefab };
                 BindCell(key, inst);
                 PositionCell(key, inst);
+            }
+        }
+
+        // 레이아웃 재계산 직후 호출되어 모든 활성 셀의 RectTransform을 한 번 갱신한다.
+        // (콘텐츠 너비/cellWidth/StartOffset 변동에 대응 — Stretch/Center 정렬에서 특히 필요)
+        private void RepositionAllActiveCells()
+        {
+            foreach (var kv in active)
+            {
+                PositionCell(kv.Key, kv.Value.Instance);
             }
         }
 
@@ -663,17 +665,33 @@ namespace Sindy.View.Scroller
 
         private void ForceLayoutNow()
         {
-            if (viewport == null || content == null) return;
+            EnsureWiring();
             var width = viewport.rect.width;
             if (lastContainerWidth < 0f) lastContainerWidth = width;
-            if (layoutDirty || sectionsLayoutsLengthMismatch())
+            if (layoutDirty || SectionsLayoutsLengthMismatch())
             {
                 RecomputeLayout(width);
+                RepositionAllActiveCells();
                 layoutDirty = false;
             }
         }
 
-        private bool sectionsLayoutsLengthMismatch() => layouts.Length != sections.Count;
+        private bool SectionsLayoutsLengthMismatch() => layouts.Length != sections.Count;
+
+        // public API 진입점에서 호출되어 와이어링이 준비되었는지 보장한다.
+        // Awake가 아직 실행되지 않은 상태에서 ScrollTo* / PrewarmPool이 호출되면
+        // viewport/content가 null이라 NullReferenceException으로 발현되었으나,
+        // 본 헬퍼가 자동 와이어링 + ValidateWiring으로 명확한 InvalidOperationException으로 전환한다.
+        private void EnsureWiring()
+        {
+            if (scrollRect == null) scrollRect = GetComponent<ScrollRect>();
+            if (scrollRect != null)
+            {
+                if (viewport == null) viewport = scrollRect.viewport;
+                if (content == null) content = scrollRect.content;
+            }
+            ValidateWiring();
+        }
 
         private (float y, float h) GetTargetRange(int sectionIndex, int itemIndex)
         {
@@ -710,12 +728,15 @@ namespace Sindy.View.Scroller
 
         private void ScrollToY(float targetScrollY, bool? animated, float? duration, EaseFunction ease)
         {
+            EnsureWiring();
             var maxY = Mathf.Max(0f, totalContentHeight - ViewportHeight);
             targetScrollY = Mathf.Clamp(targetScrollY, 0f, maxY);
 
             var doAnim = animated ?? defaultAnimated;
             if (!doAnim || !isActiveAndEnabled)
             {
+                // 진행 중인 애니메이션이 스냅 위치를 덮어쓰지 않도록 즉시 중지한다.
+                StopScrollAnimation();
                 content.anchoredPosition = new Vector2(content.anchoredPosition.x, targetScrollY);
                 return;
             }
