@@ -34,13 +34,24 @@ namespace Sindy.View.Scroller
             var paddingRight = opt.HorizontalPadding != null ? opt.HorizontalPadding.right : 0;
 
             var available = Mathf.Max(0f, containerWidth - paddingLeft - paddingRight);
-            var gap = opt.HorizontalGap;
+            var gap = Mathf.Max(0f, opt.HorizontalGap);
+
+            // 잘못된 SectionOption 입력에 대한 방어:
+            //   CellPreferredWidth/CellMinWidth가 0 또는 음수면 분모가 0에 가까워져 cols가 폭주하고,
+            //   이어지는 while 루프가 cols를 1씩 감소시키며 수백만 회 반복하여 stall이 발생할 수 있다.
+            // 따라서 1f 이상의 값으로 가드하여 cols 초기값과 cellMin 기반 상한을 모두 sane한 범위에서 산출한다.
+            var safePref = Mathf.Max(1f, opt.CellPreferredWidth);
+            var safeMin = Mathf.Max(1f, opt.CellMinWidth);
 
             // 1) 선호 기준 컬럼 수 추정
-            int cols = Mathf.FloorToInt((available + gap) / Mathf.Max(0.0001f, opt.CellPreferredWidth + gap));
-            if (cols < 1) cols = 1;
+            int cols = Mathf.FloorToInt((available + gap) / (safePref + gap));
 
-            // 2) cellWidth 계산 + 검증/조정 루프
+            // 1.5) cellMin이 허용하는 최대 컬럼 수로 상한을 두어 while 루프의 반복 횟수를 유한하게 보장
+            int maxColsByMin = Mathf.FloorToInt((available + gap) / (safeMin + gap));
+            if (maxColsByMin < 1) maxColsByMin = 1;
+            cols = Mathf.Clamp(cols, 1, maxColsByMin);
+
+            // 2) cellWidth 계산 + 검증/조정 루프 (이제 cols가 최대 maxColsByMin이라 수렴 보장)
             float cellWidth;
             while (true)
             {

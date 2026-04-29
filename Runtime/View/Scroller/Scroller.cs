@@ -190,14 +190,10 @@ namespace Sindy.View.Scroller
             }
         }
 
-        protected virtual void OnEnable()
-        {
-            if (scrollRect != null) scrollRect.onValueChanged.AddListener(OnScrollChanged);
-        }
+        protected virtual void OnEnable() { }
 
         protected virtual void OnDisable()
         {
-            if (scrollRect != null) scrollRect.onValueChanged.RemoveListener(OnScrollChanged);
             StopScrollAnimation();
         }
 
@@ -235,7 +231,12 @@ namespace Sindy.View.Scroller
             UpdateVisibleCells();
         }
 
-        private void OnScrollChanged(Vector2 _) => UpdateVisibleCells();
+        // 가상화 패스는 LateUpdate에서 매 프레임 1회만 수행한다.
+        // ScrollRect.onValueChanged 리스너를 별도로 두지 않는 이유:
+        //   - 스크롤 중에는 LateUpdate가 매 프레임 호출되므로 가시 셀 갱신은 자연스럽게 추적된다
+        //   - 리스너를 두면 onValueChanged → LateUpdate로 같은 프레임에 두 번 호출되어 가상화 패스가 중복 실행됨
+        // 스크롤이 멈췄을 때도 LateUpdate가 동작하므로 한 번 더 idempotent하게 호출되지만,
+        // 이는 prefab 풀에서 Acquire/Release가 모두 needed 셋 차이로 0이 되어 즉시 종결된다.
 
         // ───────── Prefab resolution (FR-CELL-03 / 05 / 06) ─────────
 
