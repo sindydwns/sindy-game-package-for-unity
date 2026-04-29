@@ -51,6 +51,10 @@ namespace Sindy.View.Scroller
         public GridLayout Grid;
         public int RowCount;
         public float CellHeight;
+        // SectionOption.VerticalGap의 normalize된(>=0) 캐시 값. RecomputeLayout이 매 호출마다 갱신한다.
+        // ContentHeight·PositionCell·CollectNeeded·GetTargetRange가 동일한 값을 사용해야 가상화 범위와
+        // 실제 layout 좌표가 일치한다 (음수 입력 시 직접 opt.VerticalGap 사용 시 불일치 발생).
+        public float SafeVerticalGap;
 
         public SindyComponent ContentPrefab;
         public SindyComponent HeaderPrefab;

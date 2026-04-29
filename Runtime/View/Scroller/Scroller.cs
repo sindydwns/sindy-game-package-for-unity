@@ -330,7 +330,11 @@ namespace Sindy.View.Scroller
                     L.Grid = GridLayoutResolver.Resolve(containerWidth, opt);
                     L.CellHeight = GetPrefabHeight(L.ContentPrefab);
                     L.RowCount = GridLayoutResolver.RowCount(contentCount, L.Grid.Columns);
-                    L.ContentHeight = L.RowCount * L.CellHeight + Mathf.Max(0, L.RowCount - 1) * opt.VerticalGap;
+                    // VerticalGap은 음수가 들어올 수 있으므로 0으로 normalize하여 캐시한다.
+                    // ContentHeight·PositionCell·CollectNeeded·GetTargetRange가 모두 이 값을 공유해야
+                    // 가상화 범위와 실제 셀 좌표가 일치한다 (HorizontalGap의 GridLayout.Gap과 동일 정책).
+                    L.SafeVerticalGap = Mathf.Max(0f, opt.VerticalGap);
+                    L.ContentHeight = L.RowCount * L.CellHeight + Mathf.Max(0, L.RowCount - 1) * L.SafeVerticalGap;
                 }
 
                 // TopY는 "TopMargin 적용 전" 섹션 블록 시작점이다.
@@ -416,7 +420,8 @@ namespace Sindy.View.Scroller
                 var contentBottom = L.ContentTopY + L.ContentHeight;
                 if (contentBottom <= top || L.ContentTopY >= bottom) return;
 
-                var rowStride = Mathf.Max(0.0001f, L.CellHeight + sections[sectionIndex].Option.VerticalGap);
+                // CellHeight + SafeVerticalGap이 0인 극단적 경우(0높이 셀 + 0 gap)에 대비해 0.0001f로 클램프.
+                var rowStride = Mathf.Max(0.0001f, L.CellHeight + L.SafeVerticalGap);
                 // half-open 의미를 row 단위에서도 유지하기 위해 lastRow는 ceil-minus-one로 계산한다.
                 // 예: bottom == ContentTopY + 1*stride 인 경계에서 row 1은 y == bottom이라 그릴 수 없으므로 lastRow=0이 되어야 한다.
                 var firstRow = Mathf.Max(0, Mathf.FloorToInt((top - L.ContentTopY) / rowStride));
@@ -555,7 +560,7 @@ namespace Sindy.View.Scroller
                     {
                         var col = k.Slot % L.Grid.Columns;
                         var row = k.Slot / L.Grid.Columns;
-                        var yTop = L.ContentTopY + row * (L.CellHeight + opt.VerticalGap);
+                        var yTop = L.ContentTopY + row * (L.CellHeight + L.SafeVerticalGap);
                         SetGridCellAnchors(rt, L.Grid, col, paddingLeft, paddingRight, yTop, L.CellHeight);
                         break;
                     }
@@ -821,7 +826,7 @@ namespace Sindy.View.Scroller
                 throw new ArgumentOutOfRangeException(nameof(itemIndex));
 
             var row = itemIndex / Mathf.Max(1, L.Grid.Columns);
-            var y = L.ContentTopY + row * (L.CellHeight + s.Option.VerticalGap);
+            var y = L.ContentTopY + row * (L.CellHeight + L.SafeVerticalGap);
             return (y, L.CellHeight);
         }
 
