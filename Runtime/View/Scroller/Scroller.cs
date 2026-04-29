@@ -44,6 +44,9 @@ namespace Sindy.View.Scroller
         public static void RegisterGlobalCellType<TVM>(SindyComponent prefab) where TVM : class
             => CellTypeRegistry.RegisterGlobal(typeof(TVM), prefab);
 
+        // FR-CELL-07. 섹션 구성 이후의 등록 변경은 사후 재검증되지 않는다.
+        // 사후 변경으로 인한 해상도 실패는 정의되지 않은 동작이므로,
+        // 모든 등록은 SetSections 호출 전에 마칠 것을 권장한다.
         public void RegisterCellType<TVM>(SindyComponent prefab) where TVM : class
             => registry.Register(typeof(TVM), prefab);
 
@@ -85,23 +88,41 @@ namespace Sindy.View.Scroller
 
         /// <summary>
         /// FR-SEC-05. 섹션 컬렉션을 한 번에 교체한다. 단위 추가/제거 API는 제공하지 않는다.
+        /// FR-CELL-06. 모든 prefab 해상도를 mutation 이전에 검증하므로, 등록 누락은
+        /// 본 메서드 안에서 즉시 throw되며 (첫 스크롤이나 첫 빈 콘텐츠 표시까지 지연되지 않음),
+        /// 검증 실패 시 스크롤러의 기존 상태는 변경되지 않는다.
         /// </summary>
         public void SetSections(IEnumerable<ISection> newSections)
         {
+            var staged = new List<ISection>();
+            if (newSections != null)
+            {
+                foreach (var s in newSections)
+                    if (s != null) staged.Add(s);
+            }
+
+            // FR-CELL-06. 섹션 구성 시점에 모든 prefab(콘텐츠/헤더/푸터/빈 콘텐츠)을 즉시 검증.
+            // 콘텐츠 ObservableList가 비어 있어도 Section<TVM>의 제네릭 매개변수에서
+            // 콘텐츠 VM 타입을 알 수 있으므로 검증은 항상 수행된다.
+            // 어느 하나라도 해상되지 않으면 registry.Resolve가 InvalidOperationException을 던지며,
+            // 그 시점에서 sections·listeners·active 셀은 아직 손대지 않았다 → atomic 동작.
+            var stagedLayouts = staged.Count == 0
+                ? Array.Empty<SectionLayout>()
+                : new SectionLayout[staged.Count];
+            for (var i = 0; i < staged.Count; i++)
+            {
+                ResolveSectionPrefabs(staged[i], ref stagedLayouts[i]);
+            }
+
+            // 검증 성공 — 이제부터 mutation
             DetachListeners();
             ReleaseAllActive();
 
             sections.Clear();
-            if (newSections != null)
-            {
-                foreach (var s in newSections)
-                    if (s != null) sections.Add(s);
-            }
-
-            layouts = sections.Count == 0 ? Array.Empty<SectionLayout>() : new SectionLayout[sections.Count];
+            sections.AddRange(staged);
+            layouts = stagedLayouts;
 
             AttachListeners();
-            ResolveAllPrefabs();
             InvalidateLayout();
         }
 
@@ -163,8 +184,14 @@ namespace Sindy.View.Scroller
         {
             if (viewport == null || content == null) return;
 
+            // FR-GRID-03 (보강). 가드 경로:
+            //   1) 컨테이너 가로 너비가 변했을 때만 컬럼 수를 재산출
+            //   2) 새 컬럼 수와 기존 컬럼 수를 비교
+            //   3) 다른 경우에만 레이아웃 재계산 / 활성 셀의 RectTransform 갱신
+            // 세로 크기 변경은 viewport만 영향을 미치고 그리드 산출에는 영향이 없으므로
+            // 의도적으로 가로 너비 변동에만 트리거를 걸어 스크롤바 등장/사라짐에 따른
+            // 픽셀 단위 미세 변동에서도 매 프레임 재레이아웃이 발생하지 않도록 한다.
             var width = viewport.rect.width;
-            // FR-GRID-03. 컨테이너 너비가 변경되어 컬럼 수가 달라질 때만 레이아웃을 재계산.
             if (!Mathf.Approximately(width, lastContainerWidth))
             {
                 if (WouldColumnCountChange(width)) InvalidateLayout();
@@ -182,22 +209,17 @@ namespace Sindy.View.Scroller
 
         private void OnScrollChanged(Vector2 _) => UpdateVisibleCells();
 
-        // ───────── Prefab resolution (FR-CELL-03 / 05) ─────────
+        // ───────── Prefab resolution (FR-CELL-03 / 05 / 06) ─────────
 
-        private void ResolveAllPrefabs()
+        // 한 섹션의 모든 prefab을 해상하여 layout slot에 채운다.
+        // 어느 하나라도 등록되지 않으면 registry.Resolve가 즉시 throw — FR-CELL-04, FR-CELL-06.
+        private void ResolveSectionPrefabs(ISection s, ref SectionLayout L)
         {
-            // 모든 섹션의 prefab을 미리 해상도 → 등록 누락은 첫 표시 전에 발견된다 (FR-CELL-04).
-            for (var i = 0; i < sections.Count; i++)
-            {
-                ref var L = ref layouts[i];
-                var s = sections[i];
-                var opt = s.Option;
-
-                L.ContentPrefab = registry.Resolve(s.ContentVMType, opt.ContentPrefab);
-                L.HeaderPrefab = s.Header != null ? registry.Resolve(s.Header.GetType(), opt.HeaderPrefab) : null;
-                L.FooterPrefab = s.Footer != null ? registry.Resolve(s.Footer.GetType(), opt.FooterPrefab) : null;
-                L.EmptyPrefab = s.EmptyContent != null ? registry.Resolve(s.EmptyContent.GetType(), opt.EmptyContentPrefab) : null;
-            }
+            var opt = s.Option;
+            L.ContentPrefab = registry.Resolve(s.ContentVMType, opt.ContentPrefab);
+            L.HeaderPrefab = s.Header != null ? registry.Resolve(s.Header.GetType(), opt.HeaderPrefab) : null;
+            L.FooterPrefab = s.Footer != null ? registry.Resolve(s.Footer.GetType(), opt.FooterPrefab) : null;
+            L.EmptyPrefab = s.EmptyContent != null ? registry.Resolve(s.EmptyContent.GetType(), opt.EmptyContentPrefab) : null;
         }
 
         // ───────── Layout (FR-EMPTY-01/02/03 + FR-HEIGHT-* + FR-SEC-04) ─────────
@@ -240,9 +262,12 @@ namespace Sindy.View.Scroller
                     continue;
                 }
 
-                // FR-SEC-04. 인접 표시 섹션 사이의 (위쪽 bottomMargin + 아래쪽 topMargin) 자연 가산은
-                // yCursor에 각 섹션의 두 마진을 누적하는 것으로 자동 달성된다.
-                // 비표시 섹션은 yCursor에 기여하지 않으므로 마진도 사라진다 (FR-EMPTY-02).
+                // FR-SEC-04 (보강). "시각적으로 인접한" 두 섹션 사이의 간격은
+                // (위 섹션의 BottomMargin + 아래 섹션의 TopMargin)으로 정의된다.
+                // 비표시 섹션은 위 IsVisible 분기에서 어떤 yCursor 누적에도 기여하지 않으므로
+                // (마진 포함 0), 그 사이를 건너뛰고 시각적으로 맞닿는 두 표시 섹션끼리만
+                // 마진이 합산되는 결과가 자연스럽게 도출된다.
+                //   예: [A 표시][B 비표시][C 표시] → A.bottom + C.top 만 가산되며 B.* 마진은 미적용.
                 L.TopMargin = opt.TopMargin;
                 L.BottomMargin = opt.BottomMargin;
 
@@ -488,14 +513,18 @@ namespace Sindy.View.Scroller
 
         private void OnSectionChanged(int sectionIndex, ListChange<object> e)
         {
-            // FR-DATA-03. Move는 Remove + Insert의 합성으로 처리한다.
-            // FR-HEIGHT-02에 의해 셀 높이가 고정이므로 Replace는 레이아웃 재계산 없이 바인딩만 갱신해도 충분하지만,
-            // 프로토타입은 단순성을 위해 영향받는 섹션의 레이아웃만 invalidate한다.
+            // 8장 (변경 이벤트 처리) + FR-DATA-03 (보강).
+            //
+            // FR-DATA-03 (보강): Move 핸들러는 Remove 핸들러와 Add 핸들러의 순차 호출로
+            // 구현되어도 명세 위반이 아니다. 본 구현은 그 형태를 따른다.
+            // 동일 인스턴스 재사용이나 위치 트랜지션 애니메이션은 본 명세 범위 외이므로
+            // (CON-08) 보장하지 않는다.
+            //
+            // FR-HEIGHT-02에 의해 셀 높이가 고정이므로 Replace는 레이아웃 재계산이 필요 없다.
             switch (e.Action)
             {
                 case ListChangeAction.Replace:
-                    // 셀 높이 불변(FR-HEIGHT-02) → 레이아웃 재계산 불필요.
-                    // 화면 안에 있으면 같은 인스턴스에 새 VM을 다시 바인딩한다 (8.3).
+                    // 8.3. 화면 안에 있으면 같은 인스턴스에 새 VM을 다시 바인딩.
                     var key = new CellKey(sectionIndex, e.NewIndex);
                     if (active.TryGetValue(key, out var cell))
                     {
@@ -503,16 +532,28 @@ namespace Sindy.View.Scroller
                     }
                     return;
 
+                case ListChangeAction.Move:
+                    // FR-DATA-03 (보강). Move = Remove + Add의 합성으로 처리한다.
+                    // 두 단계 모두 동일한 후처리(콘텐츠 셀 회수 + 레이아웃 재계산)를
+                    // 필요로 하므로, 두 번 호출하지 않고 한 번에 묶어 수행한다.
+                    HandleStructuralChange(sectionIndex);
+                    return;
+
                 case ListChangeAction.Add:
                 case ListChangeAction.Remove:
-                case ListChangeAction.Move:
                 case ListChangeAction.Reset:
-                    // 영향받는 섹션 이후의 모든 y좌표가 변할 수 있으므로 레이아웃 재계산.
-                    // 이 섹션의 활성 콘텐츠 셀은 인덱스 변동의 안전을 위해 일괄 회수한다.
-                    ReleaseSectionContentCells(sectionIndex);
-                    InvalidateLayout();
-                    break;
+                    // 8.1 / 8.2 / 8.5. 영향받는 섹션 이후의 모든 y좌표가 변할 수 있으므로
+                    // 이 섹션의 활성 콘텐츠 셀을 일괄 회수하고 레이아웃을 invalidate한다.
+                    // 빈 섹션 ↔ 비빈 섹션 전환도 이 경로에서 RecomputeLayout이 처리한다 (FR-EMPTY-04).
+                    HandleStructuralChange(sectionIndex);
+                    return;
             }
+        }
+
+        private void HandleStructuralChange(int sectionIndex)
+        {
+            ReleaseSectionContentCells(sectionIndex);
+            InvalidateLayout();
         }
 
         private void ReleaseSectionContentCells(int sectionIndex)
