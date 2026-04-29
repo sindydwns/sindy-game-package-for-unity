@@ -54,8 +54,15 @@ namespace Sindy.View.Scroller
 
         private ViewComponentPool pool;
 
+        /// <summary>FR-POOL-04. 명시적 prefab을 N개 사전 워밍한다.</summary>
         public void PrewarmPool(SindyComponent prefab, int count) => EnsurePool().Prewarm(prefab, count);
-        public void PrewarmPool<TVM>(SindyComponent prefab, int count) where TVM : class => PrewarmPool(prefab, count);
+
+        /// <summary>
+        /// FR-POOL-04. VM 타입에 등록된 prefab을 레지스트리(인스턴스 → 전역)에서 해상하여 사전 워밍한다.
+        /// 등록되지 않은 VM 타입에 대해 호출하면 즉시 throw한다.
+        /// </summary>
+        public void PrewarmPool<TVM>(int count) where TVM : class
+            => PrewarmPool(registry.Resolve(typeof(TVM), null), count);
 
         private ViewComponentPool EnsurePool()
         {
@@ -296,7 +303,9 @@ namespace Sindy.View.Scroller
                     L.ContentHeight = L.RowCount * L.CellHeight + Mathf.Max(0, L.RowCount - 1) * opt.VerticalGap;
                 }
 
-                L.TopY = yCursor + L.TopMargin;
+                // TopY는 "TopMargin 적용 전" 섹션 블록 시작점이다.
+                // HeaderTopY = TopY + TopMargin이 자동으로 헤더 위치가 된다.
+                L.TopY = yCursor;
                 yCursor += L.TopMargin + L.HeaderHeight + L.ContentHeight + L.FooterHeight + L.BottomMargin;
                 L.TotalHeight = L.HeaderHeight + L.ContentHeight + L.FooterHeight;
             }
@@ -353,8 +362,10 @@ namespace Sindy.View.Scroller
             ref var L = ref layouts[sectionIndex];
             if (!L.IsVisible) return;
 
-            var sectionTop = L.TopY;
-            var sectionBottom = L.TopY + L.TotalHeight;
+            // 그리는 영역(헤더 시작 ~ 푸터 끝)만 viewport와 겹치는지 확인.
+            // 마진 영역은 빈 공간이라 셀을 그리지 않으므로 범위에 포함하지 않는다.
+            var sectionTop = L.HeaderTopY;
+            var sectionBottom = L.FooterTopY + L.FooterHeight;
             if (sectionBottom < top || sectionTop > bottom) return;
 
             if (L.ShowHeader && OverlapsRange(L.HeaderTopY, L.HeaderHeight, top, bottom))
@@ -651,8 +662,8 @@ namespace Sindy.View.Scroller
 
             if (itemIndex < 0)
             {
-                // 섹션 시작 = 섹션 마진을 포함한 시작 y
-                return (L.TopY, L.TotalHeight + L.TopMargin);
+                // 섹션 시작 = 헤더(또는 첫 콘텐츠)의 시작 y. 섹션 위쪽 마진은 점프 대상에서 제외한다.
+                return (L.HeaderTopY, L.TotalHeight);
             }
             var s = sections[sectionIndex];
             if (itemIndex >= s.ContentCount)

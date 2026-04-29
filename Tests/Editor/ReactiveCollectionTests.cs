@@ -9,5 +9,6 @@ namespace Sindy.Test
         [Test] public void ReactiveSet() { using var t = new TestReactiveSet(); t.Run(); }
         [Test] public void ReactiveDictionary() { using var t = new TestReactiveDictionary(); t.Run(); }
         [Test] public void ReactiveListCondition() { using var t = new TestReactiveListCondition(); t.Run(); }
+        [Test] public void ObservableList() { using var t = new TestObservableList(); t.Run(); }
     }
 }
