@@ -25,6 +25,27 @@ namespace Sindy.Test
             EffectiveAlignment_IsStretchWhenWithinMax();
             EffectiveAlignment_PreservesOptionWhenExceedsMax();
             InvalidConfig_DoesNotProduceTinyCells();
+            InvalidMaxWidth_DoesNotProduceZeroOrNegativeCellWidth();
+        }
+
+        // CellMaxWidth가 0/음수/min 미만일 때 Left/Center 분기에서 cellWidth가 0/음수가 되지 않는지 검증.
+        // safeMax = max(safeMin, opt.CellMaxWidth)로 가드하여 cellWidth >= safeMin >= 1f이 보장된다.
+        private void InvalidMaxWidth_DoesNotProduceZeroOrNegativeCellWidth()
+        {
+            // max=0 + Left
+            var optL = MakeOption(min: 80, pref: 100, max: 0, align: GridHorizontalAlignment.Left);
+            var gL = GridLayoutResolver.Resolve(480f, optL);
+            Assert.IsTrue(gL.CellWidth >= 1f - 0.01f, $"Left max=0: cellWidth = {gL.CellWidth}");
+
+            // max=-50 + Center
+            var optC = MakeOption(min: 80, pref: 100, max: -50, align: GridHorizontalAlignment.Center);
+            var gC = GridLayoutResolver.Resolve(480f, optC);
+            Assert.IsTrue(gC.CellWidth >= 1f - 0.01f, $"Center max=-50: cellWidth = {gC.CellWidth}");
+
+            // max < min (모순 입력) → safeMax는 safeMin으로 끌어올려진다
+            var optM = MakeOption(min: 100, pref: 110, max: 50, align: GridHorizontalAlignment.Left);
+            var gM = GridLayoutResolver.Resolve(480f, optM);
+            Assert.IsTrue(gM.CellWidth >= 100f - 0.01f, $"max<min: cellWidth({gM.CellWidth})는 적어도 min(100)이어야 함");
         }
 
         private static SectionOption MakeOption(

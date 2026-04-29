@@ -32,6 +32,42 @@ namespace Sindy.Test
             HeaderMutationAfterAttach_Throws();
             FooterAndEmptyMutationAfterAttach_Throws();
             DetachReleasesGuard_AllowsMutationAgain();
+            AttachIsIdempotent_NoDoubleSubscribe();
+            DetachWithoutAttach_IsNoOp();
+        }
+
+        // 멱등성: AttachListener를 두 번 호출해도 OnContentChanged가 한 번만 발행되어야 한다.
+        private void AttachIsIdempotent_NoDoubleSubscribe()
+        {
+            var content = new ObservableList<string>();
+            var section = new Section<string>(content, MakeOption());
+
+            var fired = 0;
+            ((ISection)section).OnContentChanged += _ => fired++;
+
+            section.AttachListener();
+            section.AttachListener();  // 재호출 — 이중 구독되어선 안 됨
+
+            content.Add("A");
+            Assert.AreEqual(1, fired, "OnContentChanged가 이중 구독되어 두 번 발행되었습니다.");
+        }
+
+        // 부착되지 않은 상태의 DetachListener 호출은 no-op이며 isAttached 가드를 잘못 해제하지 않는다.
+        private void DetachWithoutAttach_IsNoOp()
+        {
+            var section = new Section<string>(new ObservableList<string>(), MakeOption());
+
+            // 부착하지 않은 상태에서 Detach 호출
+            section.DetachListener();
+
+            // 그 후 Attach → 부착 후 mutation은 여전히 throw해야 한다 (가드가 정상 작동)
+            section.AttachListener();
+            try
+            {
+                section.Header = "h1";
+                Assert.IsTrue(false, "AttachListener 후 Header mutation은 throw되어야 합니다.");
+            }
+            catch (System.InvalidOperationException) { /* 예상 */ }
         }
 
         // FR-CELL-06. ContentVMType은 ObservableList가 비어있어도 제네릭 매개변수에서 알 수 있다.

@@ -82,11 +82,16 @@ namespace Sindy.View.Scroller
 
         public void AttachListener()
         {
+            // 멱등성 보장: 이미 부착되어 있으면 no-op (이중 구독·이중 isAttached set 방지).
+            if (isAttached) return;
             Content.OnChanged += OnContentChangedInternal;
             isAttached = true;
         }
         public void DetachListener()
         {
+            // 멱등성 보장: 부착되지 않은 상태의 Detach 호출은 no-op.
+            // 이를 통해 짝이 맞지 않는 Detach 호출이 isAttached 가드를 잘못 해제하는 일이 없다.
+            if (!isAttached) return;
             Content.OnChanged -= OnContentChangedInternal;
             isAttached = false;
         }
