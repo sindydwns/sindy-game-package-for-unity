@@ -15,7 +15,7 @@ namespace Sindy.View.Scroller
     /// 빈 섹션 처리(FR-EMPTY-*), Easing 기반 스크롤 점프(FR-SCROLL-*).
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
-    public class Scroller : MonoBehaviour
+    public class SindyScroller : MonoBehaviour
     {
         [Header("UI Wiring")]
         [SerializeField] private ScrollRect scrollRect;
