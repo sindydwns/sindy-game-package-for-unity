@@ -19,6 +19,7 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
     ├── ButtonComponent
     ├── GaugeComponent
     ├── ViewComponent                   ← ViewModel 키-컴포넌트 자동 매핑
+    ├── SindyScroller                   ← 가상화 스크롤러 (ScrollerViewModel)
     └── (기타 XxxComponent)
 ```
 
@@ -143,6 +144,77 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 - `LayoutFeature` → `RectTransform`에 레이아웃 적용
 
 개별 컴포넌트에서 이미 처리하는 경우 `BindCommonFeatures`를 오버라이드하여 비활성화할 수 있습니다.
+
+---
+
+---
+
+## SindyScroller
+
+`SindyScroller`는 `SindyComponent<ScrollerViewModel>`을 상속하는 가상화 스크롤 컴포넌트입니다.  
+뷰포트에 보이는 셀만 인스턴스화하며, 다수 섹션 적층과 그리드 레이아웃을 지원합니다.
+
+### ScrollerViewModel
+
+`SindyScroller`에 전달하는 ViewModel 타입입니다.
+
+```csharp
+public class ScrollerViewModel
+{
+    public IReadOnlyList<ISection> Sections { get; }
+    public ScrollerViewModel(IEnumerable<ISection> sections) { ... }
+}
+```
+
+null 섹션은 생성자에서 자동으로 걸러집니다.
+
+### 초기화 방식
+
+두 가지 방식을 모두 지원합니다. 기존 코드는 수정 없이 동작합니다.
+
+```csharp
+// 방식 1: SetSections — 기존 방식 (thin wrapper, 변경 없음)
+scroller.RegisterCellType<ItemVM>(itemPrefab);
+scroller.SetSections(new[] { section1, section2 });
+
+// 방식 2: SetModel — SindyComponent 표준 패턴
+scroller.RegisterCellType<ItemVM>(itemPrefab);
+scroller.SetModel(new ScrollerViewModel(new[] { section1, section2 }));
+
+// 클리어
+scroller.SetModel(null);   // 또는 scroller.SetSections(null)
+```
+
+두 방식 모두 내부적으로 동일한 `Init(ScrollerViewModel)` / `Clear(ScrollerViewModel)` 흐름을 거칩니다.
+
+### 셀 등록 및 주요 API
+
+셀 타입 등록, 풀 워밍, 스크롤 조작 API는 변경 없이 그대로 유효합니다.
+
+```csharp
+// 셀 타입 등록 (SetModel/SetSections 호출 이전에 수행)
+SindyScroller.RegisterGlobalCellType<ItemVM>(itemPrefab);  // 전역
+scroller.RegisterCellType<ItemVM>(itemPrefab);             // 인스턴스
+
+// 풀 사전 워밍
+scroller.PrewarmPool<ItemVM>(count: 10);
+
+// 스크롤 이동
+scroller.ScrollTo(section, itemIndex: 3, alignment: ScrollAlignment.Center, animated: true);
+scroller.ScrollToTop();
+scroller.ScrollToBottom();
+
+// 레이아웃 강제 재계산
+scroller.InvalidateLayout();
+```
+
+### 주의사항
+
+- `RegisterCellType()` / `PrewarmPool()` 은 `SetModel()` 또는 `SetSections()` **이전**에 호출해야 합니다.  
+  사후 변경 시의 동작은 정의되지 않습니다 (FR-CELL-07).
+- 동일한 `ScrollerViewModel` 인스턴스를 재사용해 `SetModel()`을 재호출하면, SindyScroller는 항상 재초기화합니다.  
+  (SindyComponent 기본 동작의 "same-instance 스킵"을 의도적으로 우회합니다.)
+- `SetSections()`는 항상 새 `ScrollerViewModel` 인스턴스를 내부 생성하므로, 재호출 시 재초기화가 보장됩니다.
 
 ---
 

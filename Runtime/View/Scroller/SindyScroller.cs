@@ -15,7 +15,7 @@ namespace Sindy.View.Scroller
     /// 빈 섹션 처리(FR-EMPTY-*), Easing 기반 스크롤 점프(FR-SCROLL-*).
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
-    public class SindyScroller : MonoBehaviour
+    public class SindyScroller : SindyComponent<ScrollerViewModel>
     {
         [Header("UI Wiring")]
         [SerializeField] private ScrollRect scrollRect;
@@ -96,18 +96,40 @@ namespace Sindy.View.Scroller
 
         /// <summary>
         /// FR-SEC-05. 섹션 컬렉션을 한 번에 교체한다. 단위 추가/제거 API는 제공하지 않는다.
-        /// FR-CELL-06. 모든 prefab 해상도를 mutation 이전에 검증하므로, 등록 누락은
-        /// 본 메서드 안에서 즉시 throw되며 (첫 스크롤이나 첫 빈 콘텐츠 표시까지 지연되지 않음),
-        /// 검증 실패 시 스크롤러의 기존 상태는 변경되지 않는다.
+        /// 하위 호환성을 위해 유지되는 thin wrapper — 내부적으로 SetModel(new ScrollerViewModel(newSections))를 호출한다.
         /// </summary>
         public void SetSections(IEnumerable<ISection> newSections)
+            => SetModel(new ScrollerViewModel(newSections));
+
+        // ───────── SindyComponent<ScrollerViewModel> 구현 ─────────
+
+        /// <summary>
+        /// [리스크 대응] 동일 ScrollerViewModel 인스턴스 재사용 시 Init() 스킵 방지.
+        /// SindyComponent.SetModel()은 isInitialized &amp;&amp; model == Model 조건에서 Init()을 스킵하지만,
+        /// SindyScroller는 동일 인스턴스가 전달되더라도 항상 재초기화를 보장한다.
+        /// 방어: 동일 인스턴스 감지 시 Model을 null로 먼저 클리어하여 same-instance guard를 우회한다.
+        /// </summary>
+        public override SindyComponent SetModel(ScrollerViewModel model)
         {
-            var staged = new List<ISection>();
-            if (newSections != null)
+            if (IsInitialized && ReferenceEquals(model, Model) && model != null)
             {
-                foreach (var s in newSections)
-                    if (s != null) staged.Add(s);
+                base.SetModel((ScrollerViewModel)null);
             }
+            return base.SetModel(model);
+        }
+
+        protected override void Init(ScrollerViewModel model)
+        {
+            // [리스크 대응] Awake() 이전에 Init()이 호출되는 경우 대비.
+            // EnsureWiring()은 scrollRect/viewport/content가 null일 때 자동 와이어링을 시도하며,
+            // 여전히 null이면 InvalidOperationException으로 조기 실패한다 (NullReferenceException 방지).
+            EnsureWiring();
+
+            var newSections = model?.Sections ?? (IReadOnlyList<ISection>)Array.Empty<ISection>();
+
+            var staged = new List<ISection>();
+            foreach (var s in newSections)
+                if (s != null) staged.Add(s);
 
             // FR-CELL-06. 섹션 구성 시점에 모든 prefab(콘텐츠/헤더/푸터/빈 콘텐츠)을 즉시 검증.
             // 콘텐츠 ObservableList가 비어 있어도 Section<TVM>의 제네릭 매개변수에서
@@ -118,20 +140,24 @@ namespace Sindy.View.Scroller
                 ? Array.Empty<SectionLayout>()
                 : new SectionLayout[staged.Count];
             for (var i = 0; i < staged.Count; i++)
-            {
                 ResolveSectionPrefabs(staged[i], ref stagedLayouts[i]);
-            }
 
-            // 검증 성공 — 이제부터 mutation
-            DetachListeners();
-            ReleaseAllActive();
-
-            sections.Clear();
+            // 검증 성공 — Clear()에서 sections·active·listeners는 이미 정리됨. 새 상태로 교체한다.
             sections.AddRange(staged);
             layouts = stagedLayouts;
 
             AttachListeners();
             InvalidateLayout();
+        }
+
+        protected override void Clear(ScrollerViewModel model)
+        {
+            // [리스크 대응] SetModel(null) 또는 새 모델로 교체 시 진행 중인 스크롤 애니메이션을 즉시 중단한다.
+            StopScrollAnimation();
+            DetachListeners();
+            ReleaseAllActive();
+            sections.Clear();
+            layouts = Array.Empty<SectionLayout>();
         }
 
         private readonly List<Action<ListChange<object>>> sectionHandlers = new();
@@ -190,16 +216,19 @@ namespace Sindy.View.Scroller
             }
         }
 
-        protected virtual void OnEnable() { }
+        protected override void OnEnable()
+        {
+            base.OnEnable(); // SindyComponent의 deferred action 처리
+        }
 
         protected virtual void OnDisable()
         {
             StopScrollAnimation();
         }
 
-        protected virtual void OnDestroy()
+        protected override void OnDestroy()
         {
-            DetachListeners();
+            base.OnDestroy(); // ClearModel() → Clear() → DetachListeners() + ReleaseAllActive()
             // 풀 인스턴스는 poolRoot/Content의 자식이므로 GameObject가 파괴되며 함께 정리된다 (FR-POOL-06).
         }
 
@@ -895,6 +924,33 @@ namespace Sindy.View.Scroller
             }
             content.anchoredPosition = new Vector2(content.anchoredPosition.x, targetY);
             scrollCoroutine = null;
+        }
+    }
+
+    /// <summary>
+    /// SindyScroller의 ViewModel. SetModel() 호출 시 전달되는 데이터 컨테이너.
+    /// Sections는 SetSections() 호출 관례와 동일하게 null 항목을 자동으로 걸러낸다.
+    /// </summary>
+    public class ScrollerViewModel
+    {
+        private readonly IReadOnlyList<ISection> sections;
+
+        public IReadOnlyList<ISection> Sections => sections;
+
+        public ScrollerViewModel(IEnumerable<ISection> sections)
+        {
+            if (sections == null)
+            {
+                this.sections = Array.Empty<ISection>();
+                return;
+            }
+
+            var list = new List<ISection>();
+            foreach (var s in sections)
+            {
+                if (s != null) list.Add(s);
+            }
+            this.sections = list;
         }
     }
 }

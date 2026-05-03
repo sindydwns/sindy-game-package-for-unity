@@ -30,6 +30,24 @@ UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가
 
 → [상세 문서](./SINDY_COMPONENT.md)
 
+### Scroller (SindyScroller)
+
+뷰포트에 보이는 셀만 인스턴스화하는 가상화 스크롤 리스트입니다. 다수 섹션 적층, 헤더/푸터/빈 콘텐츠 처리, 그리드 자동 산출(컬럼 수 동적 계산), Easing 기반 스크롤 점프를 지원합니다.
+
+`SindyComponent<ScrollerViewModel>` 기반이므로, `SetModel(vm)` 또는 기존의 `SetSections(sections)` 두 가지 방식으로 데이터를 주입할 수 있습니다.
+
+```csharp
+// 방식 1: SetSections (기존 방식, 변경 없음)
+scroller.RegisterCellType<ItemVM>(itemPrefab);
+scroller.SetSections(new[] { section });
+
+// 방식 2: SetModel (SindyComponent 패턴)
+scroller.RegisterCellType<ItemVM>(itemPrefab);
+scroller.SetModel(new ScrollerViewModel(sections));
+```
+
+→ [상세 문서](./SINDY_COMPONENT.md#sindyscroller)
+
 ### RedDot 시스템
 
 인벤토리, 메일, 알림처럼 트리 구조로 집계되는 뱃지 카운터입니다. 점 구분 경로(`"inventory.new_item.sword"`)로 노드를 선언하면, 자식 카운트가 바뀔 때 상위 노드에 자동으로 반영됩니다. `RedDotComponent`를 오브젝트에 붙이고 경로만 입력하면 코드 없이도 뱃지가 동작합니다.
@@ -62,7 +80,7 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 
 | 문서 | 내용 |
 |------|------|
-| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | `SindyComponent<T>` 생명주기, SetParent, ViewComponent 바인딩 방법 |
+| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | `SindyComponent<T>` 생명주기, SetParent, ViewComponent 바인딩 방법, SindyScroller |
 | [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotComponent 연결 방법 |
 | [EDITOR_TOOLKIT.md](./EDITOR_TOOLKIT.md) | SindyEdit 전체 API 레퍼런스 — 메서드 목록, ComponentScope, HTTP IPC |
 | [SINDY_EDIT_TUTORIAL.md](./SINDY_EDIT_TUTORIAL.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |
