@@ -72,12 +72,13 @@ namespace Sindy.Editor.EditorTools
         {
             EditorApplication.update += Poll;
             AssemblyReloadEvents.beforeAssemblyReload += StopHttpServer;
-            StartHttpServer();
+            if (EditorPrefs.GetBool("Sindy.EditorTools.HttpEnabled", false))
+                StartHttpServer();
         }
 
         // ── HTTP 서버 ─────────────────────────────────────────────────────────────
 
-        private static void StartHttpServer()
+        internal static void StartHttpServer()
         {
             int port = EditorPrefs.GetInt(PortPrefKey, DefaultPort);
             _httpListener = new HttpListener();
@@ -144,7 +145,7 @@ namespace Sindy.Editor.EditorTools
             _listenerThread.Start();
         }
 
-        private static void StopHttpServer()
+        internal static void StopHttpServer()
         {
             _httpListener?.Stop();
             _httpListener?.Close();

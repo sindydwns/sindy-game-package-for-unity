@@ -8,6 +8,7 @@ namespace Sindy.Editor.EditorTools
     {
         private const string PortPrefKey = "Sindy.EditorTools.HttpPort";
         private const int DefaultPort = 6060;
+        private const string KEY_HTTP_ENABLED = "Sindy.EditorTools.HttpEnabled";
 
         [SettingsProvider]
         public static SettingsProvider CreateProvider() => new SettingsProvider("Preferences/Sindy", SettingsScope.User)
@@ -17,6 +18,17 @@ namespace Sindy.Editor.EditorTools
             {
                 EditorGUILayout.LabelField("EditorTools HTTP 서버", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
+
+                bool enabled = EditorPrefs.GetBool(KEY_HTTP_ENABLED, false);
+                bool newEnabled = EditorGUILayout.Toggle("HTTP 서버 활성화", enabled);
+                if (newEnabled != enabled)
+                {
+                    EditorPrefs.SetBool(KEY_HTTP_ENABLED, newEnabled);
+                    if (newEnabled)
+                        EditorCommandWatcher.StartHttpServer();
+                    else
+                        EditorCommandWatcher.StopHttpServer();
+                }
 
                 int current = EditorPrefs.GetInt(PortPrefKey, DefaultPort);
                 int newPort = EditorGUILayout.IntField("HTTP 포트", current);
