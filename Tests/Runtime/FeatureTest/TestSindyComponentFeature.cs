@@ -108,7 +108,8 @@ namespace Sindy.Test
             var component = NewComponent();
             var visibility = new VisibilityFeature(true);
             component.With(visibility);
-            component.SetModel(new ViewModel());
+            var model = new ViewModel();
+            component.SetModel(model);
 
             Assert.IsTrue(component.gameObject.activeSelf);
 
@@ -119,6 +120,7 @@ namespace Sindy.Test
             Assert.IsTrue(component.gameObject.activeSelf);
 
             component.SetModel(null);
+            model.Dispose();
             Object.DestroyImmediate(component.gameObject);
         }
 
@@ -130,13 +132,15 @@ namespace Sindy.Test
             var layout = new LayoutFeature();
 
             component.With(layout);
-            component.SetModel(new ViewModel());
+            var model = new ViewModel();
+            component.SetModel(model);
 
             // LayoutFeature.Apply가 RectTransform 대상으로 호출되어 예외 없이 동작하고,
             // 부착된 Feature가 그대로 조회되는지 확인한다.
             Assert.AreSame(layout, component.Feature<LayoutFeature>());
 
             component.SetModel(null);
+            model.Dispose();
             Object.DestroyImmediate(go);
         }
 

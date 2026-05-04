@@ -37,7 +37,7 @@ namespace Sindy.View
             Model = model;
             if (Model != null)
             {
-                BindCommonFeatures(Model as ViewModel);
+                BindCommonFeatures();
                 Init(Model);
             }
 
@@ -113,10 +113,11 @@ namespace Sindy.View
 
         /// <summary>
         /// 컴포넌트와 모델 양쪽에서 공통 Feature(Visibility, Layout)를 자동 바인딩합니다.
-        /// 컴포넌트에 부착된 Feature가 모델 Feature보다 우선합니다.
+        /// 컴포넌트에 부착된 Feature가 모델 Feature보다 우선하며, 모델이 ViewModel이 아니어도
+        /// (또는 아무 Feature도 부착되지 않아도) 안전하게 호출됩니다.
         /// 개별 컴포넌트에서 이 Feature들을 직접 처리하는 경우 오버라이드하여 비활성화할 수 있습니다.
         /// </summary>
-        protected virtual void BindCommonFeatures(ViewModel viewModel)
+        protected virtual void BindCommonFeatures()
         {
             var visibility = Feature<VisibilityFeature>();
             if (visibility != null)
