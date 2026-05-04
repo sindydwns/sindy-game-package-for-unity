@@ -1,6 +1,6 @@
 namespace Sindy.View.Features
 {
-    public class HighlightFeature : ViewModelFeature
+    public class HighlightFeature : ModelFeature
     {
         public PropModel<bool> Highlight { get; }
 

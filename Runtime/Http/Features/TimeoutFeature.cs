@@ -12,7 +12,7 @@ namespace Sindy.Http
     ///   var api = new ApiModel<Unit, DataDto>(client, "/api/data", HttpMethod.GET)
     ///       .With(new TimeoutFeature(seconds: 30f));
     /// </summary>
-    public class TimeoutFeature : ViewModelFeature
+    public class TimeoutFeature : ModelFeature
     {
         public PropModel<float> Duration { get; }
 

@@ -13,7 +13,7 @@ namespace Sindy.Http
     ///   var api = new ApiModel<Unit, DataDto>(client, "/api/data", HttpMethod.GET)
     ///       .With(new RetryFeature(maxRetry: 3, baseDelay: 1f));
     /// </summary>
-    public class RetryFeature : ViewModelFeature
+    public class RetryFeature : ModelFeature
     {
         public PropModel<bool> IsRetrying { get; } = new(false);
 

@@ -75,7 +75,7 @@ namespace Sindy.View.Components
 
     public class ButtonModel : SubjModel<Unit>
     {
-        public new ButtonModel With<T>(T feature) where T : ViewModelFeature
+        public new ButtonModel With<T>(T feature) where T : ModelFeature
         {
             base.With(feature);
             return this;

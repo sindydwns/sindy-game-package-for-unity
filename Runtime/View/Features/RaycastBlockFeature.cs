@@ -1,6 +1,6 @@
 namespace Sindy.View.Features
 {
-    public class RaycastBlockFeature : ViewModelFeature
+    public class RaycastBlockFeature : ModelFeature
     {
         public PropModel<bool> IgnoreRaycast { get; }
 

@@ -4,7 +4,7 @@ using Sindy.Common;
 
 namespace Sindy.View.Features
 {
-    public class HoldFeature : ViewModelFeature
+    public class HoldFeature : ModelFeature
     {
         public Subject<int> OnHold { get; } = new();
         public PropModel<bool> AllowHold { get; }

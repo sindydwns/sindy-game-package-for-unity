@@ -13,7 +13,7 @@ namespace Sindy.Http
     ///   cache.Apply(client.Get<RankingDto>("/api/ranking"))
     ///       .Subscribe(res => ...);
     /// </summary>
-    public class OfflineCacheFeature<T> : ViewModelFeature
+    public class OfflineCacheFeature<T> : ModelFeature
     {
         public PropModel<bool> IsFromCache { get; } = new(false);
         public PropModel<string> CachedAt { get; } = new();

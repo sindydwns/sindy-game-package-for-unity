@@ -1,6 +1,6 @@
 namespace Sindy.View.Features
 {
-    public class VisibilityFeature : ViewModelFeature
+    public class VisibilityFeature : ModelFeature
     {
         public PropModel<bool> Show { get; }
 

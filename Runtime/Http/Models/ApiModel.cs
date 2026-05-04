@@ -22,7 +22,7 @@ namespace Sindy.Http
         public ApiRequestModel<TReq> Request { get; }
         public ApiResponseModel<TRes> Response { get; }
 
-        public new ApiModel<TReq, TRes> With<T>(T feature) where T : ViewModelFeature
+        public new ApiModel<TReq, TRes> With<T>(T feature) where T : ModelFeature
         {
             base.With(feature);
             return this;

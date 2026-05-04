@@ -1,6 +1,6 @@
 namespace Sindy.View.Features
 {
-    public class InteractableFeature : ViewModelFeature
+    public class InteractableFeature : ModelFeature
     {
         public PropModel<bool> Interactable { get; }
 

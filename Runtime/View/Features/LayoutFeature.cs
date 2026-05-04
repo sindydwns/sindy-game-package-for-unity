@@ -5,7 +5,7 @@ namespace Sindy.View.Features
 {
     public enum Direction { Horizontal, Vertical }
 
-    public class LayoutFeature : ViewModelFeature
+    public class LayoutFeature : ModelFeature
     {
         internal float MarginTop, MarginRight, MarginBottom, MarginLeft;
         internal bool HasMargin;
