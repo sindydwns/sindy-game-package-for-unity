@@ -28,9 +28,7 @@ namespace Sindy.View.Components
 
         protected override void Init(SubjModel<Unit> model)
         {
-            var buttonModel = model as ButtonModel;
-
-            var hold = buttonModel?.Feature<HoldFeature>();
+            var hold = Feature<HoldFeature>();
             if (hold != null)
             {
                 void OnClickOrHold()
@@ -53,19 +51,19 @@ namespace Sindy.View.Components
                 disposables.Add(Disposable.Create(() => button.onClick.RemoveListener(OnClick)));
             }
 
-            var interactable = buttonModel?.Feature<InteractableFeature>();
+            var interactable = Feature<InteractableFeature>();
             if (interactable != null)
             {
                 interactable.Interactable.Subscribe(v => button.interactable = v).AddTo(disposables);
             }
 
-            var highlight = buttonModel?.Feature<HighlightFeature>();
+            var highlight = Feature<HighlightFeature>();
             if (highlight != null && highlightTarget != null)
             {
                 highlight.Highlight.Subscribe(v => highlightTarget.SetActive(v)).AddTo(disposables);
             }
 
-            var raycastBlock = buttonModel?.Feature<RaycastBlockFeature>();
+            var raycastBlock = Feature<RaycastBlockFeature>();
             if (raycastBlock != null && canvasGroup != null)
             {
                 raycastBlock.IgnoreRaycast.Subscribe(v => canvasGroup.blocksRaycasts = !v).AddTo(disposables);

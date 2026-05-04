@@ -18,6 +18,7 @@ namespace Sindy.View
         private SindyComponentLinkState links;
         internal SindyComponentLinkState LinkState => links ??= new(this);
         private readonly SindyComponentDeferredActionQueue deferredActions = new();
+        private Dictionary<Type, ViewModelFeature> features;
         private bool isInitialized = false;
         public bool IsInitialized => isInitialized;
 
@@ -36,10 +37,7 @@ namespace Sindy.View
             Model = model;
             if (Model != null)
             {
-                if (Model is ViewModel viewModel)
-                {
-                    BindCommonFeatures(viewModel);
-                }
+                BindCommonFeatures(Model as ViewModel);
                 Init(Model);
             }
 
@@ -77,18 +75,56 @@ namespace Sindy.View
         protected virtual void Clear(object model) { }
 
         /// <summary>
-        /// 모델이 ViewModel인 경우 공통 Feature(Visibility, Interactable)를 자동 바인딩합니다.
+        /// 컴포넌트에 Feature를 부착합니다. 동일 타입이 이미 존재하면 기존 Feature는 Dispose되고 교체됩니다.
+        /// 부착된 Feature는 컴포넌트가 파괴될 때 함께 Dispose됩니다.
+        /// </summary>
+        public SindyComponent With<T>(T feature) where T : ViewModelFeature
+        {
+            features ??= new();
+            if (features.TryGetValue(typeof(T), out var existing) && existing != feature)
+            {
+                existing.Dispose();
+            }
+            features[typeof(T)] = feature;
+            return this;
+        }
+
+        /// <summary>
+        /// 컴포넌트에 부착된 Feature를 조회합니다. 컴포넌트에 없으면 모델(ViewModel)의 Feature를 조회합니다.
+        /// </summary>
+        public T Feature<T>() where T : ViewModelFeature
+        {
+            if (features != null && features.TryGetValue(typeof(T), out var f))
+                return (T)f;
+            if (Model is ViewModel viewModel)
+                return viewModel.Feature<T>();
+            return default;
+        }
+
+        private void DisposeComponentFeatures()
+        {
+            if (features == null) return;
+            foreach (var f in features.Values)
+            {
+                f?.Dispose();
+            }
+            features.Clear();
+        }
+
+        /// <summary>
+        /// 컴포넌트와 모델 양쪽에서 공통 Feature(Visibility, Layout)를 자동 바인딩합니다.
+        /// 컴포넌트에 부착된 Feature가 모델 Feature보다 우선합니다.
         /// 개별 컴포넌트에서 이 Feature들을 직접 처리하는 경우 오버라이드하여 비활성화할 수 있습니다.
         /// </summary>
         protected virtual void BindCommonFeatures(ViewModel viewModel)
         {
-            var visibility = viewModel.Feature<VisibilityFeature>();
+            var visibility = Feature<VisibilityFeature>();
             if (visibility != null)
             {
                 visibility.Show.Subscribe(v => gameObject.SetActive(v)).AddTo(disposables);
             }
 
-            var layout = viewModel.Feature<LayoutFeature>();
+            var layout = Feature<LayoutFeature>();
             if (layout != null)
             {
                 layout.Apply(transform as RectTransform);
@@ -105,6 +141,7 @@ namespace Sindy.View
         {
             ClearModel();
             Model = null;
+            DisposeComponentFeatures();
         }
 
         protected void WaitCoroutine(Action action, float delay = 0)

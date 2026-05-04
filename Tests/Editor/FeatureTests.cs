@@ -9,5 +9,6 @@ namespace Sindy.Test
         [Test] public void InteractableFeature() { using var t = new TestInteractableFeature(); t.Run(); }
         [Test] public void HoldFeature() { using var t = new TestHoldFeature(); t.Run(); }
         [Test] public void SimpleFeatures() { using var t = new TestSimpleFeatures(); t.Run(); }
+        [Test] public void SindyComponentFeature() { using var t = new TestSindyComponentFeature(); t.Run(); }
     }
 }

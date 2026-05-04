@@ -136,9 +136,36 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 
 ---
 
+## Feature 부착 (With / Feature)
+
+`SindyComponent`도 `ViewModel`과 동일한 Feature 패턴을 지원합니다. 컴포넌트 단위로 Feature를 부착하면 모델과 무관하게 컴포넌트의 수명에 묶여 동작합니다.
+
+```csharp
+// 컴포넌트에 직접 Feature 부착
+component
+    .With(new VisibilityFeature(true))
+    .With(new InteractableFeature(true));
+
+// 조회 — 컴포넌트에 없으면 모델(ViewModel) Feature로 폴백
+var visibility = component.Feature<VisibilityFeature>();
+```
+
+### 모델 Feature와의 차이
+
+| 항목 | 모델(`ViewModel`) Feature | 컴포넌트(`SindyComponent`) Feature |
+|------|----------------------------|--------------------------------------|
+| 부착 대상 | 모델 인스턴스 | UI 컴포넌트 인스턴스 |
+| 수명 | 모델 Dispose 시 함께 해제 | 컴포넌트 OnDestroy 시 함께 해제 |
+| 모델 교체 | 새 모델은 자기 Feature를 새로 가짐 | 모델이 바뀌어도 컴포넌트 Feature는 유지 |
+| 우선순위 | — | 같은 타입이 양쪽에 있으면 컴포넌트가 우선 |
+
+### 같은 타입 재부착
+
+`With<T>()`로 같은 타입을 다시 부착하면, 기존 Feature는 즉시 `Dispose`되고 새 인스턴스로 교체됩니다.
+
 ## BindCommonFeatures
 
-`Init` 전에 자동 실행됩니다. 모델이 `ViewModel`이면 다음 Feature를 자동 처리합니다:
+`Init` 전에 자동 실행됩니다. 컴포넌트와 모델 양쪽에서 다음 Feature를 자동 처리합니다 (컴포넌트 우선):
 
 - `VisibilityFeature` → `gameObject.SetActive`
 - `LayoutFeature` → `RectTransform`에 레이아웃 적용
