@@ -542,7 +542,7 @@ namespace Sindy.View.Scroller
                 CellKey.EmptySlot => s.EmptyContent,
                 _ => s.GetContentVMAt(k.Slot),
             };
-            inst.SetModel(vm);
+            inst.Bind(vm);
         }
 
         // 셀 RectTransform은 컨테이너 가로 너비(W) 변동에 대해 Unity의 layout 시스템이
@@ -708,7 +708,7 @@ namespace Sindy.View.Scroller
                     var key = new CellKey(sectionIndex, e.NewIndex);
                     if (active.TryGetValue(key, out var cell))
                     {
-                        cell.Instance.SetModel(e.NewItem);
+                        cell.Instance.Bind(e.NewItem);
                     }
                     return;
 

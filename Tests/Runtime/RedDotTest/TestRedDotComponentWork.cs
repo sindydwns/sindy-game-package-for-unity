@@ -36,7 +36,7 @@ namespace Sindy.Test
         public override void Run()
         {
             _model = new RedDotModel("inven.new_item.copper_bar", true);
-            _component.SetModel(_model);
+            _component.Bind(_model);
 
             Assert.IsTrue(_component.IsInitialized);
 
@@ -53,7 +53,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            _component?.SetModel(null);
+            _component?.Bind(null);
             _model?.Dispose();
         }
     }

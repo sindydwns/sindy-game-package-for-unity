@@ -27,7 +27,7 @@ namespace Sindy.View
                 Object.Instantiate(Component) :
                 Object.Instantiate(Component, parent);
             com.Preset = this;
-            com.SetModel(Model);
+            com.Bind(Model);
 
             return com;
         }

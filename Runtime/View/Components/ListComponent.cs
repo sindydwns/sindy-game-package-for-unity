@@ -72,12 +72,12 @@ namespace Sindy.View.Components
                 if (i < items.Count)
                 {
                     pool[i].gameObject.SetActive(true);
-                    pool[i].SetModel(items[i]);
+                    pool[i].Bind(items[i]);
                 }
                 else
                 {
                     pool[i].gameObject.SetActive(false);
-                    pool[i].SetModel(null);
+                    pool[i].Bind(null);
                 }
             }
         }

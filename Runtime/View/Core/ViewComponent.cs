@@ -20,7 +20,7 @@ namespace Sindy.View
                 var childModel = model[view.name];
                 if (childModel != null)
                 {
-                    view.component.SetModel(childModel).SetParent(this);
+                    view.component.Bind(childModel).SetParent(this);
                 }
                 else
                 {

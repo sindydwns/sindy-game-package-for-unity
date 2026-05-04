@@ -25,7 +25,7 @@ namespace Sindy.Test
             int clickCount = 0;
             model.Subj.Subscribe(_ => clickCount++).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
             Assert.IsTrue(component.IsInitialized);
 
             // interactable feature 동작 확인
@@ -39,7 +39,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

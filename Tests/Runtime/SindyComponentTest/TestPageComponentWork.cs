@@ -23,7 +23,7 @@ namespace Sindy.Test
             model = new PropModel<int>(0);
             model.Subscribe(v => Debug.Log($"[Page] currentPage = {v}")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             model.Value = 1;
             model.Value = 2;
@@ -32,7 +32,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

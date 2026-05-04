@@ -27,20 +27,20 @@ namespace Sindy.Test
             model["title"] = title;
 
             Debug.Log("[Popup] Opening...");
-            component.SetModel(model);
+            component.Bind(model);
 
             title.Value = "타이틀 변경됨";
 
             Debug.Log("[Popup] Closing...");
-            component.SetModel(null);
+            component.Bind(null);
 
             Debug.Log("[Popup] Reopening...");
-            component.SetModel(model);
+            component.Bind(model);
         }
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

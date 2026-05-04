@@ -23,7 +23,7 @@ namespace Sindy.Test
             model = new PropModel<float>(1f);
             model.Subscribe(v => Debug.Log($"[Gauge] value = {v:F2}")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             model.Value = 0.75f;
             model.Value = 0.5f;
@@ -35,7 +35,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

@@ -26,7 +26,7 @@ R3(Reactive Extensions for Unity) 기반 MVVM 패턴을 중심으로, 에디터 
 
 ### View / MVVM 시스템 (SindyComponent)
 
-UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가 자동으로 갱신됩니다. `SindyComponent<T>`가 SetModel → Init → Clear → OnDestroy 생명주기를 표준화하여 구독 누수를 방지합니다. 복합 컴포넌트는 `SetParent(this)`로 연결해 부모-자식 해제를 자동화합니다.
+UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가 자동으로 갱신됩니다. `SindyComponent<T>`가 Bind → Init → Clear → OnDestroy 생명주기를 표준화하여 구독 누수를 방지합니다. 복합 컴포넌트는 `SetParent(this)`로 연결해 부모-자식 해제를 자동화합니다.
 
 → [상세 문서](./SINDY_COMPONENT.md)
 
@@ -34,16 +34,16 @@ UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가
 
 뷰포트에 보이는 셀만 인스턴스화하는 가상화 스크롤 리스트입니다. 다수 섹션 적층, 헤더/푸터/빈 콘텐츠 처리, 그리드 자동 산출(컬럼 수 동적 계산), Easing 기반 스크롤 점프를 지원합니다.
 
-`SindyComponent<ScrollerViewModel>` 기반이므로, `SetModel(vm)` 또는 기존의 `SetSections(sections)` 두 가지 방식으로 데이터를 주입할 수 있습니다.
+`SindyComponent<ScrollerViewModel>` 기반이므로, `Bind(vm)` 또는 기존의 `SetSections(sections)` 두 가지 방식으로 데이터를 주입할 수 있습니다.
 
 ```csharp
 // 방식 1: SetSections (기존 방식, 변경 없음)
 scroller.RegisterCellType<ItemVM>(itemPrefab);
 scroller.SetSections(new[] { section });
 
-// 방식 2: SetModel (SindyComponent 패턴)
+// 방식 2: Bind (SindyComponent 패턴)
 scroller.RegisterCellType<ItemVM>(itemPrefab);
-scroller.SetModel(new ScrollerViewModel(sections));
+scroller.Bind(new ScrollerViewModel(sections));
 ```
 
 → [상세 문서](./SINDY_COMPONENT.md#sindyscroller)

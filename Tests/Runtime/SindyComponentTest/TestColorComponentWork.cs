@@ -22,7 +22,7 @@ namespace Sindy.Test
             model = new PropModel<Color>(Color.white);
             model.Subscribe(v => Debug.Log($"[Color] color = {v}")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             model.Value = Color.red;
             model.Value = new Color(0.2f, 0.8f, 0.4f);
@@ -30,7 +30,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

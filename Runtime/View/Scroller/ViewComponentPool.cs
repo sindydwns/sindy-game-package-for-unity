@@ -41,7 +41,7 @@ namespace Sindy.View.Scroller
         {
             if (instance == null) return;
 
-            instance.SetModel(null);
+            instance.Bind(null);
             instance.gameObject.SetActive(false);
             instance.transform.SetParent(poolRoot, false);
 

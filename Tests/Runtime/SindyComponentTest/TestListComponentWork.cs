@@ -25,7 +25,7 @@ namespace Sindy.Test
             model = new ListViewModel();
             model.Items.Subscribe(items => Debug.Log($"[List] itemCount = {items.Count}")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             model.SetItems(new List<IViewModel>
             {
@@ -44,7 +44,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

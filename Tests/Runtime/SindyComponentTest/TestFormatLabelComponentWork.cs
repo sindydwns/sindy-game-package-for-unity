@@ -24,7 +24,7 @@ namespace Sindy.Test
             model = new FormatNumberPropModel<int>(0);
             model.Text.Subscribe(v => Debug.Log($"[FormatLabel] formatted = \"{v}\"")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             model.Source.Value = 1000;
             model.Source.Value = 9999999;
@@ -32,7 +32,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

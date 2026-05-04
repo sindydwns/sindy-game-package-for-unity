@@ -3,7 +3,7 @@
 ## SindyComponent란
 
 `SindyComponent`는 이 패키지의 모든 UI 컴포넌트가 상속받는 기반 MonoBehaviour입니다.  
-Unity의 MonoBehaviour에 **모델 바인딩 생명주기**를 얹어, SetModel → Init → Clear → OnDestroy 흐름을 표준화합니다.
+Unity의 MonoBehaviour에 **모델 바인딩 생명주기**를 얹어, Bind → Init → Clear → OnDestroy 흐름을 표준화합니다.
 
 기존 Unity UI 코드에서 반복되던 "구독 등록/해제를 직접 관리해야 하는 부담"을 없애고,  
 컴포넌트가 파괴되거나 모델이 교체될 때 구독 누수가 생기지 않도록 보장합니다.
@@ -25,7 +25,7 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
 
 ### SindyComponent (비제네릭)
 
-`object Model`을 보유하며 `SetModel(object)`, `Init(object)`, `Clear(object)` 가상 메서드를 제공합니다.
+`object Model`을 보유하며 `Bind(object)`, `Init(object)`, `Clear(object)` 가상 메서드를 제공합니다.
 
 내부 상태:
 - `disposables` — `Init`에서 등록한 구독들을 모아두는 리스트
@@ -39,13 +39,13 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
 public abstract class SindyComponent<T> : SindyComponent where T : class
 {
     public new T Model { get; }
-    public virtual SindyComponent SetModel(T model) { ... }
+    public virtual SindyComponent Bind(T model) { ... }
     protected abstract void Init(T model);
     protected virtual void Clear(T model) { }
 }
 ```
 
-- `SetModel(object)`에서 타입 검사: `T`가 아닌 타입이 오면 `ArgumentException` throw
+- `Bind(object)`에서 타입 검사: `T`가 아닌 타입이 오면 `ArgumentException` throw
 - `Init(T)` — abstract, 반드시 구현
 - `Clear(T)` — virtual (기본 빈 구현), UI 초기화가 필요할 때만 오버라이드
 
@@ -71,7 +71,7 @@ protected override void Init(ViewModel model)
         var childModel = model[view.name];   // ViewModel 딕셔너리에서 조회
         if (childModel != null)
         {
-            view.component.SetModel(childModel).SetParent(this);
+            view.component.Bind(childModel).SetParent(this);
         }
     }
 }
@@ -84,12 +84,12 @@ Inspector에서 `(SindyComponent, "키이름")` 쌍을 등록해두면, ViewMode
 ## 생명주기
 
 ```
-SetModel(newModel)
+Bind(newModel)
   ├── 이미 같은 모델이면 조기 반환 (isInitialized && model == Model)
   ├── ClearModel()
   │   ├── Clear(이전 model)           ← 서브클래스 UI 초기화 훅
   │   ├── ClearDisposables()          ← disposables + handles 정리
-  │   ├── 자식 컴포넌트 SetModel(null) ← LinkState의 모든 자식 연쇄 해제
+  │   ├── 자식 컴포넌트 Bind(null) ← LinkState의 모든 자식 연쇄 해제
   │   └── LinkState 정리              ← 자식 목록 클리어, 부모로부터 분리
   ├── Model = newModel
   └── model != null이면
@@ -103,7 +103,7 @@ OnDestroy()
 ### Cleanup 순서 (외부 코드에서 정리할 때)
 
 ```csharp
-component.SetModel(null);   // 1. 컴포넌트의 모델 구독 해제
+component.Bind(null);   // 1. 컴포넌트의 모델 구독 해제
 model.Dispose();            // 2. 모델 내부 구독 해제 (EveryUpdate, CombineLatest 등)
 disposables.Dispose();      // 3. 외부 관찰 구독 해제
 ```
@@ -116,7 +116,7 @@ disposables.Dispose();      // 3. 외부 관찰 구독 해제
 ## Composite 패턴과 SetParent
 
 복잡한 UI는 여러 기본 컴포넌트를 조합합니다. `SetParent(this)`로 자식을 부모에 등록하면,  
-부모가 `SetModel(null)` 또는 소멸될 때 자식도 연쇄적으로 `SetModel(null)`이 호출됩니다.
+부모가 `Bind(null)` 또는 소멸될 때 자식도 연쇄적으로 `Bind(null)`이 호출됩니다.
 
 ```csharp
 public class NoticeComponent : SindyComponent<NoticeModel>
@@ -126,13 +126,13 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 
     protected override void Init(NoticeModel model)
     {
-        title.SetModel(model.Title).SetParent(this);
-        confirm.SetModel(model.Confirm).SetParent(this);
+        title.Bind(model.Title).SetParent(this);
+        confirm.Bind(model.Confirm).SetParent(this);
     }
 }
 ```
 
-`SetParent(this)` 없이 `SetModel`만 호출하면, 부모가 교체될 때 자식 구독이 누수됩니다.
+`SetParent(this)` 없이 `Bind`만 호출하면, 부모가 교체될 때 자식 구독이 누수됩니다.
 
 ---
 
@@ -177,12 +177,12 @@ null 섹션은 생성자에서 자동으로 걸러집니다.
 scroller.RegisterCellType<ItemVM>(itemPrefab);
 scroller.SetSections(new[] { section1, section2 });
 
-// 방식 2: SetModel — SindyComponent 표준 패턴
+// 방식 2: Bind — SindyComponent 표준 패턴
 scroller.RegisterCellType<ItemVM>(itemPrefab);
-scroller.SetModel(new ScrollerViewModel(new[] { section1, section2 }));
+scroller.Bind(new ScrollerViewModel(new[] { section1, section2 }));
 
 // 클리어
-scroller.SetModel(null);   // 또는 scroller.SetSections(null)
+scroller.Bind(null);   // 또는 scroller.SetSections(null)
 ```
 
 두 방식 모두 내부적으로 동일한 `Init(ScrollerViewModel)` / `Clear(ScrollerViewModel)` 흐름을 거칩니다.
@@ -192,7 +192,7 @@ scroller.SetModel(null);   // 또는 scroller.SetSections(null)
 셀 타입 등록, 풀 워밍, 스크롤 조작 API는 변경 없이 그대로 유효합니다.
 
 ```csharp
-// 셀 타입 등록 (SetModel/SetSections 호출 이전에 수행)
+// 셀 타입 등록 (Bind/SetSections 호출 이전에 수행)
 SindyScroller.RegisterGlobalCellType<ItemVM>(itemPrefab);  // 전역
 scroller.RegisterCellType<ItemVM>(itemPrefab);             // 인스턴스
 
@@ -210,9 +210,9 @@ scroller.InvalidateLayout();
 
 ### 주의사항
 
-- `RegisterCellType()` / `PrewarmPool()` 은 `SetModel()` 또는 `SetSections()` **이전**에 호출해야 합니다.  
+- `RegisterCellType()` / `PrewarmPool()` 은 `Bind()` 또는 `SetSections()` **이전**에 호출해야 합니다.  
   사후 변경 시의 동작은 정의되지 않습니다 (FR-CELL-07).
-- 동일한 `ScrollerViewModel` 인스턴스를 재사용해 `SetModel()`을 재호출하면, SindyScroller는 항상 재초기화합니다.  
+- 동일한 `ScrollerViewModel` 인스턴스를 재사용해 `Bind()`을 재호출하면, SindyScroller는 항상 재초기화합니다.  
   (SindyComponent 기본 동작의 "same-instance 스킵"을 의도적으로 우회합니다.)
 - `SetSections()`는 항상 새 `ScrollerViewModel` 인스턴스를 내부 생성하므로, 재호출 시 재초기화가 보장됩니다.
 
@@ -226,4 +226,4 @@ scroller.InvalidateLayout();
 4. `Init(XxxModel model)` — 구독 등록 (`disposables`에 추가)
 5. `Clear(XxxModel model)` — UI 초기화 (필요할 때만)
 6. 복합 컴포넌트면: 자식 컴포넌트에 `.SetParent(this)` 반드시 호출
-7. 테스트: `component.SetModel(null); model.Dispose();` cleanup 검증
+7. 테스트: `component.Bind(null); model.Dispose();` cleanup 검증

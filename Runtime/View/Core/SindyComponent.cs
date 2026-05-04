@@ -24,7 +24,12 @@ namespace Sindy.View
         protected static bool IsComponentPrefab(SindyComponent com) => string.IsNullOrEmpty(com.gameObject.scene.name);
         public bool IsPrefab => IsComponentPrefab(this);
 
-        public virtual SindyComponent SetModel(object model)
+        /// <summary>
+        /// 주어진 모델을 이 컴포넌트에 바인딩합니다. 모델이 이전과 동일한 경우 초기화 로직을 건너뜁니다.
+        /// </summary>
+        /// <param name="model"></param>
+        /// <returns></returns>
+        public virtual SindyComponent Bind(object model)
         {
             if (isInitialized && model == Model)
             {
@@ -46,7 +51,10 @@ namespace Sindy.View
             return this;
         }
 
-        public void ReloadModel()
+        /// <summary>
+        /// 현재 모델을 초기화 상태로 다시 로드합니다. 모델이 변경되지 않았지만 내부 상태가 업데이트되어야 하는 경우에 유용합니다.
+        /// </summary>
+        public void Reload()
         {
             ClearModel();
             if (Model != null)
@@ -66,7 +74,7 @@ namespace Sindy.View
 
             foreach (var child in LinkState.GetChildrenSnapshot())
             {
-                child.SetModel(null);
+                child.Bind(null);
             }
 
             LinkState.ClearChildrenLinks();
@@ -167,7 +175,7 @@ namespace Sindy.View
             protected set => base.Model = value;
         }
 
-        public override SindyComponent SetModel(object model)
+        public override SindyComponent Bind(object model)
         {
             if (model == null || model is T)
             {
@@ -181,7 +189,7 @@ namespace Sindy.View
         }
         public virtual SindyComponent SetModel(T model)
         {
-            base.SetModel(model);
+            base.Bind(model);
             return this;
         }
         protected abstract void Init(T model);

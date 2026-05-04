@@ -22,7 +22,7 @@ namespace Sindy.Test
             model = new PropModel<bool>(true);
             model.Subscribe(v => Debug.Log($"[Visibility] visible = {v}")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             model.Value = false;
             model.Value = true;
@@ -30,7 +30,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

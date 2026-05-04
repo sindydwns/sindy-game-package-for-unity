@@ -19,7 +19,7 @@ namespace Sindy.Test
         public override void Run()
         {
             model = new PropModel<string>("Hello, World!");
-            component.SetModel(model);
+            component.Bind(model);
 
             Assert.IsTrue(component.IsInitialized);
             Assert.AreEqual("Hello, World!", model.Value);
@@ -33,7 +33,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

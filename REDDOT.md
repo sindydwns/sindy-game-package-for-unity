@@ -57,7 +57,7 @@ Inspector 필드: `dot` (GameObject), `text` (TMP_Text), `scaler`, `defaultPath`
 - `count == 1`: dot 표시, text 없음 (dot 크기 `scaler` 적용)
 - `count >= 2`: dot 표시, text에 숫자 표시 (dot 크기 원래대로)
 
-`defaultPath`가 지정되면 `SetModel` 없이도 `Awake`에서 자동으로 해당 경로의 노드를 구독합니다.
+`defaultPath`가 지정되면 `Bind` 없이도 `Awake`에서 자동으로 해당 경로의 노드를 구독합니다.
 
 ### RedDotModel
 
@@ -115,7 +115,7 @@ var social = RedDotNode.Root.GetBranch("social");
 1. 오브젝트에 `RedDotComponent` 추가
 2. `dot` 필드에 뱃지 GameObject 연결
 3. `defaultPath`에 `"inventory.new_item"` 등 경로 입력
-4. 코드에서 별도 SetModel 없이 노드 카운트가 바뀌면 자동 갱신됨
+4. 코드에서 별도 Bind 없이 노드 카운트가 바뀌면 자동 갱신됨
 
 ### RedDotComponent — 코드로 연결
 
@@ -125,7 +125,7 @@ var model = new RedDotModel("inventory.new_item");
 var node  = RedDotNode.Root.EnsureBranch("inventory.new_item");
 var model = new RedDotModel(node);
 
-redDotComponent.SetModel(model);
+redDotComponent.Bind(model);
 ```
 
 ### 노드 조회 API
@@ -158,4 +158,4 @@ RedDotNode node = RedDotBranch.GetNodeAbs("a.b.c");
 
 - **`RedDotNode.Dispose()`는 노드 자체를 해제합니다.** 트리에서 제거하려면 부모 Branch의 `Reset()` 또는 트리 재구성이 필요합니다.
 
-- **`RedDotComponent`의 `defaultPath`는 Awake에서 한 번만 해석됩니다.** 런타임에 경로를 바꾸려면 `SetModel`을 사용하세요.
+- **`RedDotComponent`의 `defaultPath`는 Awake에서 한 번만 해석됩니다.** 런타임에 경로를 바꾸려면 `Bind`을 사용하세요.

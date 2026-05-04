@@ -33,12 +33,12 @@ namespace Sindy.Test
                 .Subscribe(_ => Debug.Log("[Timer] finished!"))
                 .AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
         }
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }

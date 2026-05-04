@@ -24,7 +24,7 @@ namespace Sindy.Test
             model = new PropModel<Sprite>();
             model.Subscribe(v => Debug.Log($"[Icon] sprite = {(v != null ? v.name : "null")}")).AddTo(disposables);
 
-            component.SetModel(model);
+            component.Bind(model);
 
             if (testIcon != null)
             {
@@ -39,7 +39,7 @@ namespace Sindy.Test
 
         protected override void Cleanup()
         {
-            component?.SetModel(null);
+            component?.Bind(null);
             model?.Dispose();
         }
     }
