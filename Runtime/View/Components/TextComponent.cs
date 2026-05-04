@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Sindy.View.Components
 {
-    public class LabelComponent : SindyComponent<PropModel<string>>
+    public class TextComponent : SindyComponent<PropModel<string>>
     {
         [SerializeField] private TMP_Text label;
 

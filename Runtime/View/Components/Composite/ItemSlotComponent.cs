@@ -32,8 +32,8 @@ namespace Sindy.View.Components.Composite
 
     public class ItemSlotComponent : SindyComponent<ItemSlotModel>
     {
-        [SerializeField] private IconComponent icon;
-        [SerializeField] private LabelComponent count;
+        [SerializeField] private ImageComponent icon;
+        [SerializeField] private TextComponent count;
         [SerializeField] private RedDotComponent redDot;
 
         protected override void Init(ItemSlotModel model)

@@ -4,7 +4,7 @@ using R3;
 
 namespace Sindy.View.Components
 {
-    public class IconComponent : SindyComponent<PropModel<Sprite>>
+    public class ImageComponent : SindyComponent<PropModel<Sprite>>
     {
         [SerializeField] private Image image;
 

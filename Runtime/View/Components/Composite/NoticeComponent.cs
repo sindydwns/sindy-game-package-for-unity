@@ -38,8 +38,8 @@ namespace Sindy.View.Components.Composite
 
     public class NoticeComponent : SindyComponent<NoticeModel>
     {
-        [SerializeField] private LabelComponent title;
-        [SerializeField] private LabelComponent content;
+        [SerializeField] private TextComponent title;
+        [SerializeField] private TextComponent content;
         [SerializeField] private ButtonComponent confirm;
         [SerializeField] private ButtonComponent cancel;
         /// <summary>
