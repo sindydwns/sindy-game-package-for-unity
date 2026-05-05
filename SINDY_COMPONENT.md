@@ -10,11 +10,21 @@ Unity의 MonoBehaviour에 **모델 바인딩 생명주기**를 얹어, Bind → 
 
 ---
 
+## MVVM 사용 원칙
+
+> **Controller는 ViewModel만 건드린다. View(=`SindyComponent` 및 Unity UI)를 직접 호출하는 코드는 `SindyComponent.Init()` 안에서만 작성한다.**
+
+게임 로직(Controller / 도메인 코드)은 항상 ViewModel의 reactive property를 바꾸는 것까지만 책임지고, 그 변경이 화면에 반영되는 일은 `Init()` 안에 등록된 구독이 처리합니다. 외부에서 컴포넌트의 메서드나 GameObject API(`SetActive`, `text = ...` 등)를 직접 호출하지 않습니다.
+
+이 경계가 무너지면 MVVM과 MVP가 한 코드베이스에 섞여 "이 값은 ViewModel을 거쳐야 바뀌나, 아니면 컨트롤러가 직접 뷰를 갱신하나?" 라는 추적 비용이 폭발합니다. 모든 View 갱신을 `Init()`로 모아두면 화면 변경의 진입점이 단일화되고, 모델만 보고도 UI 동작을 재구성할 수 있어 테스트와 디버깅이 단순해집니다.
+
+---
+
 ## 클래스 구조
 
 ```
-SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model 보유
-└── SindyComponent<T> (abstract)        ← 타입 안전 레이어. T Model, abstract Init(T)
+SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. IViewModel Model 보유
+└── SindyComponent<T> (abstract)        ← 타입 안전 레이어. T Model (T : IViewModel), abstract Init(T)
     ├── LabelComponent
     ├── ButtonComponent
     ├── GaugeComponent
@@ -25,7 +35,7 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
 
 ### SindyComponent (비제네릭)
 
-`object Model`을 보유하며 `Bind(object)`, `Init(object)`, `Clear(object)` 가상 메서드를 제공합니다.
+`IViewModel Model`을 보유하며 `Bind(IViewModel)`을 공개 진입점으로, `Init(object)`/`Clear(object)`를 서브클래스 오버라이드용 훅으로 제공합니다.
 
 내부 상태:
 - `disposables` — `Init`에서 등록한 구독들을 모아두는 리스트
@@ -36,16 +46,18 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
 ### SindyComponent\<T\>
 
 ```csharp
-public abstract class SindyComponent<T> : SindyComponent where T : class
+public abstract class SindyComponent<T> : SindyComponent where T : class, IViewModel
 {
     public new T Model { get; }
-    public virtual SindyComponent Bind(T model) { ... }
+    public override SindyComponent Bind(IViewModel model) { ... }   // T 캐스팅 + 검증 후 SetModel(T) 호출
+    public virtual SindyComponent SetModel(T model) { ... }
     protected abstract void Init(T model);
     protected virtual void Clear(T model) { }
 }
 ```
 
-- `Bind(object)`에서 타입 검사: `T`가 아닌 타입이 오면 `ArgumentException` throw
+- 제약 `where T : class, IViewModel` 로 모델은 항상 `IViewModel`을 구현해야 합니다.
+- `Bind(IViewModel)`에서 타입 검사: `T`가 아닌 타입이 오면 `ArgumentException` throw
 - `Init(T)` — abstract, 반드시 구현
 - `Clear(T)` — virtual (기본 빈 구현), UI 초기화가 필요할 때만 오버라이드
 
@@ -138,12 +150,59 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 
 ## BindCommonFeatures
 
-`Init` 전에 자동 실행됩니다. 모델이 `ViewModel`이면 다음 Feature를 자동 처리합니다:
+`Init` 전에 자동 실행됩니다. 시그니처는 `BindCommonFeatures(IViewModel)`이며, 모델의 Feature 컬렉션 중 다음을 자동 처리합니다:
 
 - `VisibilityFeature` → `gameObject.SetActive`
 - `LayoutFeature` → `RectTransform`에 레이아웃 적용
 
-개별 컴포넌트에서 이미 처리하는 경우 `BindCommonFeatures`를 오버라이드하여 비활성화할 수 있습니다.
+`IViewModel.Feature<T>()` 인터페이스를 통해 조회하므로 콘크리트 `ViewModel` 캐스팅이 필요 없습니다. 개별 컴포넌트에서 이미 처리하는 경우 `BindCommonFeatures`를 오버라이드하여 비활성화할 수 있습니다.
+
+---
+
+## ModelFeature
+
+`ModelFeature`는 모델에 부착되어 동작하는 재사용 가능한 단위입니다(예: `VisibilityFeature`, `LayoutFeature`, `InteractableFeature`, `HoldFeature` 등). `ViewModel.With<TFeature>(feature)` 로 모델에 등록하고, 컴포넌트는 `model.Feature<TFeature>()` 로 조회합니다.
+
+```csharp
+var vm = new ButtonModel()
+    .With(new InteractableFeature())
+    .With(new HoldFeature(thresholdSeconds: 0.5f));
+
+vm.Feature<InteractableFeature>().Interactable.Value = false;
+```
+
+`IViewModel`은 다음 Feature 관련 API를 노출합니다:
+
+- `T Feature<T>() where T : ModelFeature` — 등록된 Feature 조회
+- `IEnumerable<Type> GetFeatureTypes()` — 등록된 Feature 타입 목록(검증/디버그 용도)
+
+---
+
+## SupportedFeatureAttribute
+
+각 컴포넌트가 어떤 `ModelFeature`를 지원하는지 선언적으로 표현하는 어트리뷰트입니다. Inspector 표시와 Editor/Dev 빌드의 검증에 활용됩니다.
+
+```csharp
+[SupportedFeature(typeof(InteractableFeature))]
+[SupportedFeature(typeof(HoldFeature))]
+public class ButtonComponent : SindyComponent<ButtonModel> { ... }
+```
+
+- 어트리뷰트는 다중 적용 가능(`AllowMultiple = true`)이며, `Inherited = true`로 파생 클래스에도 전파됩니다.
+- 베이스 `SindyComponent`는 `VisibilityFeature` / `LayoutFeature`를 묵시적으로 지원하므로 별도 선언이 필요 없습니다.
+- Editor/Dev 빌드에서 `Bind` 시점에, 모델에 등록된 Feature 중 컴포넌트가 선언하지 않은 것이 있으면 경고 로그를 출력합니다(`SindyComponent<T>.ValidateSupportedFeatures`).
+
+---
+
+## Inspector 표시 (SindyComponentEditor / ViewBehaviourDrawer)
+
+### SindyComponentEditor
+
+모든 `SindyComponent` 파생 컴포넌트의 Inspector 하단에 **지원 Feature** 목록이 표시됩니다. `[SupportedFeature(...)]` 어트리뷰트가 선언되어 있으면 해당 Feature 타입 이름이 글머리표로 나열됩니다(중복은 자동 제거).
+
+### ViewBehaviourDrawer
+
+`ViewComponent`의 `views` 리스트 항목(`ViewBehaviour`)을 한 줄에 (component 필드 + key 입력 + 모델 타입 라벨) 형태로 그려줍니다. 연결된 컴포넌트가 `SindyComponent<T>` 파생인 경우, 제네릭 인자 `T` 의 이름이 회색 라벨로 함께 표시되어 어떤 모델을 연결해야 하는지 한눈에 확인할 수 있습니다.
 
 ---
 

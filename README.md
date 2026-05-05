@@ -46,7 +46,7 @@ scroller.RegisterCellType<ItemVM>(itemPrefab);
 scroller.Bind(new ScrollerViewModel(sections));
 ```
 
-→ [상세 문서](./SINDY_COMPONENT.md#sindyscroller)
+→ [상세 문서](./SINDY_COMPONENT.md#scrollercomponent)
 
 ### RedDot 시스템
 
