@@ -14,14 +14,14 @@ namespace Sindy.View.Scroller
 
         Type ContentVMType { get; }
         int ContentCount { get; }
-        object GetContentVMAt(int index);
-        int IndexOfContentVM(object vm);
+        IViewModel GetContentVMAt(int index);
+        int IndexOfContentVM(IViewModel vm);
 
-        object Header { get; }
-        object Footer { get; }
-        object EmptyContent { get; }
+        IViewModel Header { get; }
+        IViewModel Footer { get; }
+        IViewModel EmptyContent { get; }
 
-        event Action<ListChange<object>> OnContentChanged;
+        event Action<ListChange<IViewModel>> OnContentChanged;
 
         void AttachListener();
         void DetachListener();
@@ -30,14 +30,14 @@ namespace Sindy.View.Scroller
     /// <summary>
     /// FR-SEC-02. 단일 VM 타입의 섹션. 제네릭 타입 매개변수로 VM 타입을 강제한다.
     /// </summary>
-    public class Section<TVM> : ISection where TVM : class
+    public class Section<TVM> : ISection where TVM : class, IViewModel
     {
         public ObservableList<TVM> Content { get; }
         public SectionOption Option { get; }
 
-        private object header;
-        private object footer;
-        private object emptyContent;
+        private IViewModel header;
+        private IViewModel footer;
+        private IViewModel emptyContent;
         private bool isAttached;
 
         /// <summary>
@@ -47,23 +47,23 @@ namespace Sindy.View.Scroller
         /// 부착 이후 변경은 InvalidOperationException을 던진다 (FR-CELL-06: prefab은 SetSections
         /// 시점에 검증·캐시되며 사후 재해상되지 않으므로 silent하게 무시되는 일관성 깨짐을 방지).
         /// </summary>
-        public object Header
+        public IViewModel Header
         {
             get => header;
             set { ThrowIfAttached(nameof(Header)); header = value; }
         }
-        public object Footer
+        public IViewModel Footer
         {
             get => footer;
             set { ThrowIfAttached(nameof(Footer)); footer = value; }
         }
-        public object EmptyContent
+        public IViewModel EmptyContent
         {
             get => emptyContent;
             set { ThrowIfAttached(nameof(EmptyContent)); emptyContent = value; }
         }
 
-        public event Action<ListChange<object>> OnContentChanged;
+        public event Action<ListChange<IViewModel>> OnContentChanged;
 
         public Section(ObservableList<TVM> content, SectionOption option)
         {
@@ -73,12 +73,12 @@ namespace Sindy.View.Scroller
 
         public Type ContentVMType => typeof(TVM);
         public int ContentCount => Content.Count;
-        public object GetContentVMAt(int index) => Content[index];
-        public int IndexOfContentVM(object vm) => vm is TVM typed ? Content.IndexOf(typed) : -1;
+        public IViewModel GetContentVMAt(int index) => Content[index];
+        public int IndexOfContentVM(IViewModel vm) => vm is TVM typed ? Content.IndexOf(typed) : -1;
 
-        object ISection.Header => header;
-        object ISection.Footer => footer;
-        object ISection.EmptyContent => emptyContent;
+        IViewModel ISection.Header => header;
+        IViewModel ISection.Footer => footer;
+        IViewModel ISection.EmptyContent => emptyContent;
 
         public void AttachListener()
         {
@@ -110,12 +110,12 @@ namespace Sindy.View.Scroller
             // TVM 변경 이벤트를 비제네릭 object 이벤트로 어댑팅한다.
             var adapted = e.Action switch
             {
-                ListChangeAction.Add => ListChange<object>.Add(e.NewItem, e.NewIndex),
-                ListChangeAction.Remove => ListChange<object>.Remove(e.OldItem, e.OldIndex),
-                ListChangeAction.Replace => ListChange<object>.Replace(e.OldItem, e.NewItem, e.NewIndex),
-                ListChangeAction.Move => ListChange<object>.Move(e.NewItem, e.OldIndex, e.NewIndex),
-                ListChangeAction.Reset => ListChange<object>.Reset(),
-                _ => ListChange<object>.Reset(),
+                ListChangeAction.Add => ListChange<IViewModel>.Add(e.NewItem, e.NewIndex),
+                ListChangeAction.Remove => ListChange<IViewModel>.Remove(e.OldItem, e.OldIndex),
+                ListChangeAction.Replace => ListChange<IViewModel>.Replace(e.OldItem, e.NewItem, e.NewIndex),
+                ListChangeAction.Move => ListChange<IViewModel>.Move(e.NewItem, e.OldIndex, e.NewIndex),
+                ListChangeAction.Reset => ListChange<IViewModel>.Reset(),
+                _ => ListChange<IViewModel>.Reset(),
             };
             OnContentChanged?.Invoke(adapted);
         }

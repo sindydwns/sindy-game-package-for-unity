@@ -6,6 +6,14 @@ using Sindy.Common;
 
 namespace Sindy.View
 {
+    public interface IViewModel : IDisposeChain
+    {
+        public T GetChild<T>(string name) where T : IViewModel;
+        public IViewModel this[string name] { get; set; }
+        public IEnumerable<Type> GetFeatureTypes();
+        public T Feature<T>() where T : ModelFeature;
+    }
+
     public class ViewModel : IViewModel
     {
         protected readonly List<IDisposable> disposables = new();
@@ -67,7 +75,7 @@ namespace Sindy.View
             }
         }
 
-        public ViewModel AddChild(string name, IViewModel model, bool disposeWithParent = true)
+        public IViewModel AddChild(string name, IViewModel model, bool disposeWithParent = true)
         {
             var tokens = name.Split(".", StringSplitOptions.RemoveEmptyEntries);
             var token = tokens.FirstOrDefault() ?? throw new ArgumentException("Invalid view name");
@@ -81,7 +89,14 @@ namespace Sindy.View
                     ((IDisposeChain)child).AddTo(this);
                 }
                 var subName = string.Join(".", tokens.Skip(1));
-                ((ViewModel)child).AddChild(subName, model, disposeWithParent);
+                if (child is ViewModel vmChild)
+                {
+                    vmChild.AddChild(subName, model, disposeWithParent);
+                }
+                else
+                {
+                    child[subName] = model;
+                }
             }
             else
             {

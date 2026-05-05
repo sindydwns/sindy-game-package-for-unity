@@ -11,7 +11,7 @@ namespace Sindy.View
 {
     public class SindyComponent : MonoBehaviour
     {
-        public object Model { get; protected set; }
+        public IViewModel Model { get; protected set; }
         public ComponentPreset Preset { get; set; }
         protected readonly List<IDisposable> disposables = new();
         private readonly SindyComponentNamedHandleStore handles = new();
@@ -29,7 +29,7 @@ namespace Sindy.View
         /// </summary>
         /// <param name="model"></param>
         /// <returns></returns>
-        public virtual SindyComponent Bind(object model)
+        public virtual SindyComponent Bind(IViewModel model)
         {
             if (isInitialized && model == Model)
             {
@@ -41,10 +41,7 @@ namespace Sindy.View
             Model = model;
             if (Model != null)
             {
-                if (Model is ViewModel viewModel)
-                {
-                    BindCommonFeatures(viewModel);
-                }
+                BindCommonFeatures(Model);
                 Init(Model);
             }
 
@@ -88,19 +85,13 @@ namespace Sindy.View
         /// 모델이 ViewModel인 경우 공통 Feature(Visibility, Interactable)를 자동 바인딩합니다.
         /// 개별 컴포넌트에서 이 Feature들을 직접 처리하는 경우 오버라이드하여 비활성화할 수 있습니다.
         /// </summary>
-        protected virtual void BindCommonFeatures(ViewModel viewModel)
+        protected virtual void BindCommonFeatures(IViewModel viewModel)
         {
             var visibility = viewModel.Feature<VisibilityFeature>();
-            if (visibility != null)
-            {
-                visibility.Show.Subscribe(v => gameObject.SetActive(v)).AddTo(disposables);
-            }
+            visibility?.Show.Subscribe(v => gameObject.SetActive(v)).AddTo(disposables);
 
             var layout = viewModel.Feature<LayoutFeature>();
-            if (layout != null)
-            {
-                layout.Apply(transform as RectTransform);
-            }
+            layout?.Apply(transform as RectTransform);
         }
 
         protected void ClearDisposables()
@@ -167,7 +158,7 @@ namespace Sindy.View
         }
     }
 
-    public abstract class SindyComponent<T> : SindyComponent where T : class
+    public abstract class SindyComponent<T> : SindyComponent where T : class, IViewModel
     {
         public new T Model
         {
@@ -175,12 +166,12 @@ namespace Sindy.View
             protected set => base.Model = value;
         }
 
-        public override SindyComponent Bind(object model)
+        public override SindyComponent Bind(IViewModel model)
         {
             if (model == null || model is T)
             {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-                ValidateSupportedFeatures(model);
+                ValidateSupportedFeatures((T)model);
 #endif
                 SetModel((T)model);
             }
@@ -192,9 +183,9 @@ namespace Sindy.View
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        private void ValidateSupportedFeatures(object model)
+        private void ValidateSupportedFeatures(T model)
         {
-            if (model is not ViewModel viewModel) return;
+            if (model == null) return;
 
             var declared = new HashSet<Type>
             {
@@ -207,7 +198,7 @@ namespace Sindy.View
                     declared.Add(attr.FeatureType);
             }
 
-            foreach (var featureType in viewModel.GetFeatureTypes())
+            foreach (var featureType in model.GetFeatureTypes())
             {
                 if (!declared.Contains(featureType))
                 {

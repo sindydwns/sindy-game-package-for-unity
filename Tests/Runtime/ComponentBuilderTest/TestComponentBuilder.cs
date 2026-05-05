@@ -281,7 +281,7 @@ namespace Sindy.Test
         private void BlueprintFactoryCreatesFreshInstances()
         {
             int invocations = 0;
-            var factory = new System.Func<object>(() =>
+            var factory = new System.Func<IViewModel>(() =>
             {
                 invocations++;
                 return new PropModel<string>("fresh");

@@ -33,7 +33,7 @@ namespace Sindy.View
 
         private readonly string _prefabName;
         private readonly ComponentBlueprint _baseBlueprint;
-        private Func<object> _rootModelFactory;
+        private Func<IViewModel> _rootModelFactory;
 
         private readonly List<PatchInstruction> _patches = new();
         private PatchInstruction _pendingPatch;
@@ -42,7 +42,7 @@ namespace Sindy.View
 
         internal string PrefabName => _prefabName;
         internal LayoutFeature RootLayout => _rootLayout;
-        internal Func<object> RootModelFactory => _rootModelFactory;
+        internal Func<IViewModel> RootModelFactory => _rootModelFactory;
         internal IReadOnlyList<PatchInstruction> PatchEntries => _patches;
 
         internal class PatchInstruction
@@ -50,7 +50,7 @@ namespace Sindy.View
             public readonly string Path;
             public readonly string PrefabName;
             public readonly ComponentBlueprint Blueprint;
-            public Func<object> ModelFactory;
+            public Func<IViewModel> ModelFactory;
             public LayoutFeature Layout;
 
             public PatchInstruction(string path, string prefabName)
@@ -92,7 +92,7 @@ namespace Sindy.View
         /// 직전 Create() 또는 Patch()에 팩토리로 모델을 지정한다.
         /// Open() 시점에 팩토리가 실행되어 매번 새 인스턴스가 생성된다.
         /// </summary>
-        public ComponentBlueprint WithModel(Func<object> factory)
+        public ComponentBlueprint WithModel(Func<IViewModel> factory)
         {
             if (_pendingPatch != null)
             {

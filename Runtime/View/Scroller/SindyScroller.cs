@@ -160,7 +160,7 @@ namespace Sindy.View.Scroller
             layouts = Array.Empty<SectionLayout>();
         }
 
-        private readonly List<Action<ListChange<object>>> sectionHandlers = new();
+        private readonly List<Action<ListChange<IViewModel>>> sectionHandlers = new();
 
         private void AttachListeners()
         {
@@ -168,7 +168,7 @@ namespace Sindy.View.Scroller
             for (var i = 0; i < sections.Count; i++)
             {
                 var idx = i;
-                Action<ListChange<object>> h = e => OnSectionChanged(idx, e);
+                Action<ListChange<IViewModel>> h = e => OnSectionChanged(idx, e);
                 sectionHandlers.Add(h);
                 sections[i].OnContentChanged += h;
                 sections[i].AttachListener();
@@ -535,7 +535,7 @@ namespace Sindy.View.Scroller
         private void BindCell(CellKey k, SindyComponent inst)
         {
             var s = sections[k.Section];
-            object vm = k.Slot switch
+            IViewModel vm = k.Slot switch
             {
                 CellKey.HeaderSlot => s.Header,
                 CellKey.FooterSlot => s.Footer,
@@ -691,7 +691,7 @@ namespace Sindy.View.Scroller
 
         // ───────── Data change handling (8장) ─────────
 
-        private void OnSectionChanged(int sectionIndex, ListChange<object> e)
+        private void OnSectionChanged(int sectionIndex, ListChange<IViewModel> e)
         {
             // 8장 (변경 이벤트 처리) + FR-DATA-03 (보강).
             //
@@ -785,7 +785,7 @@ namespace Sindy.View.Scroller
             ScrollTo(idx, itemIndex, alignment, animated, duration, ease);
         }
 
-        public void ScrollTo(ISection section, object vm,
+        public void ScrollTo(ISection section, IViewModel vm,
             ScrollAlignment? alignment = null, bool? animated = null, float? duration = null, EaseFunction ease = default)
         {
             var idx = sections.IndexOf(section);
@@ -795,7 +795,7 @@ namespace Sindy.View.Scroller
             ScrollTo(idx, itemIndex, alignment, animated, duration, ease);
         }
 
-        public void ScrollTo(object vm,
+        public void ScrollTo(IViewModel vm,
             ScrollAlignment? alignment = null, bool? animated = null, float? duration = null, EaseFunction ease = default)
         {
             for (var i = 0; i < sections.Count; i++)
@@ -931,7 +931,7 @@ namespace Sindy.View.Scroller
     /// SindyScroller의 ViewModel. SetModel() 호출 시 전달되는 데이터 컨테이너.
     /// Sections는 SetSections() 호출 관례와 동일하게 null 항목을 자동으로 걸러낸다.
     /// </summary>
-    public class ScrollerViewModel
+    public class ScrollerViewModel : ViewModel
     {
         private readonly IReadOnlyList<ISection> sections;
 

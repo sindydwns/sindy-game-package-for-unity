@@ -21,7 +21,7 @@ namespace Sindy.View
             Instance.BuildComponent(preset);
         }
 
-        public static void Open(string panelName, object data = null, int layer = 0)
+        public static void Open(string panelName, IViewModel data = null, int layer = 0)
         {
             var prefab = Instance.prefabs.GetGameObject<SindyComponent>(panelName);
             if (prefab == null)

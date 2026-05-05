@@ -5,10 +5,10 @@ namespace Sindy.View
     public class ComponentPreset
     {
         public SindyComponent Component { get; private set; }
-        public object Model { get; set; }
+        public IViewModel Model { get; set; }
         public int Layer { get; set; }
 
-        public ComponentPreset(SindyComponent prefab, object model = null, int layer = 0)
+        public ComponentPreset(SindyComponent prefab, IViewModel model = null, int layer = 0)
         {
             Component = prefab;
             Model = model;
@@ -33,7 +33,7 @@ namespace Sindy.View
         }
     }
 
-    public class ComponentPreset<T> : ComponentPreset where T : class
+    public class ComponentPreset<T> : ComponentPreset where T : class, IViewModel
     {
         public ComponentPreset(SindyComponent prefab, T model = null) : base(prefab, model) { }
 
@@ -44,7 +44,7 @@ namespace Sindy.View
         }
     }
 
-    public class ComponentPreset<T1, T2> : ComponentPreset where T1 : SindyComponent where T2 : class
+    public class ComponentPreset<T1, T2> : ComponentPreset where T1 : SindyComponent where T2 : class, IViewModel
     {
         public ComponentPreset(T1 prefab, T2 model = null) : base(prefab, model) { }
     }

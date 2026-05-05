@@ -103,12 +103,13 @@ namespace Sindy.View
                     return null;
 
                 Type type = component.GetType();
-                while (type != null && type != typeof(SindyComponent))
+                while (type != null)
                 {
                     if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(SindyComponent<>))
                     {
                         return type.GetGenericArguments()[0];
                     }
+                    if (type == typeof(SindyComponent)) break;
                     type = type.BaseType;
                 }
                 return null;
