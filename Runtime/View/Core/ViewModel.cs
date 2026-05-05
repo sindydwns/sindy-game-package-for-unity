@@ -34,6 +34,11 @@ namespace Sindy.View
             return default;
         }
 
+        public IEnumerable<Type> GetFeatureTypes()
+        {
+            return features?.Keys ?? Enumerable.Empty<Type>();
+        }
+
         protected void Dispose(Result _) => Dispose();
         protected static void DoNothing<T>(T _) { }
 

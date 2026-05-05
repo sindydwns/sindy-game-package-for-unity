@@ -179,6 +179,9 @@ namespace Sindy.View
         {
             if (model == null || model is T)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                ValidateSupportedFeatures(model);
+#endif
                 SetModel((T)model);
             }
             else
@@ -187,6 +190,32 @@ namespace Sindy.View
             }
             return this;
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        private void ValidateSupportedFeatures(object model)
+        {
+            if (model is not ViewModel viewModel) return;
+
+            var declared = new HashSet<Type>
+            {
+                typeof(VisibilityFeature),
+                typeof(LayoutFeature),
+            };
+            foreach (var raw in GetType().GetCustomAttributes(typeof(SupportedFeatureAttribute), inherit: true))
+            {
+                if (raw is SupportedFeatureAttribute attr && attr.FeatureType != null)
+                    declared.Add(attr.FeatureType);
+            }
+
+            foreach (var featureType in viewModel.GetFeatureTypes())
+            {
+                if (!declared.Contains(featureType))
+                {
+                    Debug.LogWarning($"[{GetType().Name}] Feature {featureType.Name}는 SupportedFeatureAttribute로 선언되지 않았습니다.", this);
+                }
+            }
+        }
+#endif
         public virtual SindyComponent SetModel(T model)
         {
             base.Bind(model);
