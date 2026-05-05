@@ -30,7 +30,7 @@ UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가
 
 → [상세 문서](./SINDY_COMPONENT.md)
 
-### Scroller (SindyScroller)
+### Scroller (ScrollerComponent)
 
 뷰포트에 보이는 셀만 인스턴스화하는 가상화 스크롤 리스트입니다. 다수 섹션 적층, 헤더/푸터/빈 콘텐츠 처리, 그리드 자동 산출(컬럼 수 동적 계산), Easing 기반 스크롤 점프를 지원합니다.
 
@@ -80,7 +80,7 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 
 | 문서 | 내용 |
 |------|------|
-| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | `SindyComponent<T>` 생명주기, SetParent, ViewComponent 바인딩 방법, SindyScroller |
+| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | `SindyComponent<T>` 생명주기, SetParent, ViewComponent 바인딩 방법, ScrollerComponent |
 | [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotComponent 연결 방법 |
 | [EDITOR_TOOLKIT.md](./EDITOR_TOOLKIT.md) | SindyEdit 전체 API 레퍼런스 — 메서드 목록, ComponentScope, HTTP IPC |
 | [SINDY_EDIT_TUTORIAL.md](./SINDY_EDIT_TUTORIAL.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |

@@ -19,7 +19,7 @@ SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. object Model
     ├── ButtonComponent
     ├── GaugeComponent
     ├── ViewComponent                   ← ViewModel 키-컴포넌트 자동 매핑
-    ├── SindyScroller                   ← 가상화 스크롤러 (ScrollerViewModel)
+    ├── ScrollerComponent               ← 가상화 스크롤러 (ScrollerViewModel)
     └── (기타 XxxComponent)
 ```
 
@@ -149,14 +149,14 @@ public class NoticeComponent : SindyComponent<NoticeModel>
 
 ---
 
-## SindyScroller
+## ScrollerComponent
 
-`SindyScroller`는 `SindyComponent<ScrollerViewModel>`을 상속하는 가상화 스크롤 컴포넌트입니다.  
+`ScrollerComponent`는 `SindyComponent<ScrollerViewModel>`을 상속하는 가상화 스크롤 컴포넌트입니다.  
 뷰포트에 보이는 셀만 인스턴스화하며, 다수 섹션 적층과 그리드 레이아웃을 지원합니다.
 
 ### ScrollerViewModel
 
-`SindyScroller`에 전달하는 ViewModel 타입입니다.
+`ScrollerComponent`에 전달하는 ViewModel 타입입니다.
 
 ```csharp
 public class ScrollerViewModel
@@ -193,7 +193,7 @@ scroller.Bind(null);   // 또는 scroller.SetSections(null)
 
 ```csharp
 // 셀 타입 등록 (Bind/SetSections 호출 이전에 수행)
-SindyScroller.RegisterGlobalCellType<ItemVM>(itemPrefab);  // 전역
+ScrollerComponent.RegisterGlobalCellType<ItemVM>(itemPrefab);  // 전역
 scroller.RegisterCellType<ItemVM>(itemPrefab);             // 인스턴스
 
 // 풀 사전 워밍
@@ -212,7 +212,7 @@ scroller.InvalidateLayout();
 
 - `RegisterCellType()` / `PrewarmPool()` 은 `Bind()` 또는 `SetSections()` **이전**에 호출해야 합니다.  
   사후 변경 시의 동작은 정의되지 않습니다 (FR-CELL-07).
-- 동일한 `ScrollerViewModel` 인스턴스를 재사용해 `Bind()`을 재호출하면, SindyScroller는 항상 재초기화합니다.  
+- 동일한 `ScrollerViewModel` 인스턴스를 재사용해 `Bind()`을 재호출하면, ScrollerComponent는 항상 재초기화합니다.  
   (SindyComponent 기본 동작의 "same-instance 스킵"을 의도적으로 우회합니다.)
 - `SetSections()`는 항상 새 `ScrollerViewModel` 인스턴스를 내부 생성하므로, 재호출 시 재초기화가 보장됩니다.
 

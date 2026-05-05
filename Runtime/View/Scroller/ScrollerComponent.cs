@@ -15,7 +15,7 @@ namespace Sindy.View.Scroller
     /// 빈 섹션 처리(FR-EMPTY-*), Easing 기반 스크롤 점프(FR-SCROLL-*).
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
-    public class SindyScroller : SindyComponent<ScrollerViewModel>
+    public class ScrollerComponent : SindyComponent<ScrollerViewModel>
     {
         [Header("UI Wiring")]
         [SerializeField] private ScrollRect scrollRect;
@@ -106,7 +106,7 @@ namespace Sindy.View.Scroller
         /// <summary>
         /// [리스크 대응] 동일 ScrollerViewModel 인스턴스 재사용 시 Init() 스킵 방지.
         /// SindyComponent.SetModel()은 isInitialized &amp;&amp; model == Model 조건에서 Init()을 스킵하지만,
-        /// SindyScroller는 동일 인스턴스가 전달되더라도 항상 재초기화를 보장한다.
+        /// ScrollerComponent는 동일 인스턴스가 전달되더라도 항상 재초기화를 보장한다.
         /// 방어: 동일 인스턴스 감지 시 Model을 null로 먼저 클리어하여 same-instance guard를 우회한다.
         /// </summary>
         public override SindyComponent SetModel(ScrollerViewModel model)
@@ -928,7 +928,7 @@ namespace Sindy.View.Scroller
     }
 
     /// <summary>
-    /// SindyScroller의 ViewModel. SetModel() 호출 시 전달되는 데이터 컨테이너.
+    /// ScrollerComponent의 ViewModel. SetModel() 호출 시 전달되는 데이터 컨테이너.
     /// Sections는 SetSections() 호출 관례와 동일하게 null 항목을 자동으로 걸러낸다.
     /// </summary>
     public class ScrollerViewModel : ViewModel
