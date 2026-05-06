@@ -13,7 +13,6 @@ namespace Sindy.Inven
     /// </summary>
     public class Checkpoint : IDisposable, ISerializable<int, Entity>
     {
-        private readonly CompositeDisposable disposibles = new();
         public bool IsDisposed { get; private set; } = false;
         protected ReactiveList<MissionTracker> missions = new();
         private ReactiveListCondition<MissionTracker> isComplete;
@@ -101,7 +100,7 @@ namespace Sindy.Inven
                 throw new ArgumentNullException(nameof(mission.target), "Entity cannot be null.");
             }
 
-            var stack = mission.Inventory.GetEntityStack(mission.target);
+            mission.Inventory.GetEntityStack(mission.target); // 스택이 존재하지 않으면 생성 (MissionTracker가 참조할 수 있도록)
             var tracker = new MissionTracker(mission);
             if (mission.syncronized == false)
             {
@@ -124,8 +123,6 @@ namespace Sindy.Inven
             {
                 return;
             }
-            disposibles.Dispose();
-            disposibles.Clear();
             isComplete.Dispose();
 
             foreach (var tracker in missions)
@@ -180,7 +177,7 @@ namespace Sindy.Inven
                 if (tracker != null)
                 {
                     tracker.Amount.Value = cnt;
-                    deserializeMissionList.Remove(tracker);
+                    deserializeMissionList.Remove(tracker); // 일치하는 미션이 여러개일 경우를 대비해 리스트에서 제거
                 }
             }
         }
@@ -191,15 +188,13 @@ namespace Sindy.Inven
             public Mission Mission => mission;
             public ReactiveProperty<long> Amount { get; private set; } = new();
             public ReadOnlyReactiveProperty<bool> IsComplete { get; private set; }
-            private readonly IEntityStack stack;
             public long Goal => mission.amount;
 
             public MissionTracker(Mission mission)
             {
                 this.mission = mission;
 
-                stack = mission.Stack;
-                Amount.Value = mission.startZero ? 0 : stack.Amount;
+                Amount.Value = mission.startZero ? 0 : mission.Stack.Amount;
                 IsComplete = Amount
                     .Select(amount => amount >= Goal)
                     .ToReadOnlyReactiveProperty();

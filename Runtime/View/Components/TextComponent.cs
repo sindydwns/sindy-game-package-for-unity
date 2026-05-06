@@ -48,7 +48,7 @@ namespace Sindy.View.Components
                 .Subscribe(_ =>
                 {
                     if (!IsPaused && Remaining.Value > 0f)
-                        Remaining.Value = MathF.Max(0f, Remaining.Value - Time.deltaTime);
+                        Remaining.Value = Mathf.Max(0f, Remaining.Value - Time.deltaTime);
                 })
                 .AddTo(disposables);
         }

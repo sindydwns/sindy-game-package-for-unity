@@ -138,7 +138,18 @@ namespace Sindy.Editor.EditorTools
                             context.Response.Close();
                         }
                     }
-                    catch (Exception) { /* 리스너 중지 시 발생하는 예외 무시 */ }
+                    catch (Exception)
+                    {
+                        if (_httpListener.IsListening == false)
+                        {
+                            // 서버가 중지되어 GetContext()가 예외를 던진 경우 정상 종료로 간주
+                            Debug.Log("[SindyCmd] HTTP 서버 중지됨");
+                        }
+                        else
+                        {
+                            // pass
+                        }
+                    }
                 }
             })
             { IsBackground = true };

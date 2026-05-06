@@ -279,7 +279,7 @@ namespace Sindy.Inven
             Change(stack, amount);
         }
 
-        private IEntityStack GetItem(Entity target)
+        private IEntityStack FindItem(Entity target)
         {
             if (target == null)
             {
@@ -291,7 +291,7 @@ namespace Sindy.Inven
 
         public long GetAmount(Entity item)
         {
-            var stack = GetItem(item);
+            var stack = FindItem(item);
             return stack == null ? 0 : stack.Amount;
         }
 

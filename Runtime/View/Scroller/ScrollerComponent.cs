@@ -216,20 +216,9 @@ namespace Sindy.View.Scroller
             }
         }
 
-        protected override void OnEnable()
-        {
-            base.OnEnable(); // SindyComponent의 deferred action 처리
-        }
-
         protected virtual void OnDisable()
         {
             StopScrollAnimation();
-        }
-
-        protected override void OnDestroy()
-        {
-            base.OnDestroy(); // ClearModel() → Clear() → DetachListeners() + ReleaseAllActive()
-            // 풀 인스턴스는 poolRoot/Content의 자식이므로 GameObject가 파괴되며 함께 정리된다 (FR-POOL-06).
         }
 
         protected virtual void LateUpdate()
