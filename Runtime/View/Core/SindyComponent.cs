@@ -31,7 +31,7 @@ namespace Sindy.View
         /// <returns></returns>
         public virtual SindyComponent Bind(IViewModel model)
         {
-            if (isInitialized && model == Model)
+            if (isInitialized && ReferenceEquals(model, Model))
             {
                 return this;
             }

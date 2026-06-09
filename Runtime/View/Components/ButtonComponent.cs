@@ -13,6 +13,10 @@ using UnityEditor.UI;
 namespace Sindy.View.Components
 {
     [RequireComponent(typeof(HoldButton))]
+    [SupportedFeature(typeof(HoldFeature))]
+    [SupportedFeature(typeof(InteractableFeature))]
+    [SupportedFeature(typeof(HighlightFeature))]
+    [SupportedFeature(typeof(RaycastBlockFeature))]
     public class ButtonComponent : SindyComponent<SubjModel<Unit>>
     {
         [SerializeField] private GameObject highlightTarget;

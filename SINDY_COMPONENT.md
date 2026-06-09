@@ -25,7 +25,8 @@ Unity의 MonoBehaviour에 **모델 바인딩 생명주기**를 얹어, Bind → 
 ```
 SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. IViewModel Model 보유
 └── SindyComponent<T> (abstract)        ← 타입 안전 레이어. T Model (T : IViewModel), abstract Init(T)
-    ├── LabelComponent
+    ├── TextComponent
+    ├── ImageComponent
     ├── ButtonComponent
     ├── GaugeComponent
     ├── ViewComponent                   ← ViewModel 키-컴포넌트 자동 매핑
@@ -97,7 +98,7 @@ Inspector에서 `(SindyComponent, "키이름")` 쌍을 등록해두면, ViewMode
 
 ```
 Bind(newModel)
-  ├── 이미 같은 모델이면 조기 반환 (isInitialized && model == Model)
+  ├── 이미 같은 모델이면 조기 반환 (isInitialized && ReferenceEquals(model, Model))
   ├── ClearModel()
   │   ├── Clear(이전 model)           ← 서브클래스 UI 초기화 훅
   │   ├── ClearDisposables()          ← disposables + handles 정리
@@ -133,7 +134,7 @@ disposables.Dispose();      // 3. 외부 관찰 구독 해제
 ```csharp
 public class NoticeComponent : SindyComponent<NoticeModel>
 {
-    [SerializeField] private LabelComponent title;
+    [SerializeField] private TextComponent title;
     [SerializeField] private ButtonComponent confirm;
 
     protected override void Init(NoticeModel model)
