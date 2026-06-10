@@ -9,5 +9,12 @@ namespace Sindy.View.Features
             Interactable = new PropModel<bool>(initialValue);
             Interactable.AddTo(this);
         }
-    }
+    
+        /// <summary>외부 모델 주입. Feature와 함께 Dispose된다.</summary>
+        public InteractableFeature(PropModel<bool> external)
+        {
+            Interactable = external ?? throw new System.ArgumentNullException(nameof(external));
+            Interactable.AddTo(this);
+        }
+}
 }
