@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using R3;
 using Sindy.View;
-using Sindy.View.Components;
 using Sindy.View.Features;
 
 namespace Sindy.Http
@@ -26,8 +25,9 @@ namespace Sindy.Http
         public PropModel<HttpError> Error { get; } = new();
         public PropModel<bool> HasError { get; } = new(false);
 
-        public ButtonModel PrevButton { get; } = new();
-        public ButtonModel NextButton { get; } = new();
+        /// <summary>이전/다음 페이지 버튼 모델 (ButtonFeature + InteractableFeature).</summary>
+        public ViewModel PrevButton { get; }
+        public ViewModel NextButton { get; }
 
         private readonly IHttpClient client;
         private readonly string baseUrl;
@@ -45,8 +45,14 @@ namespace Sindy.Http
             this.baseUrl = baseUrl;
             this.itemMapper = itemMapper;
 
-            PrevButton.With(new InteractableFeature(false));
-            NextButton.With(new InteractableFeature(false));
+            PrevButton = new ViewModel()
+                .With(new ButtonFeature())
+                .With(new InteractableFeature(false));
+            NextButton = new ViewModel()
+                .With(new ButtonFeature())
+                .With(new InteractableFeature(false));
+            PrevButton.AddTo(this);
+            NextButton.AddTo(this);
 
             // 버튼 활성화 상태 연동
             Observable.CombineLatest(CurrentPage.Obs, TotalPages.Obs, (cur, total) => cur > 1)
@@ -57,8 +63,8 @@ namespace Sindy.Http
                 .Subscribe(v => NextButton.Feature<InteractableFeature>().Interactable.Value = v)
                 .AddTo(disposables);
 
-            PrevButton.Obs.Subscribe(_ => GoToPage(CurrentPage.Value - 1)).AddTo(disposables);
-            NextButton.Obs.Subscribe(_ => GoToPage(CurrentPage.Value + 1)).AddTo(disposables);
+            PrevButton.Feature<ButtonFeature>().OnClick.Subscribe(_ => GoToPage(CurrentPage.Value - 1)).AddTo(disposables);
+            NextButton.Feature<ButtonFeature>().OnClick.Subscribe(_ => GoToPage(CurrentPage.Value + 1)).AddTo(disposables);
         }
 
         public void GoToPage(int page)
@@ -105,8 +111,6 @@ namespace Sindy.Http
             IsLoading.Dispose();
             Error.Dispose();
             HasError.Dispose();
-            PrevButton.Dispose();
-            NextButton.Dispose();
         }
     }
 }

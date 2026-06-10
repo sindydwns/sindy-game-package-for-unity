@@ -1,6 +1,11 @@
 # [설계 확정안] FeatureView 아키텍처 — 사용 시나리오
 
-> **상태: 설계 확정 (2026-06-10 논의 수렴, 잔여 질문 3건 포함 전부 확정). 구현 전.**
+> **상태: 구현 완료 (2026-06-11, Phase 1~4 전체 반영).**
+> 현행 레퍼런스는 [SINDY_COMPONENT.md](SINDY_COMPONENT.md), 실습은 [SINDY_COMPONENT_TUTORIAL.md](SINDY_COMPONENT_TUTORIAL.md) 참고.
+> 이 문서는 설계 결정 기록(Decision Log) 보존용이다.
+> 구현 노트: ButtonFeature는 기존 HoldFeature의 KeepHold/Release()를 계승했고,
+> 명시되지 않았던 Toggle/Color/Tab/Page/List/RedDot도 Feature 쌍으로 이식되었으며,
+> Notice/ItemSlot 복합 컴포넌트는 Models 팩토리(Models.Notice/Models.ItemSlot)로 대체되었다.
 > 핵심: 타입별 컴포넌트(TextComponent, ButtonComponent...)를 없애고,
 > **SindyComponent(허브) + FeatureView(능력 단위)** 조합으로 모든 UI를 구성한다.
 

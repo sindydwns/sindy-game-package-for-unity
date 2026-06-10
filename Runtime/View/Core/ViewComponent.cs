@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
+using R3;
 using UnityEngine;
-
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -9,14 +10,33 @@ using UnityEditor;
 
 namespace Sindy.View
 {
-    public class ViewComponent : SindyComponent<ViewModel>
+    /// <summary>
+    /// ViewModel의 자식들을 키로 하위 SindyComponent(허브)에 자동 매핑하는 트리 구조 컴포넌트.
+    ///
+    /// Feature는 "한 오브젝트의 능력" 축, ViewModel 자식은 "UI 트리 구조" 축 — 두 축은 공존한다.
+    /// Inspector의 views 리스트에 (자식 허브, "키이름") 쌍을 등록해두면,
+    /// 모델이 바인딩될 때 model[키]의 자식 모델이 각 허브에 주입되고 SetParent로 연쇄 해제가 연결된다.
+    /// </summary>
+    public class ViewComponent : SindyComponent
     {
         [SerializeField] private List<ViewBehaviour> views;
 
-        protected override void Init(ViewModel model)
+        private IDisposable modelSubscription;
+
+        protected virtual void Awake()
         {
+            modelSubscription = Model.Subscribe(OnModelChanged);
+        }
+
+        private void OnModelChanged(IViewModel model)
+        {
+            // null 전파 시 자식 해제는 허브의 LinkState 연쇄가 이미 처리했다.
+            if (model == null) return;
+
             foreach (var view in views)
             {
+                if (view.component == null) continue;
+
                 var childModel = model[view.name];
                 if (childModel != null)
                 {
@@ -24,13 +44,16 @@ namespace Sindy.View
                 }
                 else
                 {
-                    Debug.LogWarning($"ViewComponent: Model for view '{view.name}' not found in ViewModel.");
+                    Debug.LogWarning($"ViewComponent: Model for view '{view.name}' not found in ViewModel.", this);
                 }
             }
         }
 
-        protected override void Clear(ViewModel model)
+        protected override void OnDestroy()
         {
+            modelSubscription?.Dispose();
+            modelSubscription = null;
+            base.OnDestroy();
         }
 
         [Serializable]
@@ -44,7 +67,7 @@ namespace Sindy.View
         [CustomPropertyDrawer(typeof(ViewBehaviour))]
         public class ViewBehaviourDrawer : PropertyDrawer
         {
-            private static GUIStyle modelTypeStyle;
+            private static GUIStyle featureListStyle;
 
             public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
             {
@@ -61,25 +84,24 @@ namespace Sindy.View
                 EditorGUI.indentLevel = 0;
 
                 var componentProperty = property.FindPropertyRelative("component");
-                var modelType = ResolveModelType(componentProperty.objectReferenceValue);
-                string modelTypeText = modelType?.Name;
+                var featureListText = ResolveFeatureViewList(componentProperty.objectReferenceValue);
 
                 float componentWidth = 150f;
                 float spacing = 4f;
 
-                modelTypeStyle ??= new GUIStyle(EditorStyles.miniLabel)
+                featureListStyle ??= new GUIStyle(EditorStyles.miniLabel)
                 {
                     alignment = TextAnchor.MiddleLeft,
                     normal = { textColor = Color.gray }
                 };
 
-                float modelTypeWidth = 0f;
-                if (!string.IsNullOrEmpty(modelTypeText))
+                float featureListWidth = 0f;
+                if (!string.IsNullOrEmpty(featureListText))
                 {
-                    modelTypeWidth = modelTypeStyle.CalcSize(new GUIContent(modelTypeText)).x + spacing;
+                    featureListWidth = featureListStyle.CalcSize(new GUIContent(featureListText)).x + spacing;
                 }
 
-                float nameWidth = position.width - componentWidth - spacing - modelTypeWidth;
+                float nameWidth = position.width - componentWidth - spacing - featureListWidth;
 
                 Rect componentRect = new(position.x, position.y, componentWidth, position.height);
                 Rect nameRect = new(position.x + componentWidth + spacing, position.y, nameWidth, position.height);
@@ -87,32 +109,45 @@ namespace Sindy.View
                 EditorGUI.PropertyField(componentRect, componentProperty, GUIContent.none);
                 EditorGUI.PropertyField(nameRect, property.FindPropertyRelative("name"), GUIContent.none);
 
-                if (!string.IsNullOrEmpty(modelTypeText))
+                if (!string.IsNullOrEmpty(featureListText))
                 {
-                    Rect modelTypeRect = new(nameRect.xMax + spacing, position.y, modelTypeWidth, position.height);
-                    GUI.Label(modelTypeRect, modelTypeText, modelTypeStyle);
+                    Rect featureListRect = new(nameRect.xMax + spacing, position.y, featureListWidth, position.height);
+                    GUI.Label(featureListRect, featureListText, featureListStyle);
                 }
 
                 EditorGUI.indentLevel = indent;
                 EditorGUI.EndProperty();
             }
 
-            private static Type ResolveModelType(UnityEngine.Object component)
+            /// <summary>
+            /// 연결된 허브 오브젝트의 FeatureView 목록을 "Text, Button" 형태로 표시한다.
+            /// 어떤 Feature를 가진 모델을 연결해야 하는지 한눈에 확인할 수 있다.
+            /// </summary>
+            private static string ResolveFeatureViewList(UnityEngine.Object component)
             {
-                if (component == null)
-                    return null;
+                if (component is not SindyComponent sindy) return null;
 
-                Type type = component.GetType();
-                while (type != null)
+                var featureViews = sindy.GetComponents<IFeatureView>();
+                if (featureViews.Length == 0)
                 {
-                    if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(SindyComponent<>))
-                    {
-                        return type.GetGenericArguments()[0];
-                    }
-                    if (type == typeof(SindyComponent)) break;
-                    type = type.BaseType;
+                    return sindy is ViewComponent ? "View" : null;
                 }
-                return null;
+
+                var sb = new StringBuilder();
+                foreach (var view in featureViews)
+                {
+                    if (sb.Length > 0) sb.Append(", ");
+                    sb.Append(ShortFeatureName(view.FeatureType.Name));
+                }
+                return sb.ToString();
+            }
+
+            private static string ShortFeatureName(string featureTypeName)
+            {
+                const string suffix = "Feature";
+                return featureTypeName.EndsWith(suffix)
+                    ? featureTypeName.Substring(0, featureTypeName.Length - suffix.Length)
+                    : featureTypeName;
             }
         }
 #endif

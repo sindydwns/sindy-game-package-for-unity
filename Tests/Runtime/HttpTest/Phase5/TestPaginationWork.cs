@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using R3;
 using Sindy.Http;
 using Sindy.View;
-using Sindy.View.Components;
 using Sindy.View.Features;
 using UnityEngine.Assertions;
 
@@ -94,7 +93,7 @@ namespace Sindy.Test
             Assert.AreEqual(1, paged.CurrentPage.Value);
             Assert.AreEqual(true, paged.NextButton.Feature<InteractableFeature>().Interactable.Value);
 
-            paged.NextButton.OnNext(Unit.Default);  // 다음 페이지
+            paged.NextButton.Feature<ButtonFeature>().OnClick.OnNext(Unit.Default);  // 다음 페이지
 
             Assert.AreEqual(2, paged.CurrentPage.Value);
             Assert.AreEqual(2, fake.ReceivedRequests.Count);
@@ -116,7 +115,7 @@ namespace Sindy.Test
             Assert.AreEqual(2, paged.CurrentPage.Value);
             Assert.AreEqual(true, paged.PrevButton.Feature<InteractableFeature>().Interactable.Value);
 
-            paged.PrevButton.OnNext(Unit.Default);
+            paged.PrevButton.Feature<ButtonFeature>().OnClick.OnNext(Unit.Default);
 
             Assert.AreEqual(1, paged.CurrentPage.Value);
             Assert.AreEqual("/api/ranking?page=1", fake.ReceivedRequests[1].Url);

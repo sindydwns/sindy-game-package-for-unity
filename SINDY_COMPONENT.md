@@ -1,289 +1,316 @@
-# SindyComponent & ViewComponent
+# SindyComponent & FeatureView
 
-## SindyComponent란
+> **FeatureView 아키텍처** (2026-06 전환 완료). 설계 배경과 Decision Log는
+> [FEATURE_VIEW_SCENARIO.md](FEATURE_VIEW_SCENARIO.md), 실습은 [SINDY_COMPONENT_TUTORIAL.md](SINDY_COMPONENT_TUTORIAL.md) 참고.
 
-`SindyComponent`는 이 패키지의 모든 UI 컴포넌트가 상속받는 기반 MonoBehaviour입니다.  
-Unity의 MonoBehaviour에 **모델 바인딩 생명주기**를 얹어, Bind → Init → Clear → OnDestroy 흐름을 표준화합니다.
+## 개념 한 장 요약
 
-기존 Unity UI 코드에서 반복되던 "구독 등록/해제를 직접 관리해야 하는 부담"을 없애고,  
-컴포넌트가 파괴되거나 모델이 교체될 때 구독 누수가 생기지 않도록 보장합니다.
+타입별 컴포넌트(TextComponent, ButtonComponent...)는 없다.
+**SindyComponent(허브) + FeatureView(능력 단위)** 조합으로 모든 UI를 구성한다.
+
+```
+[모델 측]                            [뷰 측 - 한 GameObject]
+ViewModel                            SindyComponent              ← 허브: ReactiveProperty<IViewModel>
+ ├─ TextFeature("공격")        ◀──▶   TextFeatureView            ← TMP_Text 출력
+ ├─ ButtonFeature(allowHold)   ◀──▶   ButtonFeatureView          ← 클릭+홀드 입력 (포인터 이벤트 단일 소유)
+ ├─ GaugeFeature(0.7f)         ◀──▶   GaugeFeatureView           ← Image fillAmount 출력
+ └─ InteractableFeature        ◀──▶   InteractableFeatureView    ← CanvasGroup 제어
+```
+
+- "이 오브젝트가 뭘 할 수 있는가" = Inspector의 FeatureView 목록 그 자체 (1:1이므로 자명)
+- 모델 교체/해제는 ReactiveProperty 스트림으로 모든 FeatureView에 자동 전파
+
+## 설계 4원칙
+
+1. **1:1 대칭** — `ModelFeature`(모델) ↔ `FeatureView`(뷰)는 항상 1:1. N:1은 채택하지 않음.
+2. **Feature 경계 기준** — 같은 저수준 입력 자원(포인터 제스처 공간 등)을 공유하는 동작은
+   **한 Feature의 내부 옵션**으로 통합한다(예: 클릭/홀드 → `ButtonFeature(allowHold:)`).
+   독립 동작 가능한 능력은 별도 Feature로 분리한다(예: Interactable, Visibility, Highlight).
+3. **역방향 참조** — FeatureView가 `[RequireComponent(typeof(SindyComponent))]`로 허브를 보장하고,
+   스스로 허브를 찾아 구독한다. 허브는 FeatureView의 존재를 모른다(릴리스 빌드 기준).
+4. **ReactiveProperty 기반 모델 전파** — 허브는 `ReactiveProperty<IViewModel>`을 보유.
+   R3의 "구독 즉시 현재 값 방출" 의미론이 비활성 Bind·늦은 Awake·런타임 AddComponent
+   타이밍 문제를 전부 해결한다.
 
 ---
 
 ## MVVM 사용 원칙
 
-> **Controller는 ViewModel만 건드린다. View(=`SindyComponent` 및 Unity UI)를 직접 호출하는 코드는 `SindyComponent.Init()` 안에서만 작성한다.**
+> **Controller는 ViewModel(Feature)만 건드린다. Unity UI를 직접 호출하는 코드는 FeatureView의 `Bind()` 안에서만 작성한다.**
 
-게임 로직(Controller / 도메인 코드)은 항상 ViewModel의 reactive property를 바꾸는 것까지만 책임지고, 그 변경이 화면에 반영되는 일은 `Init()` 안에 등록된 구독이 처리합니다. 외부에서 컴포넌트의 메서드나 GameObject API(`SetActive`, `text = ...` 등)를 직접 호출하지 않습니다.
-
-이 경계가 무너지면 MVVM과 MVP가 한 코드베이스에 섞여 "이 값은 ViewModel을 거쳐야 바뀌나, 아니면 컨트롤러가 직접 뷰를 갱신하나?" 라는 추적 비용이 폭발합니다. 모든 View 갱신을 `Init()`로 모아두면 화면 변경의 진입점이 단일화되고, 모델만 보고도 UI 동작을 재구성할 수 있어 테스트와 디버깅이 단순해집니다.
+게임 로직은 항상 Feature의 reactive property를 바꾸는 것까지만 책임지고, 그 변경이 화면에 반영되는 일은 FeatureView에 등록된 구독이 처리합니다. 외부에서 GameObject API(`SetActive`, `text = ...` 등)를 직접 호출하지 않습니다. 모든 View 갱신이 FeatureView로 모이면 화면 변경의 진입점이 단일화되고, 모델만 보고도 UI 동작을 재구성할 수 있어 테스트와 디버깅이 단순해집니다.
 
 ---
 
-## 클래스 구조
+## 핵심 클래스
 
-```
-SindyComponent (MonoBehaviour)          ← 비제네릭 베이스. IViewModel Model 보유
-└── SindyComponent<T> (abstract)        ← 타입 안전 레이어. T Model (T : IViewModel), abstract Init(T)
-    ├── TextComponent
-    ├── ImageComponent
-    ├── ButtonComponent
-    ├── GaugeComponent
-    ├── ViewComponent                   ← ViewModel 키-컴포넌트 자동 매핑
-    ├── ScrollerComponent               ← 가상화 스크롤러 (ScrollerViewModel)
-    └── (기타 XxxComponent)
-```
-
-### SindyComponent (비제네릭)
-
-`IViewModel Model`을 보유하며 `Bind(IViewModel)`을 공개 진입점으로, `Init(object)`/`Clear(object)`를 서브클래스 오버라이드용 훅으로 제공합니다.
-
-내부 상태:
-- `disposables` — `Init`에서 등록한 구독들을 모아두는 리스트
-- `LinkState` — 부모-자식 컴포넌트 연결 관리 (`SindyComponentLinkState`)
-- `handles` — 이름 있는 IDisposable 핸들 저장소 (`AddHandle` / `GetHandle`)
-- `deferredActions` — GameObject 비활성 중 요청된 코루틴을 OnEnable 시점으로 지연
-
-### SindyComponent\<T\>
+### SindyComponent (허브)
 
 ```csharp
-public abstract class SindyComponent<T> : SindyComponent where T : class, IViewModel
+public class SindyComponent : MonoBehaviour
 {
-    public new T Model { get; }
-    public override SindyComponent Bind(IViewModel model) { ... }   // T 캐스팅 + 검증 후 SetModel(T) 호출
-    public virtual SindyComponent SetModel(T model) { ... }
-    protected abstract void Init(T model);
-    protected virtual void Clear(T model) { }
+    public ReadOnlyReactiveProperty<IViewModel> Model { get; }   // FeatureView가 구독
+    public IViewModel CurrentModel { get; }
+
+    public SindyComponent Bind(IViewModel newModel);   // 같은 인스턴스면 방출 없음 (same-instance 스킵)
+    public void Reload();                              // ForceNotify — 의도적 전체 재초기화
+    public void SetParent(SindyComponent parent);      // 부모-자식 연쇄 해제 연결
 }
 ```
 
-- 제약 `where T : class, IViewModel` 로 모델은 항상 `IViewModel`을 구현해야 합니다.
-- `Bind(IViewModel)`에서 타입 검사: `T`가 아닌 타입이 오면 `ArgumentException` throw
-- `Init(T)` — abstract, 반드시 구현
-- `Clear(T)` — virtual (기본 빈 구현), UI 초기화가 필요할 때만 오버라이드
+- 모델은 **필드 초기화된** `ReactiveProperty<IViewModel>`이므로 허브의 Awake 실행 여부와
+  무관하게 비활성 상태에서도 Bind 가능
+- `Bind(null)` → 스트림으로 null 전파 → 각 FeatureView가 스스로 정리
+- LinkState(부모-자식 연쇄 해제)는 기존 구조 유지
 
----
-
-## SindyComponent vs ViewComponent
-
-| 항목 | SindyComponent\<T\> | ViewComponent |
-|------|---------------------|---------------|
-| 역할 | 단일 UI 요소 바인딩 | ViewModel의 자식들을 하위 컴포넌트에 매핑 |
-| 제네릭 | `T` (자유) | `ViewModel` 고정 |
-| Init 구현 | 직접 구독 코드 작성 | Inspector의 `views` 리스트 순회하며 `model[name]` 전달 |
-| 모델 키 접근 | 없음 | `model["이름"]`으로 자식 ViewModel 조회 |
-| 사용 위치 | 개별 컴포넌트 (라벨, 버튼 등) | 복잡한 UI 루트, 팝업 컨테이너 |
-
-`ViewComponent`의 Init:
+### FeatureView\<TFeature\> — dispose-then-bind를 구조로 강제
 
 ```csharp
-protected override void Init(ViewModel model)
+[RequireComponent(typeof(SindyComponent))]
+public abstract class FeatureView<TFeature> : MonoBehaviour, IFeatureView where TFeature : ModelFeature
 {
-    foreach (var view in views)
-    {
-        var childModel = model[view.name];   // ViewModel 딕셔너리에서 조회
-        if (childModel != null)
-        {
-            view.component.Bind(childModel).SetParent(this);
-        }
-    }
+    protected abstract void Bind(TFeature feature, ICollection<IDisposable> disposables);
+    protected virtual void Clear() { }
 }
 ```
 
-Inspector에서 `(SindyComponent, "키이름")` 쌍을 등록해두면, ViewModel에 담긴 자식 모델이 자동으로 연결됩니다.
+- Awake에서 허브의 `Model` 스트림을 구독. 모델이 바뀔 때마다 **항상 이전 구독을 먼저 해제**한 뒤
+  Feature가 있으면 `Bind`, 없으면(또는 null 모델) `Clear` 호출.
+- 구현자가 작성하는 것은 `Bind`/`Clear` 두 개뿐 — 생명주기 실수의 여지가 구조적으로 없다.
+- 구독 시작 시 현재 값이 즉시 방출된다. 모델이 아직 없으면 `Clear()`가 1회 호출되어
+  UI가 초기화 상태로 시작한다.
+
+### 타이밍 보장 (ReactiveProperty 의미론)
+
+| 시나리오 | 동작 |
+|---|---|
+| 비활성 오브젝트에 Bind 후 SetActive | 활성화 → FeatureView.Awake → 구독 → **현재 모델 즉시 수신** |
+| 런타임 AddComponent로 FeatureView 추가 | Awake에서 구독 → 현재 모델 즉시 수신 |
+| Scroller 셀 재활용 (재Bind 반복) | `model.Value = next`만 발생, 스캔 비용 0 |
+| 같은 모델 인스턴스 재Bind | 방출 없음 (스킵). 강제 갱신은 `Reload()` |
 
 ---
 
-## 생명주기
+## ModelFeature와 With
 
-```
-Bind(newModel)
-  ├── 이미 같은 모델이면 조기 반환 (isInitialized && ReferenceEquals(model, Model))
-  ├── ClearModel()
-  │   ├── Clear(이전 model)           ← 서브클래스 UI 초기화 훅
-  │   ├── ClearDisposables()          ← disposables + handles 정리
-  │   ├── 자식 컴포넌트 Bind(null) ← LinkState의 모든 자식 연쇄 해제
-  │   └── LinkState 정리              ← 자식 목록 클리어, 부모로부터 분리
-  ├── Model = newModel
-  └── model != null이면
-      ├── BindCommonFeatures(viewModel)   ← VisibilityFeature, LayoutFeature 자동 바인딩
-      └── Init(newModel)                 ← 서브클래스 구독 등록 훅
-
-OnDestroy()
-  └── ClearModel() + Model = null
-```
-
-### Cleanup 순서 (외부 코드에서 정리할 때)
+`ModelFeature`는 모델에 부착되는 능력 단위입니다. `ViewModel.With<TFeature>(feature)`로 등록하고,
+FeatureView가 `model.Feature<TFeature>()`로 조회합니다.
 
 ```csharp
-component.Bind(null);   // 1. 컴포넌트의 모델 구독 해제
-model.Dispose();            // 2. 모델 내부 구독 해제 (EveryUpdate, CombineLatest 등)
-disposables.Dispose();      // 3. 외부 관찰 구독 해제
-```
+var vm = new ViewModel()
+    .With(new TextFeature("파이어볼"))
+    .With(new ButtonFeature(allowHold: true))
+    .With(new InteractableFeature());
 
-순서가 중요합니다. 컴포넌트가 먼저 구독을 끊고, 그 다음 모델이 Dispose되어야 합니다.  
-역순이면 이미 Disposed된 Observable에 값이 흐를 수 있습니다.
-
----
-
-## Composite 패턴과 SetParent
-
-복잡한 UI는 여러 기본 컴포넌트를 조합합니다. `SetParent(this)`로 자식을 부모에 등록하면,  
-부모가 `Bind(null)` 또는 소멸될 때 자식도 연쇄적으로 `Bind(null)`이 호출됩니다.
-
-```csharp
-public class NoticeComponent : SindyComponent<NoticeModel>
-{
-    [SerializeField] private TextComponent title;
-    [SerializeField] private ButtonComponent confirm;
-
-    protected override void Init(NoticeModel model)
-    {
-        title.Bind(model.Title).SetParent(this);
-        confirm.Bind(model.Confirm).SetParent(this);
-    }
-}
-```
-
-`SetParent(this)` 없이 `Bind`만 호출하면, 부모가 교체될 때 자식 구독이 누수됩니다.
-
----
-
-## BindCommonFeatures
-
-`Init` 전에 자동 실행됩니다. 시그니처는 `BindCommonFeatures(IViewModel)`이며, 모델의 Feature 컬렉션 중 다음을 자동 처리합니다:
-
-- `VisibilityFeature` → `gameObject.SetActive`
-- `LayoutFeature` → `RectTransform`에 레이아웃 적용
-
-`IViewModel.Feature<T>()` 인터페이스를 통해 조회하므로 콘크리트 `ViewModel` 캐스팅이 필요 없습니다. 개별 컴포넌트에서 이미 처리하는 경우 `BindCommonFeatures`를 오버라이드하여 비활성화할 수 있습니다.
-
----
-
-## ModelFeature
-
-`ModelFeature`는 모델에 부착되어 동작하는 재사용 가능한 단위입니다(예: `VisibilityFeature`, `LayoutFeature`, `InteractableFeature`, `HoldFeature` 등). `ViewModel.With<TFeature>(feature)` 로 모델에 등록하고, 컴포넌트는 `model.Feature<TFeature>()` 로 조회합니다.
-
-```csharp
-var vm = new ButtonModel()
-    .With(new InteractableFeature())
-    .With(new HoldFeature(thresholdSeconds: 0.5f));
-
+sindy.Bind(vm);
 vm.Feature<InteractableFeature>().Interactable.Value = false;
 ```
 
-`IViewModel`은 다음 Feature 관련 API를 노출합니다:
+### 내장 Feature ↔ FeatureView 쌍
 
-- `T Feature<T>() where T : ModelFeature` — 등록된 Feature 조회
-- `IEnumerable<Type> GetFeatureTypes()` — 등록된 Feature 타입 목록(검증/디버그 용도)
+| Feature (모델 측) | FeatureView (뷰 측) | 제어 대상 |
+|---|---|---|
+| `TextFeature` | `TextFeatureView` | TMP_Text |
+| `ImageFeature` | `ImageFeatureView` | Image.sprite |
+| `GaugeFeature` | `GaugeFeatureView` | Image.fillAmount |
+| `ButtonFeature(allowHold:)` | `ButtonFeatureView` | 포인터 클릭+홀드 (uGUI Button 불필요) |
+| `ToggleFeature` | `ToggleFeatureView` | uGUI Toggle (양방향) |
+| `ColorFeature` | `ColorFeatureView` | Graphic.color |
+| `TabFeature` | `TabFeatureView` | Toggle 리스트 선택 (양방향) |
+| `PageFeature` | `PageFeatureView` | GameObject 리스트 중 1개 활성 |
+| `ListFeature` | `ListFeatureView` | 비가상화 아이템 리스트 |
+| `VisibilityFeature` | `VisibilityFeatureView` | GameObject.SetActive |
+| `LayoutFeature` | `LayoutFeatureView` | RectTransform 레이아웃 |
+| `InteractableFeature` | `InteractableFeatureView` | CanvasGroup interactable/blocksRaycasts/alpha |
+| `HighlightFeature` | `HighlightFeatureView` | 하이라이트 오브젝트 표시 |
+| `RaycastBlockFeature` | `RaycastBlockFeatureView` | CanvasGroup.blocksRaycasts |
+| `RedDotFeature` | `RedDotFeatureView` | 알림 뱃지 ([REDDOT.md](REDDOT.md)) |
+| `ScrollerFeature` | `ScrollerFeatureView` | 가상화 스크롤 (아래 참조) |
 
----
+대부분의 출력형 Feature는 두 가지 생성자를 제공합니다:
+단순 값(`new TextFeature("신디")`)과 **외부 모델 주입**(`new TextFeature(new TimerModel(60f))`).
+`TimerModel`·`FormatNumberPropModel` 등 `PropModel<string>` 파생 자가 갱신 모델을 그대로 재사용할 수 있습니다.
 
-## SupportedFeatureAttribute
+### Models 팩토리
 
-각 컴포넌트가 어떤 `ModelFeature`를 지원하는지 선언적으로 표현하는 어트리뷰트입니다. Inspector 표시와 Editor/Dev 빌드의 검증에 활용됩니다.
+자주 쓰는 조합은 `Models` 정적 팩토리로 축약합니다.
 
 ```csharp
-[SupportedFeature(typeof(InteractableFeature))]
-[SupportedFeature(typeof(HoldFeature))]
-public class ButtonComponent : SindyComponent<ButtonModel> { ... }
+sindy.Bind(Models.Label("신디"));
+sindy.Bind(Models.Button(allowHold: true));
+
+var notice = Models.Notice("알림", "정말 삭제할까요?");   // 키: title/content/confirm/cancel
+notice["confirm"].Feature<ButtonFeature>().OnClick.Subscribe(_ => Delete());
 ```
 
-- 어트리뷰트는 다중 적용 가능(`AllowMultiple = true`)이며, `Inherited = true`로 파생 클래스에도 전파됩니다.
-- 베이스 `SindyComponent`는 `VisibilityFeature` / `LayoutFeature`를 묵시적으로 지원하므로 별도 선언이 필요 없습니다.
-- Editor/Dev 빌드에서 `Bind` 시점에, 모델에 등록된 Feature 중 컴포넌트가 선언하지 않은 것이 있으면 경고 로그를 출력합니다(`SindyComponent<T>.ValidateSupportedFeatures`).
+---
+
+## UI 트리 구조 — ViewComponent
+
+Feature는 "한 오브젝트의 능력" 축, ViewModel 자식은 "UI 트리 구조" 축. 공존한다.
+
+루트에 `ViewComponent`를 두고 Inspector의 `views` 리스트에 (자식 허브, "키이름") 쌍을 등록하면,
+모델의 `model["키"]` 자식이 각 허브에 자동 주입되고 `SetParent`로 연쇄 해제가 연결됩니다.
+
+```csharp
+var shop = new ViewModel();
+shop["title"] = Models.Label("상점");
+shop["gold"]  = Models.Label(new FormatNumberPropModel<long>(12345));
+shop["buy"]   = new ViewModel().With(new TextFeature("구매")).With(new ButtonFeature());
+
+shopView.Bind(shop);
+```
+
+- 키가 ViewModel에 없으면 `ViewComponent: Model for view 'xxx' not found` 경고가 출력됩니다.
+- Inspector 각 항목 옆에 해당 오브젝트의 **FeatureView 목록**(예: `Text, Button`)이 회색 라벨로 표시됩니다.
+
+### Composite와 SetParent
+
+코드로 자식 허브를 직접 바인딩하는 경우 `SetParent(this)`를 호출해야
+부모가 `Bind(null)` 또는 재바인딩/소멸될 때 자식도 연쇄적으로 해제됩니다.
+
+```csharp
+childHub.Bind(childModel).SetParent(parentHub);
+```
 
 ---
 
-## Inspector 표시 (SindyComponentEditor / ViewBehaviourDrawer)
+## 생명주기와 정리(cleanup)
 
-### SindyComponentEditor
+```
+hub.Bind(newModel)
+  ├── 같은 인스턴스면 조기 반환 (same-instance 스킵)
+  ├── LinkState 연쇄: 자식 허브들 Bind(null), 부모로부터 분리
+  ├── (Editor/Dev) FeatureView ↔ Feature 매칭 검증
+  └── model.Value = newModel  → 각 FeatureView: 이전 구독 해제 → Bind(feature) 또는 Clear()
 
-모든 `SindyComponent` 파생 컴포넌트의 Inspector 하단에 **지원 Feature** 목록이 표시됩니다. `[SupportedFeature(...)]` 어트리뷰트가 선언되어 있으면 해당 Feature 타입 이름이 글머리표로 나열됩니다(중복은 자동 제거).
+hub.OnDestroy()
+  └── 자식 연쇄 해제 → 스트림으로 null 전파 → 스트림 Dispose
+```
 
-### ViewBehaviourDrawer
+외부 코드에서 정리할 때의 순서:
 
-`ViewComponent`의 `views` 리스트 항목(`ViewBehaviour`)을 한 줄에 (component 필드 + key 입력 + 모델 타입 라벨) 형태로 그려줍니다. 연결된 컴포넌트가 `SindyComponent<T>` 파생인 경우, 제네릭 인자 `T` 의 이름이 회색 라벨로 함께 표시되어 어떤 모델을 연결해야 하는지 한눈에 확인할 수 있습니다.
+```csharp
+hub.Bind(null);    // 1. FeatureView 구독 해제
+model.Dispose();   // 2. 모델 내부 구독 해제 (EveryUpdate, CombineLatest 등)
+```
+
+순서가 중요합니다. 역순이면 이미 Disposed된 Observable에 값이 흐를 수 있습니다.
+허브가 파괴되면 1번은 자동 수행되지만, 모델 Dispose는 모델 소유자(Controller)의 책임입니다.
 
 ---
 
+## 검증 (Editor/Dev 빌드 한정, 릴리스 비용 0)
+
+릴리스 빌드의 허브는 FeatureView 명단을 모르므로(순수 pub/sub), 검증은 Bind 타임 일회 스캔으로 수행:
+
+```
+[SindyComponent] 모델의 GaugeFeature에 매칭되는 FeatureView가 없습니다. (SkillSlot)
+[SindyComponent] TextFeatureView가 있으나 모델에 TextFeature가 없습니다. (SkillSlot)
+```
+
+FeatureView가 하나도 없는 허브(ViewComponent 트리 노드 등)는 검증 대상에서 제외됩니다.
+SindyComponent Inspector 하단에는 부착된 FeatureView 목록이 표시되고,
+플레이 중에는 바인딩된 모델과의 매칭 상태(✓/✗)가 함께 표시됩니다.
+
 ---
 
-## ScrollerComponent
+## ScrollerFeatureView (가상화 스크롤)
 
-`ScrollerComponent`는 `SindyComponent<ScrollerViewModel>`을 상속하는 가상화 스크롤 컴포넌트입니다.  
+`ScrollerFeature`(섹션 데이터) ↔ `ScrollerFeatureView`(가상화 엔진) 쌍입니다.
 뷰포트에 보이는 셀만 인스턴스화하며, 다수 섹션 적층과 그리드 레이아웃을 지원합니다.
 
-### ScrollerViewModel
+### 셀 키 + 카탈로그
 
-`ScrollerComponent`에 전달하는 ViewModel 타입입니다.
+prefab은 VM 타입 키 대신 **명시적 셀 키(문자열)**로 해상합니다. 해상 우선순위:
+
+1. `Section`의 명시 prefab (`ContentPrefab` 등)
+2. `SectionOption`의 prefab 오버라이드 (보조)
+3. 셀 키 → 인스턴스 등록(`RegisterCell`) → `CellCatalog` 에셋 → 전역 등록(`RegisterGlobalCell`)
+4. 미등록 → Bind 시점 throw (누락 키를 메시지에 명시, atomic)
 
 ```csharp
-public class ScrollerViewModel
+// 키 선언 — 오타 방지 const 모음
+public static class CellKeys
 {
-    public IReadOnlyList<ISection> Sections { get; }
-    public ScrollerViewModel(IEnumerable<ISection> sections) { ... }
+    public const string Title = "title";
+    public const string Item  = "shop.item";
 }
+
+// 공용 셀: 전역 등록(또는 CellCatalog 에셋) → 모든 스크롤러에서 키로 참조
+ScrollerFeatureView.RegisterGlobalCell(CellKeys.Title, titlePrefab);
+
+// 셀 모델은 순수 ViewModel + Feature (전용 클래스 불필요, 팩토리로 충분)
+static ViewModel ItemCell(ItemData d) => new ViewModel()
+    .With(new ImageFeature(d.Icon))
+    .With(new TextFeature(d.Name))
+    .With(new ButtonFeature());
+
+// 섹션 — 공용 셀은 키 참조, 일회성 셀은 prefab 직접 지정
+var section = new Section(itemList, option)        // ObservableList<IViewModel>
+{
+    ContentKey = CellKeys.Item,
+    Header = titleVM,
+    HeaderKey = CellKeys.Title,
+};
+var oneOff = new Section(eventList, option)
+{
+    ContentPrefab = eventBannerPrefab,             // 키 등록 없이 명시 지정
+};
+
+scroller.Bind(new ViewModel().With(new ScrollerFeature(new[] { section, oneOff })));
 ```
 
-null 섹션은 생성자에서 자동으로 걸러집니다.
-
-### 초기화 방식
-
-두 가지 방식을 모두 지원합니다. 기존 코드는 수정 없이 동작합니다.
-
-```csharp
-// 방식 1: SetSections — 기존 방식 (thin wrapper, 변경 없음)
-scroller.RegisterCellType<ItemVM>(itemPrefab);
-scroller.SetSections(new[] { section1, section2 });
-
-// 방식 2: Bind — SindyComponent 표준 패턴
-scroller.RegisterCellType<ItemVM>(itemPrefab);
-scroller.Bind(new ScrollerViewModel(new[] { section1, section2 }));
-
-// 클리어
-scroller.Bind(null);   // 또는 scroller.SetSections(null)
-```
-
-두 방식 모두 내부적으로 동일한 `Init(ScrollerViewModel)` / `Clear(ScrollerViewModel)` 흐름을 거칩니다.
-
-### 셀 등록 및 주요 API
-
-셀 타입 등록, 풀 워밍, 스크롤 조작 API는 변경 없이 그대로 유효합니다.
-
-```csharp
-// 셀 타입 등록 (Bind/SetSections 호출 이전에 수행)
-ScrollerComponent.RegisterGlobalCellType<ItemVM>(itemPrefab);  // 전역
-scroller.RegisterCellType<ItemVM>(itemPrefab);             // 인스턴스
-
-// 풀 사전 워밍
-scroller.PrewarmPool<ItemVM>(count: 10);
-
-// 스크롤 이동
-scroller.ScrollTo(section, itemIndex: 3, alignment: ScrollAlignment.Center, animated: true);
-scroller.ScrollToTop();
-scroller.ScrollToBottom();
-
-// 레이아웃 강제 재계산
-scroller.InvalidateLayout();
-```
+`CellCatalog`는 ScriptableObject 에셋(`Sindy/Scroller/Cell Catalog`)으로,
+등록 타이밍 제약이 없고 디자이너가 Inspector에서 매핑을 확인/수정할 수 있습니다.
 
 ### 주의사항
 
-- `RegisterCellType()` / `PrewarmPool()` 은 `Bind()` 또는 `SetSections()` **이전**에 호출해야 합니다.  
-  사후 변경 시의 동작은 정의되지 않습니다 (FR-CELL-07).
-- 동일한 `ScrollerViewModel` 인스턴스를 재사용해 `Bind()`을 재호출하면, ScrollerComponent는 항상 재초기화합니다.  
-  (SindyComponent 기본 동작의 "same-instance 스킵"을 의도적으로 우회합니다.)
-- `SetSections()`는 항상 새 `ScrollerViewModel` 인스턴스를 내부 생성하므로, 재호출 시 재초기화가 보장됩니다.
+- 코드 등록(`RegisterCell`/`RegisterGlobalCell`)은 `Bind()` **이전**에 호출해야 합니다 (FR-CELL-07).
+  CellCatalog 에셋은 이 제약이 없습니다.
+- 섹션 갱신은 새 `ScrollerFeature`를 가진 모델로 재Bind하거나, 같은 모델이면 허브의 `Reload()`를 호출합니다.
+- `RegisterCellType<TVM>` / `Section<TVM>` / `SetSections` 등 타입 키 API는 제거되었습니다.
 
 ---
 
-## 새 컴포넌트 추가 체크리스트
+## 커스텀 Feature/FeatureView 만들기 — 점멸(Blink) 예제
 
-1. `Components/XxxComponent.cs` 파일 생성
-2. 같은 파일에 `XxxModel : PropModel<T>` (또는 `SubjModel<T>`) 정의
-3. `XxxComponent : SindyComponent<XxxModel>` 정의
-4. `Init(XxxModel model)` — 구독 등록 (`disposables`에 추가)
-5. `Clear(XxxModel model)` — UI 초기화 (필요할 때만)
-6. 복합 컴포넌트면: 자식 컴포넌트에 `.SetParent(this)` 반드시 호출
-7. 테스트: `component.Bind(null); model.Dispose();` cleanup 검증
+작성할 것은 Feature/FeatureView 한 쌍. SindyComponent 수정 없음(Open/Closed).
+
+```csharp
+// 1) 모델 측 — 순수 데이터 (Unity API 없음 → 단위 테스트 가능)
+public class BlinkFeature : ModelFeature
+{
+    public PropModel<bool> Blinking { get; }
+    public BlinkFeature(bool initial = false)
+    {
+        Blinking = new PropModel<bool>(initial);
+        Blinking.AddTo(this);
+    }
+}
+
+// 2) 뷰 측 — Bind/Clear만 구현하면 생명주기는 베이스가 처리
+public class BlinkFeatureView : FeatureView<BlinkFeature>
+{
+    [SerializeField] private CanvasGroup target;
+    [SerializeField] private float interval = 0.3f;
+
+    protected override void Bind(BlinkFeature feature, ICollection<IDisposable> disposables)
+    {
+        feature.Blinking
+            .Subscribe(on => { if (on) StartBlink(); else StopBlink(); })
+            .AddTo(disposables);
+    }
+
+    protected override void Clear() => StopBlink();
+}
+```
+
+**체크리스트 (새 Feature 쌍 추가 시):**
+
+1. `Features/XxxFeature.cs` — `ModelFeature` 상속, 상태는 `PropModel<T>`, 이벤트는 `Subject<T>`
+2. 내부 모델은 생성자에서 `AddTo(this)` (Feature와 함께 Dispose)
+3. 가능하면 외부 모델 주입 생성자도 제공 (`XxxFeature(PropModel<T> external)`)
+4. `FeatureViews/XxxFeatureView.cs` — `Bind`의 모든 구독에 `.AddTo(disposables)`
+5. `[AddComponentMenu("Sindy/Feature Views/...")]` 선언
+6. 테스트: `hub.Bind(null); model.Dispose();` 후 값 변경해도 예외/갱신 없는지 확인

@@ -24,33 +24,30 @@ R3(Reactive Extensions for Unity) 기반 MVVM 패턴을 중심으로, 에디터 
 
 ## 모듈 소개
 
-### View / MVVM 시스템 (SindyComponent)
+### View / MVVM 시스템 (SindyComponent + FeatureView)
 
-UI 컴포넌트가 모델을 직접 관찰하고, 모델 값이 바뀌면 뷰가 자동으로 갱신됩니다. `SindyComponent<T>`가 Bind → Init → Clear → OnDestroy 생명주기를 표준화하여 구독 누수를 방지합니다. 복합 컴포넌트는 `SetParent(this)`로 연결해 부모-자식 해제를 자동화합니다.
+타입별 UI 컴포넌트 대신 **SindyComponent(허브) + FeatureView(능력 단위)** 조합으로 모든 UI를 구성합니다. 모델은 `ViewModel + Feature 조합`(전용 클래스 불필요), 뷰는 GameObject에 FeatureView를 부착하는 것으로 끝납니다. 허브의 `ReactiveProperty<IViewModel>` 스트림이 모델 교체/해제를 모든 FeatureView에 자동 전파하여 구독 누수를 구조적으로 차단합니다. 자식 허브는 `SetParent(this)`로 연결해 부모-자식 해제를 자동화합니다.
 
 → [상세 문서](./SINDY_COMPONENT.md)
 
-### Scroller (ScrollerComponent)
+### Scroller (ScrollerFeatureView)
 
 뷰포트에 보이는 셀만 인스턴스화하는 가상화 스크롤 리스트입니다. 다수 섹션 적층, 헤더/푸터/빈 콘텐츠 처리, 그리드 자동 산출(컬럼 수 동적 계산), Easing 기반 스크롤 점프를 지원합니다.
 
-`SindyComponent<ScrollerViewModel>` 기반이므로, `Bind(vm)` 또는 기존의 `SetSections(sections)` 두 가지 방식으로 데이터를 주입할 수 있습니다.
+`ScrollerFeature`(섹션 데이터) ↔ `ScrollerFeatureView`(가상화 엔진) 쌍이며, prefab은 명시적 셀 키(문자열) 또는 CellCatalog 에셋으로 해상합니다.
 
 ```csharp
-// 방식 1: SetSections (기존 방식, 변경 없음)
-scroller.RegisterCellType<ItemVM>(itemPrefab);
-scroller.SetSections(new[] { section });
+ScrollerFeatureView.RegisterGlobalCell("shop.item", itemPrefab);   // 또는 CellCatalog 에셋
 
-// 방식 2: Bind (SindyComponent 패턴)
-scroller.RegisterCellType<ItemVM>(itemPrefab);
-scroller.Bind(new ScrollerViewModel(sections));
+var section = new Section(itemList, option) { ContentKey = "shop.item" };
+scrollerHub.Bind(new ViewModel().With(new ScrollerFeature(new[] { section })));
 ```
 
-→ [상세 문서](./SINDY_COMPONENT.md#scrollercomponent)
+→ [상세 문서](./SINDY_COMPONENT.md#scrollerfeatureview-가상화-스크롤)
 
 ### RedDot 시스템
 
-인벤토리, 메일, 알림처럼 트리 구조로 집계되는 뱃지 카운터입니다. 점 구분 경로(`"inventory.new_item.sword"`)로 노드를 선언하면, 자식 카운트가 바뀔 때 상위 노드에 자동으로 반영됩니다. `RedDotComponent`를 오브젝트에 붙이고 경로만 입력하면 코드 없이도 뱃지가 동작합니다.
+인벤토리, 메일, 알림처럼 트리 구조로 집계되는 뱃지 카운터입니다. 점 구분 경로(`"inventory.new_item.sword"`)로 노드를 선언하면, 자식 카운트가 바뀔 때 상위 노드에 자동으로 반영됩니다. `RedDotFeatureView`를 오브젝트에 붙이고 경로만 입력하면 코드 없이도 뱃지가 동작합니다.
 
 → [상세 문서](./REDDOT.md)
 
@@ -80,7 +77,7 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 
 | 문서 | 내용 |
 |------|------|
-| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | `SindyComponent<T>` 생명주기, SetParent, ViewComponent 바인딩 방법, ScrollerComponent |
-| [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotComponent 연결 방법 |
+| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | SindyComponent(허브)·FeatureView 아키텍처, Feature 쌍 목록, ViewComponent, ScrollerFeatureView |
+| [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotFeature/RedDotFeatureView 연결 방법 |
 | [EDITOR_TOOLKIT.md](./EDITOR_TOOLKIT.md) | SindyEdit 전체 API 레퍼런스 — 메서드 목록, ComponentScope, HTTP IPC |
 | [SINDY_EDIT_TUTORIAL.md](./SINDY_EDIT_TUTORIAL.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |

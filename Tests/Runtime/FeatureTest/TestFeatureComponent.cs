@@ -11,7 +11,7 @@ namespace Sindy.Test
         {
             tests.Add(new TestFeatureWith());
             tests.Add(new TestInteractableFeature());
-            tests.Add(new TestHoldFeature());
+            tests.Add(new TestButtonFeature());
             tests.Add(new TestSimpleFeatures());
 
             tests.ForEach(test => test.Run());

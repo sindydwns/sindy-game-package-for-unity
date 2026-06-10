@@ -46,9 +46,24 @@ IRedDotNode (interface)
 직접 `Count.Value`를 설정하는 말단 노드입니다.  
 `Count`가 `ReactiveProperty<int>`로 쓰기 가능하며, `Clear()`는 `Count.Value = 0`으로 초기화합니다.
 
-### RedDotComponent
+### RedDotFeature / RedDotFeatureView
 
-`SindyComponent<RedDotModel>`을 상속한 Unity 컴포넌트입니다.
+FeatureView 아키텍처의 알림 뱃지 쌍입니다 ([SINDY_COMPONENT.md](SINDY_COMPONENT.md) 참고).
+
+`RedDotFeature`는 노드의 `Count`를 `PropModel<int>`로 노출합니다:
+
+```csharp
+public class RedDotFeature : ModelFeature
+{
+    public PropModel<int> Count { get; }
+
+    public RedDotFeature(RedDotNode node) { ... }
+    public RedDotFeature(string path, bool isLeaf = false) { ... }  // 경로로 노드 자동 조회/생성
+    public RedDotFeature(PropModel<int> external) { ... }           // RedDotModel 등 외부 모델 주입
+}
+```
+
+`RedDotFeatureView`는 카운트를 dot + 숫자 텍스트로 출력합니다.
 
 Inspector 필드: `dot` (GameObject), `text` (TMP_Text), `scaler`, `defaultPath`, `isLeaf`
 
@@ -57,21 +72,12 @@ Inspector 필드: `dot` (GameObject), `text` (TMP_Text), `scaler`, `defaultPath`
 - `count == 1`: dot 표시, text 없음 (dot 크기 `scaler` 적용)
 - `count >= 2`: dot 표시, text에 숫자 표시 (dot 크기 원래대로)
 
-`defaultPath`가 지정되면 `Bind` 없이도 `Awake`에서 자동으로 해당 경로의 노드를 구독합니다.
+`defaultPath`가 지정되면 Feature가 바인딩되지 않은 동안 해당 경로의 노드를 기본 소스로 구독합니다.
 
 ### RedDotModel
 
 `PropModel<int>`를 상속합니다. 노드의 `Count`를 구독해 자신의 `Prop`에 흘려보냅니다.
-
-```csharp
-public class RedDotModel : PropModel<int>
-{
-    public RedDotNode Node { get; private set; }
-
-    public RedDotModel(RedDotNode node) { ... }
-    public RedDotModel(string path, bool isLeaf = false) { ... }  // 경로로 노드 자동 조회/생성
-}
-```
+`RedDotFeature(PropModel<int>)` 생성자에 그대로 주입할 수 있습니다.
 
 ---
 
@@ -110,22 +116,22 @@ var social = RedDotNode.Root.GetBranch("social");
 // Count = 2 (활성 자식 Branch 수: mail, friend)
 ```
 
-### RedDotComponent — Inspector 연결
+### RedDotFeatureView — Inspector 연결
 
-1. 오브젝트에 `RedDotComponent` 추가
+1. 오브젝트에 **Add Component → Sindy → Feature Views → Red Dot Feature View** (허브 자동 부착)
 2. `dot` 필드에 뱃지 GameObject 연결
 3. `defaultPath`에 `"inventory.new_item"` 등 경로 입력
 4. 코드에서 별도 Bind 없이 노드 카운트가 바뀌면 자동 갱신됨
 
-### RedDotComponent — 코드로 연결
+### RedDotFeature — 코드로 연결
 
 ```csharp
-var model = new RedDotModel("inventory.new_item");
+var model = new ViewModel().With(new RedDotFeature("inventory.new_item"));
 // 또는 노드 직접 전달
 var node  = RedDotNode.Root.EnsureBranch("inventory.new_item");
-var model = new RedDotModel(node);
+var model = new ViewModel().With(new RedDotFeature(node));
 
-redDotComponent.Bind(model);
+redDotHub.Bind(model);   // 허브(SindyComponent)에 바인딩 → RedDotFeatureView가 수신
 ```
 
 ### 노드 조회 API
@@ -158,4 +164,4 @@ RedDotNode node = RedDotBranch.GetNodeAbs("a.b.c");
 
 - **`RedDotNode.Dispose()`는 노드 자체를 해제합니다.** 트리에서 제거하려면 부모 Branch의 `Reset()` 또는 트리 재구성이 필요합니다.
 
-- **`RedDotComponent`의 `defaultPath`는 Awake에서 한 번만 해석됩니다.** 런타임에 경로를 바꾸려면 `Bind`을 사용하세요.
+- **`RedDotFeatureView`의 `defaultPath`는 Awake에서 한 번만 해석됩니다.** 런타임에 경로를 바꾸려면 다른 `RedDotFeature`를 가진 모델을 `Bind`하세요.
