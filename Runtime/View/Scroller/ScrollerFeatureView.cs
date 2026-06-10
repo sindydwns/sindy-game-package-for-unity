@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using R3;
 using Sindy.Easing;
 using Sindy.Reactive;
 using UnityEngine;
@@ -9,13 +10,18 @@ using UnityEngine.UI;
 namespace Sindy.View.Scroller
 {
     /// <summary>
-    /// Sindy 가상화 스크롤러. SRS v1.0의 FR-* 요구사항을 구현한다.
+    /// Sindy 가상화 스크롤러 (FeatureView 아키텍처). <see cref="ScrollerFeature"/>와 1:1 대칭.
+    /// SRS v1.0의 FR-* 요구사항을 구현한다:
     /// 단일 세로 스크롤(CON-01), 다수 섹션 적층(FR-SEC-01), 그리드 자동 산출(FR-GRID-*),
     /// prefab 단위 풀(FR-POOL-*), ObservableList 5종 이벤트 처리(FR-DATA-02, 8장),
     /// 빈 섹션 처리(FR-EMPTY-*), Easing 기반 스크롤 점프(FR-SCROLL-*).
+    ///
+    /// prefab은 VM 타입 키 대신 명시적 셀 키(문자열)로 해상한다 — <see cref="CellRegistry"/> 참조.
+    /// 같은 ScrollerFeature 인스턴스로 강제 재초기화하려면 허브의 Reload()를 호출한다.
     /// </summary>
     [RequireComponent(typeof(RectTransform))]
-    public class ScrollerComponent : SindyComponent<ScrollerViewModel>
+    [AddComponentMenu("Sindy/Feature Views/Scroller Feature View")]
+    public class ScrollerFeatureView : FeatureView<ScrollerFeature>
     {
         [Header("UI Wiring")]
         [SerializeField] private ScrollRect scrollRect;
@@ -27,6 +33,10 @@ namespace Sindy.View.Scroller
         [Tooltip("뷰포트 위/아래로 추가 인스턴스화하는 버퍼 픽셀 수.")]
         [SerializeField] private float overscan = 100f;
 
+        [Header("Cell Catalog (optional)")]
+        [Tooltip("셀 키 → prefab 매핑 에셋. 인스턴스 등록보다 후순위, 전역 등록보다 선순위로 해상된다.")]
+        [SerializeField] private CellCatalog catalog;
+
         [Header("Defaults (FR-SCROLL-03)")]
         [SerializeField] private ScrollAlignment defaultAlignment = ScrollAlignment.Top;
         [SerializeField] private bool defaultAnimated = false;
@@ -36,19 +46,20 @@ namespace Sindy.View.Scroller
         public bool DefaultAnimated { get => defaultAnimated; set => defaultAnimated = value; }
         public float DefaultDuration { get => defaultDuration; set => defaultDuration = value; }
         public EaseFunction DefaultEase { get; set; } = Ease.OutCubic;
+        public CellCatalog Catalog { get => catalog; set => catalog = value; }
 
-        // ───────── Cell type registry (FR-CELL-*) ─────────
+        // ───────── Cell registry (FR-CELL-*) ─────────
 
-        private readonly CellTypeRegistry registry = new();
+        private readonly CellRegistry registry = new();
 
-        public static void RegisterGlobalCellType<TVM>(SindyComponent prefab) where TVM : class
-            => CellTypeRegistry.RegisterGlobal(typeof(TVM), prefab);
+        /// <summary>전역 셀 키 등록. 모든 스크롤러에서 키로 참조할 수 있다.</summary>
+        public static void RegisterGlobalCell(string key, SindyComponent prefab)
+            => CellRegistry.RegisterGlobal(key, prefab);
 
         // FR-CELL-07. 섹션 구성 이후의 등록 변경은 사후 재검증되지 않는다.
-        // 사후 변경으로 인한 해상도 실패는 정의되지 않은 동작이므로,
-        // 모든 등록은 SetSections 호출 전에 마칠 것을 권장한다.
-        public void RegisterCellType<TVM>(SindyComponent prefab) where TVM : class
-            => registry.Register(typeof(TVM), prefab);
+        // 모든 등록은 Bind 호출 전에 마칠 것. (CellCatalog 에셋은 이 제약이 없다.)
+        public void RegisterCell(string key, SindyComponent prefab)
+            => registry.Register(key, prefab);
 
         // ───────── Pool (FR-POOL-*) ─────────
 
@@ -58,11 +69,11 @@ namespace Sindy.View.Scroller
         public void PrewarmPool(SindyComponent prefab, int count) => EnsurePool().Prewarm(prefab, count);
 
         /// <summary>
-        /// FR-POOL-04. VM 타입에 등록된 prefab을 레지스트리(인스턴스 → 전역)에서 해상하여 사전 워밍한다.
-        /// 등록되지 않은 VM 타입에 대해 호출하면 즉시 throw한다.
+        /// FR-POOL-04. 셀 키로 등록된 prefab을 해상하여 사전 워밍한다.
+        /// 등록되지 않은 키에 대해 호출하면 즉시 throw한다.
         /// </summary>
-        public void PrewarmPool<TVM>(int count) where TVM : class
-            => PrewarmPool(registry.Resolve(typeof(TVM), null), count);
+        public void PrewarmPool(string key, int count)
+            => PrewarmPool(registry.Resolve(key, catalog), count);
 
         private ViewComponentPool EnsurePool()
         {
@@ -85,7 +96,7 @@ namespace Sindy.View.Scroller
 
         // ───────── Sections ─────────
 
-        private readonly List<ISection> sections = new();
+        private readonly List<Section> sections = new();
         private SectionLayout[] layouts = Array.Empty<SectionLayout>();
         private readonly Dictionary<CellKey, ActiveCell> active = new();
         private readonly HashSet<CellKey> needed = new();
@@ -94,65 +105,38 @@ namespace Sindy.View.Scroller
         private float lastContainerWidth = -1f;
         private bool layoutDirty;
 
-        /// <summary>
-        /// FR-SEC-05. 섹션 컬렉션을 한 번에 교체한다. 단위 추가/제거 API는 제공하지 않는다.
-        /// 하위 호환성을 위해 유지되는 thin wrapper — 내부적으로 SetModel(new ScrollerViewModel(newSections))를 호출한다.
-        /// </summary>
-        public void SetSections(IEnumerable<ISection> newSections)
-            => SetModel(new ScrollerViewModel(newSections));
+        // ───────── FeatureView 구현 ─────────
 
-        // ───────── SindyComponent<ScrollerViewModel> 구현 ─────────
-
-        /// <summary>
-        /// [리스크 대응] 동일 ScrollerViewModel 인스턴스 재사용 시 Init() 스킵 방지.
-        /// SindyComponent.SetModel()은 isInitialized &amp;&amp; model == Model 조건에서 Init()을 스킵하지만,
-        /// ScrollerComponent는 동일 인스턴스가 전달되더라도 항상 재초기화를 보장한다.
-        /// 방어: 동일 인스턴스 감지 시 Model을 null로 먼저 클리어하여 same-instance guard를 우회한다.
-        /// </summary>
-        public override SindyComponent SetModel(ScrollerViewModel model)
+        protected override void Bind(ScrollerFeature feature, ICollection<IDisposable> disposables)
         {
-            if (IsInitialized && ReferenceEquals(model, Model) && model != null)
-            {
-                base.SetModel((ScrollerViewModel)null);
-            }
-            return base.SetModel(model);
-        }
-
-        protected override void Init(ScrollerViewModel model)
-        {
-            // [리스크 대응] Awake() 이전에 Init()이 호출되는 경우 대비.
-            // EnsureWiring()은 scrollRect/viewport/content가 null일 때 자동 와이어링을 시도하며,
-            // 여전히 null이면 InvalidOperationException으로 조기 실패한다 (NullReferenceException 방지).
+            // Awake() 이전에 Bind가 도착하는 경우 대비 — 자동 와이어링 시도 후
+            // 여전히 누락이면 InvalidOperationException으로 조기 실패한다.
             EnsureWiring();
 
-            var newSections = model?.Sections ?? (IReadOnlyList<ISection>)Array.Empty<ISection>();
-
-            var staged = new List<ISection>();
-            foreach (var s in newSections)
-                if (s != null) staged.Add(s);
+            var staged = feature.Sections;
 
             // FR-CELL-06. 섹션 구성 시점에 모든 prefab(콘텐츠/헤더/푸터/빈 콘텐츠)을 즉시 검증.
-            // 콘텐츠 ObservableList가 비어 있어도 Section<TVM>의 제네릭 매개변수에서
-            // 콘텐츠 VM 타입을 알 수 있으므로 검증은 항상 수행된다.
-            // 어느 하나라도 해상되지 않으면 registry.Resolve가 InvalidOperationException을 던지며,
-            // 그 시점에서 sections·listeners·active 셀은 아직 손대지 않았다 → atomic 동작.
+            // 어느 하나라도 해상되지 않으면 throw하며, 그 시점에 sections·listeners·active 셀은
+            // 아직 손대지 않았다 → atomic 동작. (직전 모델의 정리는 베이스의 dispose-then-bind가 보장)
             var stagedLayouts = staged.Count == 0
                 ? Array.Empty<SectionLayout>()
                 : new SectionLayout[staged.Count];
             for (var i = 0; i < staged.Count; i++)
                 ResolveSectionPrefabs(staged[i], ref stagedLayouts[i]);
 
-            // 검증 성공 — Clear()에서 sections·active·listeners는 이미 정리됨. 새 상태로 교체한다.
             sections.AddRange(staged);
             layouts = stagedLayouts;
 
             AttachListeners();
             InvalidateLayout();
+
+            // 모델 교체/해제 시 베이스가 이 disposable을 먼저 해제한다 → 엔진 teardown 보장.
+            disposables.Add(Disposable.Create(Teardown));
         }
 
-        protected override void Clear(ScrollerViewModel model)
+        private void Teardown()
         {
-            // [리스크 대응] SetModel(null) 또는 새 모델로 교체 시 진행 중인 스크롤 애니메이션을 즉시 중단한다.
+            // 진행 중인 스크롤 애니메이션을 즉시 중단하고 모든 상태를 정리한다.
             StopScrollAnimation();
             DetachListeners();
             ReleaseAllActive();
@@ -187,7 +171,7 @@ namespace Sindy.View.Scroller
 
         // ───────── Unity callbacks ─────────
 
-        protected virtual void Awake()
+        protected override void Awake()
         {
             if (scrollRect == null) scrollRect = GetComponent<ScrollRect>();
             if (scrollRect != null)
@@ -196,6 +180,9 @@ namespace Sindy.View.Scroller
                 if (content == null) content = scrollRect.content;
             }
             ValidateWiring();
+
+            // 와이어링 준비 후 모델 스트림 구독 시작 (구독 즉시 현재 모델이 방출될 수 있음)
+            base.Awake();
         }
 
         /// <summary>
@@ -225,13 +212,8 @@ namespace Sindy.View.Scroller
         {
             if (viewport == null || content == null) return;
 
-            // FR-GRID-03 (보강). 가드 경로:
-            //   1) 새 컨테이너 가로 너비로 그리드 컬럼 수를 재산출
-            //   2) 컬럼 수가 직전과 같으면 어떤 후속 작업도 수행하지 않는다
-            //   3) 컬럼 수가 다른 경우에만 레이아웃 재계산 + 활성 셀 RectTransform 갱신
-            // 가드 목적: 스크롤바 등장/사라짐에 따른 가로 너비 미세 변동에서도 매 프레임
-            // 재레이아웃이 발생하지 않도록 보호한다.
-            // 세로 크기 변경은 viewport 가시 영역만 영향을 미치고 그리드 산출과 무관하므로 트리거하지 않는다.
+            // FR-GRID-03 (보강). 컬럼 수가 같으면 어떤 후속 작업도 수행하지 않는다.
+            // 스크롤바 등장/사라짐에 따른 가로 너비 미세 변동에서 매 프레임 재레이아웃을 막는다.
             var width = viewport.rect.width;
             if (!Mathf.Approximately(width, lastContainerWidth))
             {
@@ -252,29 +234,31 @@ namespace Sindy.View.Scroller
         // 가상화 패스는 LateUpdate에서 매 프레임 1회만 수행한다.
         // ScrollRect.onValueChanged 리스너를 별도로 두지 않는 이유:
         //   - 스크롤 중에는 LateUpdate가 매 프레임 호출되므로 가시 셀 갱신은 자연스럽게 추적된다
-        //   - 리스너를 두면 onValueChanged → LateUpdate로 같은 프레임에 두 번 호출되어 가상화 패스가 중복 실행됨
-        // 스크롤이 멈췄을 때도 LateUpdate가 동작하므로 한 번 더 idempotent하게 호출되지만,
-        // 이는 prefab 풀에서 Acquire/Release가 모두 needed 셋 차이로 0이 되어 즉시 종결된다.
+        //   - 리스너를 두면 같은 프레임에 가상화 패스가 중복 실행됨
 
         // ───────── Prefab resolution (FR-CELL-03 / 05 / 06) ─────────
 
         // 한 섹션의 모든 prefab을 해상하여 layout slot에 채운다.
-        // 어느 하나라도 등록되지 않으면 registry.Resolve가 즉시 throw — FR-CELL-04, FR-CELL-06.
-        //
-        // 콘텐츠 prefab은 Section<TVM>의 선언 타입 typeof(TVM)을 사용하므로 ObservableList가
-        // 비어 있어도 검증 가능하고, 파생 인스턴스가 컬렉션에 들어와도 일관된 prefab을 사용한다.
-        //
-        // Header/Footer/EmptyContent는 Section의 콘텐츠 TVM과 다른 VM 타입이 자유롭게 할당되므로
-        // 선언 타입 정보가 없다(컴파일 타임에 object). 따라서 인스턴스의 런타임 타입(GetType())을
-        // 키로 사용한다. 사용자는 실제로 사용하는 leaf VM 타입에 대해 RegisterCellType(또는
-        // SectionOption.HeaderPrefab override)을 등록해야 한다 (FR-CELL-05).
-        private void ResolveSectionPrefabs(ISection s, ref SectionLayout L)
+        // 어느 하나라도 해상되지 않으면 즉시 throw — FR-CELL-04, FR-CELL-06.
+        // 우선순위: Section 명시 prefab > SectionOption 오버라이드(보조) > 셀 키 해상.
+        private void ResolveSectionPrefabs(Section s, ref SectionLayout L)
         {
             var opt = s.Option;
-            L.ContentPrefab = registry.Resolve(s.ContentVMType, opt.ContentPrefab);
-            L.HeaderPrefab = s.Header != null ? registry.Resolve(s.Header.GetType(), opt.HeaderPrefab) : null;
-            L.FooterPrefab = s.Footer != null ? registry.Resolve(s.Footer.GetType(), opt.FooterPrefab) : null;
-            L.EmptyPrefab = s.EmptyContent != null ? registry.Resolve(s.EmptyContent.GetType(), opt.EmptyContentPrefab) : null;
+            L.ContentPrefab = ResolveSlot(s.ContentPrefab, opt.ContentPrefab, s.ContentKey, "Content", s);
+            L.HeaderPrefab = s.Header != null ? ResolveSlot(s.HeaderPrefab, opt.HeaderPrefab, s.HeaderKey, "Header", s) : null;
+            L.FooterPrefab = s.Footer != null ? ResolveSlot(s.FooterPrefab, opt.FooterPrefab, s.FooterKey, "Footer", s) : null;
+            L.EmptyPrefab = s.EmptyContent != null ? ResolveSlot(s.EmptyContentPrefab, opt.EmptyContentPrefab, s.EmptyContentKey, "EmptyContent", s) : null;
+        }
+
+        private SindyComponent ResolveSlot(SindyComponent explicitPrefab, SindyComponent optionOverride, string key, string slot, Section s)
+        {
+            if (explicitPrefab != null) return explicitPrefab;
+            if (optionOverride != null) return optionOverride;
+            if (!string.IsNullOrEmpty(key)) return registry.Resolve(key, catalog);
+
+            throw new InvalidOperationException(
+                $"Section {slot} prefab is not configured. " +
+                $"Set Section.{slot}Prefab, Section.{slot}Key, or the SectionOption override before binding.");
         }
 
         // ───────── Layout (FR-EMPTY-01/02/03 + FR-HEIGHT-* + FR-SEC-04) ─────────
@@ -317,12 +301,8 @@ namespace Sindy.View.Scroller
                     continue;
                 }
 
-                // FR-SEC-04 (보강). "시각적으로 인접한" 두 섹션 사이의 간격은
+                // FR-SEC-04 (보강). 시각적으로 인접한 두 섹션 사이의 간격은
                 // (위 섹션의 BottomMargin + 아래 섹션의 TopMargin)으로 정의된다.
-                // 비표시 섹션은 위 IsVisible 분기에서 어떤 yCursor 누적에도 기여하지 않으므로
-                // (마진 포함 0), 그 사이를 건너뛰고 시각적으로 맞닿는 두 표시 섹션끼리만
-                // 마진이 합산되는 결과가 자연스럽게 도출된다.
-                //   예: [A 표시][B 비표시][C 표시] → A.bottom + C.top 만 가산되며 B.* 마진은 미적용.
                 L.TopMargin = opt.TopMargin;
                 L.BottomMargin = opt.BottomMargin;
 
@@ -349,14 +329,11 @@ namespace Sindy.View.Scroller
                     L.CellHeight = GetPrefabHeight(L.ContentPrefab);
                     L.RowCount = GridLayoutResolver.RowCount(contentCount, L.Grid.Columns);
                     // VerticalGap은 음수가 들어올 수 있으므로 0으로 normalize하여 캐시한다.
-                    // ContentHeight·PositionCell·CollectNeeded·GetTargetRange가 모두 이 값을 공유해야
-                    // 가상화 범위와 실제 셀 좌표가 일치한다 (HorizontalGap의 GridLayout.Gap과 동일 정책).
                     L.SafeVerticalGap = Mathf.Max(0f, opt.VerticalGap);
                     L.ContentHeight = L.RowCount * L.CellHeight + Mathf.Max(0, L.RowCount - 1) * L.SafeVerticalGap;
                 }
 
                 // TopY는 "TopMargin 적용 전" 섹션 블록 시작점이다.
-                // HeaderTopY = TopY + TopMargin이 자동으로 헤더 위치가 된다.
                 L.TopY = yCursor;
                 yCursor += L.TopMargin + L.HeaderHeight + L.ContentHeight + L.FooterHeight + L.BottomMargin;
                 L.TotalHeight = L.HeaderHeight + L.ContentHeight + L.FooterHeight;
@@ -367,8 +344,6 @@ namespace Sindy.View.Scroller
         }
 
         // FR-GRID-03 (보강) 1단계. 새 너비로 모든 섹션의 컬럼 수를 재산출하고, 하나라도 달라지면 true.
-        // 명세는 "컬럼 수가 같으면 어떤 후속 작업도 수행하지 않는다"고 정의하므로, false인 경우 호출자는
-        // 레이아웃을 invalidate하지 않는다.
         private bool WouldColumnCountChange(float newWidth)
         {
             for (var i = 0; i < sections.Count; i++)
@@ -418,8 +393,6 @@ namespace Sindy.View.Scroller
             if (!L.IsVisible) return;
 
             // OverlapsRange는 half-open 구간(`y + h > top && y < bottom`)을 사용한다.
-            // 같은 의미가 되도록 섹션·콘텐츠 early-out도 `<=` / `>=`로 통일한다.
-            // (경계에서만 닿는 섹션·콘텐츠는 invisible로 처리되어 불필요한 셀 인스턴스화를 막는다.)
             var sectionTop = L.HeaderTopY;
             var sectionBottom = L.FooterTopY + L.FooterHeight;
             if (sectionBottom <= top || sectionTop >= bottom) return;
@@ -438,10 +411,9 @@ namespace Sindy.View.Scroller
                 var contentBottom = L.ContentTopY + L.ContentHeight;
                 if (contentBottom <= top || L.ContentTopY >= bottom) return;
 
-                // CellHeight + SafeVerticalGap이 0인 극단적 경우(0높이 셀 + 0 gap)에 대비해 0.0001f로 클램프.
+                // CellHeight + SafeVerticalGap이 0인 극단적 경우에 대비해 0.0001f로 클램프.
                 var rowStride = Mathf.Max(0.0001f, L.CellHeight + L.SafeVerticalGap);
                 // half-open 의미를 row 단위에서도 유지하기 위해 lastRow는 ceil-minus-one로 계산한다.
-                // 예: bottom == ContentTopY + 1*stride 인 경계에서 row 1은 y == bottom이라 그릴 수 없으므로 lastRow=0이 되어야 한다.
                 var firstRow = Mathf.Max(0, Mathf.FloorToInt((top - L.ContentTopY) / rowStride));
                 var lastRow = Mathf.Min(L.RowCount - 1, Mathf.CeilToInt((bottom - L.ContentTopY) / rowStride) - 1);
 
@@ -463,7 +435,6 @@ namespace Sindy.View.Scroller
 
         private void ReleaseUnneeded()
         {
-            // 활성 셀 중 needed에 없는 것을 풀로 반환.
             List<CellKey> toRemove = null;
             foreach (var kv in active)
             {
@@ -484,8 +455,6 @@ namespace Sindy.View.Scroller
         private void AcquireMissing()
         {
             // 이미 활성인 셀은 콘텐츠 좌표가 바뀌지 않으므로 매 프레임 PositionCell을 호출하지 않는다.
-            // (스크롤은 Content RectTransform 자체가 움직이는 것이므로 자식 셀 좌표는 그대로.)
-            // 레이아웃이 갱신될 때만 RepositionAllActiveCells가 일괄 갱신한다.
             foreach (var key in needed)
             {
                 if (active.ContainsKey(key)) continue;
@@ -500,7 +469,6 @@ namespace Sindy.View.Scroller
         }
 
         // 레이아웃 재계산 직후 호출되어 모든 활성 셀의 RectTransform을 한 번 갱신한다.
-        // (콘텐츠 너비/cellWidth/StartOffset 변동에 대응 — Stretch/Center 정렬에서 특히 필요)
         private void RepositionAllActiveCells()
         {
             foreach (var kv in active)
@@ -536,16 +504,6 @@ namespace Sindy.View.Scroller
 
         // 셀 RectTransform은 컨테이너 가로 너비(W) 변동에 대해 Unity의 layout 시스템이
         // 자동으로 셀 크기/위치를 재조정하도록 W-무관 anchor + offset 표현을 사용한다.
-        // 이로써 FR-GRID-03 (보강)의 "컬럼 수 동일 시 후속 작업 미수행" 정책을 어기지 않으면서도
-        // Stretch/Center 정렬에서 cellWidth/StartOffset이 W에 의존하는 문제(L223 우려)가 해소된다.
-        //
-        // 모든 셀: pivot = top-left, Y는 항상 top anchor (anchorMin.y = anchorMax.y = 1).
-        // X anchor는 정렬 모드에 따라:
-        //   - Stretch (기본 또는 cellMax 미초과): 분수 앵커 (col/N ~ (col+1)/N) → cellWidth = W에서 자동 도출
-        //   - Header/Footer: anchor (0, 1) ~ (1, 1), padding만 픽셀 offset
-        //   - Empty: 0.5 anchor (X 중앙)
-        //   - Left (cellMax 초과): 좌측 픽셀 앵커, cellWidth = cellMax 고정
-        //   - Center (cellMax 초과): 0.5 anchor + ±rowWidth/2 픽셀 offset
         private void PositionCell(CellKey k, SindyComponent inst)
         {
             ref var L = ref layouts[k.Section];
@@ -568,8 +526,7 @@ namespace Sindy.View.Scroller
                     break;
                 case CellKey.EmptySlot:
                     {
-                        // FR-EMPTY-03. 가로/세로 중앙 배치, prefab 자체 크기. padding 비대칭이 있으면
-                        // padded area 안에서 중앙 정렬되도록 (padL - padR)/2 만큼 shift 한다.
+                        // FR-EMPTY-03. 가로/세로 중앙 배치, prefab 자체 크기.
                         var emptyTopY = L.ContentTopY + (L.ContentHeight - L.EmptyPrefabSize.y) * 0.5f;
                         SetCenterXFixedWidth(rt, L.EmptyPrefabSize.x, paddingLeft, paddingRight, emptyTopY, L.EmptyPrefabSize.y);
                         break;
@@ -586,7 +543,6 @@ namespace Sindy.View.Scroller
         }
 
         // Header/Footer: 부모(content) 가로폭 전체에 stretch, padding만 픽셀 offset.
-        // Unity가 부모 폭 변동 시 자식 폭을 자동 재조정한다.
         private static void SetStretchXFullWidth(RectTransform rt, int padL, int padR, float yTop, float cellH)
         {
             rt.anchorMin = new Vector2(0f, 1f);
@@ -595,8 +551,7 @@ namespace Sindy.View.Scroller
             rt.offsetMax = new Vector2(-padR, -yTop);
         }
 
-        // Empty 콘텐츠: X 중앙(0.5 anchor) + 고정 폭 / Y는 콘텐츠 영역 중앙으로 사전 산출된 yTop 사용.
-        // padded area의 중앙(부모 중앙으로부터 (padL - padR)/2 만큼 shift된 위치)에 정렬되도록 한다.
+        // Empty 콘텐츠: X 중앙(0.5 anchor) + 고정 폭. padded area의 중앙에 정렬되도록 한다.
         private static void SetCenterXFixedWidth(RectTransform rt, float width, int padL, int padR, float yTop, float cellH)
         {
             rt.anchorMin = new Vector2(0.5f, 1f);
@@ -608,18 +563,7 @@ namespace Sindy.View.Scroller
         }
 
         // 그리드 셀의 anchor/offset을 effective alignment에 따라 W-무관 식으로 산출한다.
-        // 수식 도출:
-        //   Stretch (cellMax 미초과 또는 옵션 Stretch):
-        //     anchorX = (col/N, (col+1)/N)
-        //     cellLeft(col) = padL + col*(cellWidth + gap)
-        //     anchor band의 좌측 = col*W/N
-        //     offsetMinX = cellLeft - col*W/N
-        //                = padL + col*(cellWidth + gap - W/N)
-        //                = padL + col*((W - padL - padR + gap)/N - W/N)
-        //                = padL + col*(-padL - padR + gap)/N         (W가 소거됨)
-        //     동일 방식으로 offsetMaxX 도 W 무관 형태로 정리.
-        //   Left (cellMax 초과): anchorX = (0, 0), offset에 padL + col*(cellMax+gap), cellMax 고정.
-        //   Center (cellMax 초과): anchorX = (0.5, 0.5), offset에 ±rowWidth/2 + col*(cellMax+gap).
+        // (수식 도출은 SRS 부록 및 git history 참조 — W가 소거된 형태)
         private static void SetGridCellAnchors(RectTransform rt, GridLayout grid, int col, int padL, int padR,
             float yTop, float cellH)
         {
@@ -631,7 +575,6 @@ namespace Sindy.View.Scroller
                         var aMinX = col / n;
                         var aMaxX = (col + 1) / n;
                         var pad = padL + padR;
-                        // W-무관 식 (위 수식 도출 결과)
                         var offMinX = padL + col * (-pad + grid.Gap) / n;
                         var offMaxX = padL + col * grid.Gap - (col + 1) * (pad + (grid.Columns - 1) * grid.Gap) / n;
 
@@ -652,9 +595,6 @@ namespace Sindy.View.Scroller
                     }
                 case GridHorizontalAlignment.Center:
                     {
-                        // padding 비대칭이 있을 때 row를 padded area 안에서 중앙 정렬하기 위해
-                        // 부모 중앙 anchor로부터 (padL - padR)/2 만큼 row 전체를 shift 한다.
-                        // (GridLayoutResolver.StartOffset = padL + slack/2 와 동치가 되도록.)
                         var rowWidth = grid.Columns * grid.CellWidth + (grid.Columns - 1) * grid.Gap;
                         var paddingShift = (padL - padR) * 0.5f;
                         var leftOfRow = -rowWidth * 0.5f + paddingShift;
@@ -682,13 +622,6 @@ namespace Sindy.View.Scroller
 
         private void OnSectionChanged(int sectionIndex, ListChange<IViewModel> e)
         {
-            // 8장 (변경 이벤트 처리) + FR-DATA-03 (보강).
-            //
-            // FR-DATA-03 (보강): Move 핸들러는 Remove 핸들러와 Add 핸들러의 순차 호출로
-            // 구현되어도 명세 위반이 아니다. 본 구현은 그 형태를 따른다.
-            // 동일 인스턴스 재사용이나 위치 트랜지션 애니메이션은 본 명세 범위 외이므로
-            // (CON-08) 보장하지 않는다.
-            //
             // FR-HEIGHT-02에 의해 셀 높이가 고정이므로 Replace는 레이아웃 재계산이 필요 없다.
             switch (e.Action)
             {
@@ -702,18 +635,11 @@ namespace Sindy.View.Scroller
                     return;
 
                 case ListChangeAction.Move:
-                    // FR-DATA-03 (보강). Move = Remove + Add의 합성으로 처리한다.
-                    // 두 단계 모두 동일한 후처리(콘텐츠 셀 회수 + 레이아웃 재계산)를
-                    // 필요로 하므로, 두 번 호출하지 않고 한 번에 묶어 수행한다.
-                    HandleStructuralChange(sectionIndex);
-                    return;
-
                 case ListChangeAction.Add:
                 case ListChangeAction.Remove:
                 case ListChangeAction.Reset:
-                    // 8.1 / 8.2 / 8.5. 영향받는 섹션 이후의 모든 y좌표가 변할 수 있으므로
-                    // 이 섹션의 활성 콘텐츠 셀을 일괄 회수하고 레이아웃을 invalidate한다.
-                    // 빈 섹션 ↔ 비빈 섹션 전환도 이 경로에서 RecomputeLayout이 처리한다 (FR-EMPTY-04).
+                    // 8.1 / 8.2 / 8.5 / FR-DATA-03 (보강). 영향받는 섹션 이후의 모든 y좌표가
+                    // 변할 수 있으므로 이 섹션의 활성 콘텐츠 셀을 일괄 회수하고 레이아웃을 invalidate한다.
                     HandleStructuralChange(sectionIndex);
                     return;
             }
@@ -766,7 +692,7 @@ namespace Sindy.View.Scroller
             ScrollToTarget(y, h, alignment, animated, duration, ease);
         }
 
-        public void ScrollTo(ISection section, int itemIndex = -1,
+        public void ScrollTo(Section section, int itemIndex = -1,
             ScrollAlignment? alignment = null, bool? animated = null, float? duration = null, EaseFunction ease = default)
         {
             var idx = sections.IndexOf(section);
@@ -774,7 +700,7 @@ namespace Sindy.View.Scroller
             ScrollTo(idx, itemIndex, alignment, animated, duration, ease);
         }
 
-        public void ScrollTo(ISection section, IViewModel vm,
+        public void ScrollTo(Section section, IViewModel vm,
             ScrollAlignment? alignment = null, bool? animated = null, float? duration = null, EaseFunction ease = default)
         {
             var idx = sections.IndexOf(section);
@@ -815,9 +741,6 @@ namespace Sindy.View.Scroller
         private bool SectionsLayoutsLengthMismatch() => layouts.Length != sections.Count;
 
         // public API 진입점에서 호출되어 와이어링이 준비되었는지 보장한다.
-        // Awake가 아직 실행되지 않은 상태에서 ScrollTo* / PrewarmPool이 호출되면
-        // viewport/content가 null이라 NullReferenceException으로 발현되었으나,
-        // 본 헬퍼가 자동 와이어링 + ValidateWiring으로 명확한 InvalidOperationException으로 전환한다.
         private void EnsureWiring()
         {
             if (scrollRect == null) scrollRect = GetComponent<ScrollRect>();
@@ -913,33 +836,6 @@ namespace Sindy.View.Scroller
             }
             content.anchoredPosition = new Vector2(content.anchoredPosition.x, targetY);
             scrollCoroutine = null;
-        }
-    }
-
-    /// <summary>
-    /// ScrollerComponent의 ViewModel. SetModel() 호출 시 전달되는 데이터 컨테이너.
-    /// Sections는 SetSections() 호출 관례와 동일하게 null 항목을 자동으로 걸러낸다.
-    /// </summary>
-    public class ScrollerViewModel : ViewModel
-    {
-        private readonly IReadOnlyList<ISection> sections;
-
-        public IReadOnlyList<ISection> Sections => sections;
-
-        public ScrollerViewModel(IEnumerable<ISection> sections)
-        {
-            if (sections == null)
-            {
-                this.sections = Array.Empty<ISection>();
-                return;
-            }
-
-            var list = new List<ISection>();
-            foreach (var s in sections)
-            {
-                if (s != null) list.Add(s);
-            }
-            this.sections = list;
         }
     }
 }

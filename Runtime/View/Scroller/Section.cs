@@ -4,93 +4,128 @@ using Sindy.Reactive;
 namespace Sindy.View.Scroller
 {
     /// <summary>
-    /// 비제네릭 섹션 인터페이스. Scroller가 섹션을 다룰 때 사용한다.
-    /// FR-SEC-02에 의해 단일 VM 타입은 제네릭 매개변수로 강제되며,
-    /// Scroller 내부에서는 타입 무관하게 다루기 위해 이 인터페이스를 사용한다.
+    /// 비제네릭 섹션. 셀 모델은 "ViewModel + Feature 조합"이므로 VM 타입 제약이 없다.
+    ///
+    /// prefab 해상 우선순위 (슬롯별):
+    ///   1) Section의 명시 prefab (ContentPrefab 등)
+    ///   2) SectionOption의 prefab 오버라이드 (보조)
+    ///   3) 셀 키 (ContentKey 등) → CellRegistry/CellCatalog 해상
+    ///   4) 어느 것도 없으면 Bind 시점에 throw (atomic — 섹션 상태는 손대지 않음)
+    ///
+    /// 모든 설정은 스크롤러에 부착되기 전에 마쳐야 한다 (FR-CELL-06).
+    /// 부착 이후 변경은 InvalidOperationException을 던진다.
     /// </summary>
-    public interface ISection
+    public class Section
     {
-        SectionOption Option { get; }
-
-        Type ContentVMType { get; }
-        int ContentCount { get; }
-        IViewModel GetContentVMAt(int index);
-        int IndexOfContentVM(IViewModel vm);
-
-        IViewModel Header { get; }
-        IViewModel Footer { get; }
-        IViewModel EmptyContent { get; }
-
-        event Action<ListChange<IViewModel>> OnContentChanged;
-
-        void AttachListener();
-        void DetachListener();
-    }
-
-    /// <summary>
-    /// FR-SEC-02. 단일 VM 타입의 섹션. 제네릭 타입 매개변수로 VM 타입을 강제한다.
-    /// </summary>
-    public class Section<TVM> : ISection where TVM : class, IViewModel
-    {
-        public ObservableList<TVM> Content { get; }
+        public ObservableList<IViewModel> Content { get; }
         public SectionOption Option { get; }
 
+        private string contentKey;
+        private SindyComponent contentPrefab;
         private IViewModel header;
+        private string headerKey;
+        private SindyComponent headerPrefab;
         private IViewModel footer;
+        private string footerKey;
+        private SindyComponent footerPrefab;
         private IViewModel emptyContent;
+        private string emptyContentKey;
+        private SindyComponent emptyContentPrefab;
         private bool isAttached;
 
-        /// <summary>
-        /// 섹션 헤더 VM. spec 7.3 예시처럼 콘텐츠 TVM과 다른 VM 타입을 자유롭게 할당할 수 있도록
-        /// `object`로 선언한다 (예: `Section&lt;ItemVM&gt; { Header = new HeaderVM(...) }`).
-        /// SetSections에 전달되기 전(아직 Scroller에 부착되지 않은 상태)에만 설정 가능.
-        /// 부착 이후 변경은 InvalidOperationException을 던진다 (FR-CELL-06: prefab은 SetSections
-        /// 시점에 검증·캐시되며 사후 재해상되지 않으므로 silent하게 무시되는 일관성 깨짐을 방지).
-        /// </summary>
+        public Section(ObservableList<IViewModel> content, SectionOption option)
+        {
+            Content = content ?? throw new ArgumentNullException(nameof(content));
+            Option = option != null ? option : throw new ArgumentNullException(nameof(option));
+        }
+
+        /// <summary>콘텐츠 셀 키. CellRegistry/CellCatalog에서 prefab을 해상한다.</summary>
+        public string ContentKey
+        {
+            get => contentKey;
+            set { ThrowIfAttached(nameof(ContentKey)); contentKey = value; }
+        }
+
+        /// <summary>콘텐츠 prefab 직접 지정. 키 등록 없이 일회성 셀에 사용한다. 키보다 우선한다.</summary>
+        public SindyComponent ContentPrefab
+        {
+            get => contentPrefab;
+            set { ThrowIfAttached(nameof(ContentPrefab)); contentPrefab = value; }
+        }
+
         public IViewModel Header
         {
             get => header;
             set { ThrowIfAttached(nameof(Header)); header = value; }
         }
+
+        public string HeaderKey
+        {
+            get => headerKey;
+            set { ThrowIfAttached(nameof(HeaderKey)); headerKey = value; }
+        }
+
+        public SindyComponent HeaderPrefab
+        {
+            get => headerPrefab;
+            set { ThrowIfAttached(nameof(HeaderPrefab)); headerPrefab = value; }
+        }
+
         public IViewModel Footer
         {
             get => footer;
             set { ThrowIfAttached(nameof(Footer)); footer = value; }
         }
+
+        public string FooterKey
+        {
+            get => footerKey;
+            set { ThrowIfAttached(nameof(FooterKey)); footerKey = value; }
+        }
+
+        public SindyComponent FooterPrefab
+        {
+            get => footerPrefab;
+            set { ThrowIfAttached(nameof(FooterPrefab)); footerPrefab = value; }
+        }
+
         public IViewModel EmptyContent
         {
             get => emptyContent;
             set { ThrowIfAttached(nameof(EmptyContent)); emptyContent = value; }
         }
 
-        public event Action<ListChange<IViewModel>> OnContentChanged;
-
-        public Section(ObservableList<TVM> content, SectionOption option)
+        public string EmptyContentKey
         {
-            Content = content ?? throw new ArgumentNullException(nameof(content));
-            Option = option != null ? option : throw new ArgumentNullException(nameof(option));
+            get => emptyContentKey;
+            set { ThrowIfAttached(nameof(EmptyContentKey)); emptyContentKey = value; }
         }
 
-        public Type ContentVMType => typeof(TVM);
+        public SindyComponent EmptyContentPrefab
+        {
+            get => emptyContentPrefab;
+            set { ThrowIfAttached(nameof(EmptyContentPrefab)); emptyContentPrefab = value; }
+        }
+
         public int ContentCount => Content.Count;
         public IViewModel GetContentVMAt(int index) => Content[index];
-        public int IndexOfContentVM(IViewModel vm) => vm is TVM typed ? Content.IndexOf(typed) : -1;
+        public int IndexOfContentVM(IViewModel vm) => Content.IndexOf(vm);
 
-        IViewModel ISection.Header => header;
-        IViewModel ISection.Footer => footer;
-        IViewModel ISection.EmptyContent => emptyContent;
+        public event Action<ListChange<IViewModel>> OnContentChanged;
+
+        public bool IsAttached => isAttached;
 
         public void AttachListener()
         {
-            // 멱등성 보장: 이미 부착되어 있으면 no-op (이중 구독·이중 isAttached set 방지).
+            // 멱등성 보장: 이미 부착되어 있으면 no-op (이중 구독 방지).
             if (isAttached) return;
             Content.OnChanged += OnContentChangedInternal;
             isAttached = true;
         }
+
         public void DetachListener()
         {
-            // 멱등성 보장: 부착되지 않은 상태의 Detach 호출은 no-op.
-            // 이를 통해 짝이 맞지 않는 Detach 호출이 isAttached 가드를 잘못 해제하는 일이 없다.
+            // 멱등성 보장: 부착되지 않은 상태의 Detach는 no-op.
             if (!isAttached) return;
             Content.OnChanged -= OnContentChangedInternal;
             isAttached = false;
@@ -100,24 +135,10 @@ namespace Sindy.View.Scroller
         {
             if (isAttached)
                 throw new InvalidOperationException(
-                    $"Section.{property} cannot be modified after the section is attached to a Scroller " +
-                    $"via SetSections. Configure all section fields before calling SetSections, or call " +
-                    $"Scroller.SetSections again to rebuild.");
+                    $"Section.{property} cannot be modified after the section is attached to a Scroller. " +
+                    $"Configure all section fields before binding, or bind a new ScrollerFeature to rebuild.");
         }
 
-        private void OnContentChangedInternal(ListChange<TVM> e)
-        {
-            // TVM 변경 이벤트를 비제네릭 object 이벤트로 어댑팅한다.
-            var adapted = e.Action switch
-            {
-                ListChangeAction.Add => ListChange<IViewModel>.Add(e.NewItem, e.NewIndex),
-                ListChangeAction.Remove => ListChange<IViewModel>.Remove(e.OldItem, e.OldIndex),
-                ListChangeAction.Replace => ListChange<IViewModel>.Replace(e.OldItem, e.NewItem, e.NewIndex),
-                ListChangeAction.Move => ListChange<IViewModel>.Move(e.NewItem, e.OldIndex, e.NewIndex),
-                ListChangeAction.Reset => ListChange<IViewModel>.Reset(),
-                _ => ListChange<IViewModel>.Reset(),
-            };
-            OnContentChanged?.Invoke(adapted);
-        }
+        private void OnContentChangedInternal(ListChange<IViewModel> e) => OnContentChanged?.Invoke(e);
     }
 }
