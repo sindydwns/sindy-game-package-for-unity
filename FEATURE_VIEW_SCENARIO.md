@@ -405,6 +405,10 @@ scroller.Bind(new ScrollerViewModel(new[] { section, oneOff }));
 | `BindCommonFeatures` (Visibility/Layout 하드코딩) | VisibilityFeatureView / LayoutFeatureView로 일반화 |
 | 허브 disposables 단일 리스트 | FeatureView 각자 disposables 소유 |
 | 복합 컴포넌트 (NoticeComponent 등) | 단순 조합 → FeatureView 조합, 트리 구조 → ViewComponent 유지 |
+| `TimerModel`/`FormatNumberPropModel` (PropModel<string> 파생) | `new TextFeature(model)` 생성자 주입으로 그대로 재사용 |
+| `RegisterCellType<TVM>` / `RegisterGlobalCellType<TVM>` (타입 키) | `RegisterCell(key, prefab)` / 전역 CellCatalog 에셋 (셀 키) |
+| `Section<TVM>` (제네릭) | `Section` (비제네릭) + `ContentKey` 또는 `ContentPrefab` |
+| Scroller `SetModel` same-instance 우회 해킹 | 삭제 — ReactiveProperty 의미론 + `Reload()` |
 
 ---
 
@@ -418,11 +422,17 @@ scroller.Bind(new ScrollerViewModel(new[] { section, oneOff }));
 | `ReactiveProperty<IViewModel>` 보유 | `IViewModel` 필드 + "늦은 등록=즉시 바인딩" 수동 구현 | R3 구독 의미론이 타이밍 문제(비활성 Bind, 늦은 Awake)를 플랫폼 차원에서 해결. 특수 케이스 코드 불필요 |
 | dispose-then-bind를 베이스 클래스에 고정 | 구현자 재량 | 모델 교체 시 구독 누수는 가장 흔한 실수 — 구조적으로 차단 |
 | 검증은 Dev 빌드 일회 스캔 | 허브가 View 명단 상시 보유 | 릴리스 빌드 비용 0, 순수 pub/sub 유지 |
+| TextFeature는 `PropModel<string>` 보유 | `ReactiveProperty<string>` 직접 노출 | 기존 Feature들(Visibility/Interactable)과 일관. TimerModel·FormatNumberPropModel 등 자가 갱신 모델을 생성자 주입으로 재사용 — B안은 수동 배선 보일러플레이트·누수 위험 |
+| Scroller는 셀 키 + 카탈로그 하이브리드 | (a) 셀 모델 서브클래스 유지 / (b) 섹션 명시 prefab 단독 | (a)는 "전용 모델 클래스 제거" 철학에 영구 예외 잔류, (b) 단독은 공용 셀(타이틀·필터)을 섹션마다 지정하는 번거로움. 키 교체로 3단계 해상 구조와 전역 등록 편의를 모두 보존 |
+| 네이밍: FeatureView | FeatureBinder / Ability | 직관성. Feature(모델)–FeatureView(뷰) 대칭이 이름에서 드러남 |
 
 ---
 
-## 남은 질문 (구현 시 확정)
+## 구현 단계 제안
 
-1. **TextFeature 내용물** — `PropModel<string>` 보유 vs `ReactiveProperty<string>` 직접 노출. 기존 TimerModel, FormatNumberPropModel 등 파생 모델의 이식 경로에 영향.
-2. **SindyComponent\<T\> 폐기 범위** — 완전 폐기 vs ScrollerComponent/ViewComponent처럼 구조적 역할(트리·가상화)이 있는 것은 제네릭 유지.
-3. **네이밍 확정** — FeatureView / FeatureBinder / Ability 등. SindyComponent 자동 부착 시 메뉴 구조(Add Component → Sindy → ...)도 함께.
+1. **Phase 1 — 코어**: `ReactiveProperty<IViewModel>` 허브 + `FeatureView<TFeature>` 베이스 + Dev 빌드 검증. 기존 컴포넌트와 공존
+2. **Phase 2 — 기본 Feature 이식**: Text/Image/Gauge/Button(`allowHold` 옵션)/Interactable/Visibility 쌍 구현, 기존 컴포넌트 deprecated 표기
+3. **Phase 3 — Scroller**: 셀 키 카탈로그 전환, `Section` 비제네릭화, ScrollerFeature/FeatureView 이식
+4. **Phase 4 — 정리**: 기존 컴포넌트·HoldButton·SupportedFeatureAttribute 제거, 문서/튜토리얼 갱신
+
+UPM 배포이므로 Phase별 마이너 버전 릴리스로 의존 프로젝트가 점진 이행할 수 있게 한다.
