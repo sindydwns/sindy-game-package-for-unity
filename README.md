@@ -51,6 +51,12 @@ scrollerHub.Bind(new ViewModel().With(new ScrollerFeature(new[] { section })));
 
 → [상세 문서](./REDDOT.md)
 
+### HTTP 모듈
+
+R3 + UnityWebRequest 기반 서버 통신입니다. `ApiModel<TReq, TRes>`가 엔드포인트 하나를 ViewModel로 대표하며, `Request.Send(body)` 발행 → `Response.Data/IsLoading/Error` 자동 갱신 흐름을 UI에 그대로 바인딩합니다. `RetryFeature`/`TimeoutFeature`/`OfflineCacheFeature`를 `.With()`로 합성하고, `AuthenticatedHttpClient`가 토큰 주입과 401 자동 갱신을 처리합니다.
+
+→ [상세 문서](./HTTP.md)
+
 ### Inventory 시스템
 
 `Entity`(ScriptableObject) + `Inventory`(컨테이너)로 아이템을 관리합니다. Add/Remove/Set/Move 등 CRUD 연산과 함께 R3 기반 변경 이벤트를 제공합니다. `Contains`, `Intersect`, `Subtract` 집합 연산으로 재료 충분 여부 같은 게임 로직을 간결하게 표현할 수 있습니다.
@@ -69,7 +75,7 @@ using var s = SindyEdit.Open("Assets/Prefabs/UI/GaugeBar.prefab");
 s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 ```
 
-→ [API 레퍼런스](./EDITOR_TOOLKIT.md) · [튜토리얼](./SINDY_EDIT_TUTORIAL.md)
+→ [API 레퍼런스](./EDITOR_TOOLKIT.md) · [튜토리얼](./SINDY_EDIT.md)
 
 ---
 
@@ -77,7 +83,10 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 
 | 문서 | 내용 |
 |------|------|
-| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | SindyComponent(허브)·FeatureView 아키텍처, Feature 쌍 목록, ViewComponent, ScrollerFeatureView |
+| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | **현행 레퍼런스** — SindyComponent(허브)·FeatureView 아키텍처, Feature 쌍 목록, ViewComponent, ScrollerFeatureView |
+| [SINDY_COMPONENT_TUTORIAL.md](./SINDY_COMPONENT_TUTORIAL.md) | View/MVVM 스텝 바이 스텝 실습 — 라벨부터 커스텀 Feature까지 |
+| [FEATURE_VIEW_SCENARIO.md](./FEATURE_VIEW_SCENARIO.md) | FeatureView 전환 설계 결정 기록(Decision Log)·마이그레이션 대응표 — 보존용 |
+| [HTTP.md](./HTTP.md) | HTTP 모듈 — ApiModel, Retry/Timeout/OfflineCache 합성, 토큰 자동 갱신, 페이지네이션 |
 | [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotFeature/RedDotFeatureView 연결 방법 |
 | [EDITOR_TOOLKIT.md](./EDITOR_TOOLKIT.md) | SindyEdit 전체 API 레퍼런스 — 메서드 목록, ComponentScope, HTTP IPC |
-| [SINDY_EDIT_TUTORIAL.md](./SINDY_EDIT_TUTORIAL.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |
+| [SINDY_EDIT.md](./SINDY_EDIT.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |
