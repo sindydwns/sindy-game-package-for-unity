@@ -25,6 +25,8 @@ namespace Sindy.Samples.ComponentShowcase
     {
         [Header("뷰 (씬)")]
         [SerializeField] private ViewComponent shopView;
+        [Tooltip("화면 변형 전환 시 가상화 재계산을 위해 Reload()를 호출할 스크롤러 허브")]
+        [SerializeField] private SindyComponent scrollerHub;
 
         [Header("스크롤러 설정")]
         [SerializeField] private SectionOption itemSectionOption;
@@ -52,6 +54,7 @@ namespace Sindy.Samples.ComponentShowcase
         private ToggleFeature bgm;
         private ToggleFeature skipConfirm;
 
+        private ScreenFeature screen;
         private ShopItemData selected;
         private bool pendingConfirm;
         private readonly Queue<string> logLines = new();
@@ -62,6 +65,15 @@ namespace Sindy.Samples.ComponentShowcase
         {
             shop = BuildModel();
             shopView.Bind(shop);
+
+            // 화면 변형 전환 시 스크롤러 가상화 재계산.
+            // Bind 이후에 구독해야 ResponsiveLayoutFeatureView의 레이아웃 적용(먼저 구독됨)이
+            // 끝난 뒤 Reload가 실행된다 — 새 뷰포트 크기 기준으로 재계산됨.
+            screen.Variant.Prop.Skip(1).Subscribe(v =>
+            {
+                Log($"화면 변형 전환: {v}");
+                if (scrollerHub != null) scrollerHub.Reload();
+            });
 
             if (items != null && items.Length > 0)
                 Select(items[0]);
@@ -80,6 +92,10 @@ namespace Sindy.Samples.ComponentShowcase
         private ViewModel BuildModel()
         {
             var vm = new ViewModel();
+
+            // 반응형 — 모델은 variant 키만 알고, 좌표는 ResponsiveLayoutFeatureView(뷰)에 있다.
+            screen = new ScreenFeature();
+            vm.With(screen);
 
             // 헤더 — 자가 갱신 모델 주입 (gold.Source만 바꾸면 표시는 자동)
             gold = new FormatNumberPropModel<long>(startGold, v => $"{v:n0} G");
