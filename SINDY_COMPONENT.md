@@ -120,7 +120,7 @@ vm.Feature<InteractableFeature>().Interactable.Value = false;
 | `PageFeature` | `PageFeatureView` | GameObject 리스트 중 1개 활성 |
 | `ListFeature` | `ListFeatureView` | 비가상화 아이템 리스트 |
 | `VisibilityFeature` | `VisibilityFeatureView` | GameObject.SetActive |
-| `LayoutFeature` | `LayoutFeatureView` | RectTransform 레이아웃 — fluent API: `new LayoutFeature().Layout(Direction.Vertical, 14).Padding(12)` (ComponentBlueprint 없이 단독 사용 가능) |
+| `LayoutFeature` | `LayoutFeatureView` | RectTransform 레이아웃 (LayoutGroup/LayoutElement) — 보통 ComponentBlueprint 체인으로 선언 (아래 "프리팹 조합" 참조) |
 | `InteractableFeature` | `InteractableFeatureView` | CanvasGroup interactable/blocksRaycasts/alpha |
 | `HighlightFeature` | `HighlightFeatureView` | 하이라이트 오브젝트 표시 |
 | `RaycastBlockFeature` | `RaycastBlockFeatureView` | CanvasGroup.blocksRaycasts |
@@ -173,6 +173,91 @@ shopView.Bind(shop);
 ```csharp
 childHub.Bind(childModel).SetParent(parentHub);
 ```
+
+---
+
+## 프리팹 조합 — ComponentBlueprint & LayoutFeature
+
+사전 제작된 **부품 프리팹**(라벨, 아이콘, 버튼, 카드 틀...)을 코드에서 조합해
+원하는 UI를 만들어내는 시스템입니다. 전제: 부품 프리팹들이 `ComponentManager`의
+프리팹 카탈로그(GameObjectCollection)에 등록되어 있어야 합니다.
+
+**Blueprint는 설계도(데이터)입니다.** 선언 시점에는 아무것도 생성되지 않고,
+`Open()` 시점에 루트 프리팹이 인스턴스화된 뒤 각 `Patch`가 가리키는 프리팹이
+해당 경로의 자식으로 인스턴스화·부착·바인딩됩니다.
+
+```csharp
+// 재사용 템플릿 — 한 번 정의하고 상태 보존한 채 여러 번 Open
+static readonly ComponentBlueprint Card = ComponentBlueprint
+    .Create("card_frame")
+        .Layout(Direction.Vertical, spacing: 4)
+        .Padding(8)
+    .Patch("icon", "icon_part")
+    .Patch("title", "label_part");
+
+// 조합 + 실행
+ComponentBlueprint
+    .Create("popup_frame").WithModel(() => BuildPopupModel())
+    .Patch("header", Card).WithModel(() => BuildHeaderModel())
+    .Patch("footer.confirm", "button_part").WithModel(() => Models.Button())
+    .Open(layer: 1);
+```
+
+### 디자인/기능 분리 원칙
+
+코드만으로 UI를 제어하면 기능 코드와 디자인 코드가 섞이기 쉽습니다.
+이를 막는 것이 LayoutFeature와 Blueprint의 존재 이유입니다.
+
+- **디자인**(배치 방향·간격·여백·크기)은 **Blueprint 체인**에 선언한다 — `Layout/Padding/Align/Size`.
+- **기능**(모델 상태·구독·로직)은 모델 구성 함수에 둔다 — Feature 조합과 reactive 구독.
+
+```csharp
+// ✅ 디자인은 설계도에
+ComponentBlueprint.Create("panel")
+    .Patch("rows", "container_part").Layout(Direction.Vertical, spacing: 14).Padding(12)
+    ...
+
+// ❌ 안티패턴: 기능 코드(BuildModel) 안에 디자인 선언 — 두 관심사가 다시 섞인다.
+//    모델에 이미 LayoutFeature가 있으면 Blueprint 적용 시 Dev 빌드 경고가 출력된다.
+vm["rows"] = new ViewModel().With(new LayoutFeature().Layout(Direction.Vertical, 14));
+```
+
+디자인 값의 거처 기준: **구조적 플로우**(행/열 배치, 간격)는 Blueprint(코드)에,
+**화면 변형별 절대 좌표·앵커**는 뷰의 `ResponsiveLayoutFeatureView`(씬 직렬화)에 둡니다.
+모델은 variant 키만 압니다 (반응형 레이아웃 섹션 참조).
+
+### 조립 규칙 (Open)
+
+1. **하이브리드** — 패치 경로의 키가 루트 프리팹(ViewComponent)에 이미 있으면
+   인스턴스화를 생략하고 모델만 주입한다. 틀은 프리팹에, 가변 부품은 코드에.
+2. **자동 컨테이너** — 중간 경로(`"footer.confirm"`의 `footer`)가 없으면
+   RectTransform+ViewComponent 빈 컨테이너가 자동 생성된다.
+3. **재정의 승계** — 같은 경로를 다시 패치하면 마지막 선언이 우선하되, 지정하지 않은
+   모델 팩토리/레이아웃은 이전 선언에서 승계한다. 재정의된 base 팩토리는 실행되지 않는다.
+4. **형제 순서** = 같은 깊이에서의 패치 선언 순서 (프리팹 기존 자식이 먼저).
+5. **패치 프리팹 미등록** = 즉시 예외. 설계도 오류는 빨리 실패한다.
+
+파생 설계도는 `Create(템플릿)`으로 만들고 일부 경로만 재정의합니다.
+`Patch(path, blueprint)`로 Blueprint를 중첩하면 하위 패치가 경로 접두어와 함께 전개되고,
+해당 Blueprint의 루트 레이아웃이 패치 노드의 레이아웃이 됩니다.
+
+### LayoutFeature 의미론
+
+`Apply`는 **full-spec**입니다: Feature의 전체 상태를 대상에 반영하고, 지정하지 않은
+속성(padding, alignment, size)은 기본값으로 리셋합니다. 방향 전환 시 기존 반대 방향
+LayoutGroup은 제거됩니다. 따라서 셀 풀링·재바인딩에서 이전 모델의 디자인이 잔존하지 않습니다.
+모델 해제 시 `LayoutFeatureView.Clear`가 레이아웃 영향을 비활성화합니다(파괴 아님 — 풀링 성능).
+
+`Margin`은 제공하지 않습니다. uGUI에서 offset 기반 margin은 부모 LayoutGroup이 즉시
+덮어써 무효이므로, 간격은 부모의 `Padding`/`Layout(spacing:)`으로 해결합니다.
+
+### Dev 빌드 경고 (릴리스 비용 0)
+
+| 상황 | 경고 |
+|---|---|
+| 패치 모델이 ViewModel이 아닌데 Layout/Size 지정 | 레이아웃 무시 경고 |
+| 루트 모델이 ViewModel이 아닌데 패치 존재 | 패치 무시 경고 |
+| 모델에 이미 LayoutFeature가 있는데 Blueprint 레이아웃 지정 | 덮어쓰기 경고 (분리 원칙 위반 가시화) |
 
 ---
 

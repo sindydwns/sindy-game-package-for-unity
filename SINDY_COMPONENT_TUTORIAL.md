@@ -276,6 +276,42 @@ model.Dispose();    // 2. 모델 내부 구독 해제 (EveryUpdate 등)
 
 ---
 
+## Step 8. ComponentBlueprint — 프리팹 조합
+
+Step 5의 ViewComponent는 프리팹에 **이미 배치된** 자식에 모델을 꽂았습니다.
+Blueprint는 한 걸음 더 나아가, 카탈로그에 등록한 부품 프리팹을 **코드에서 조합해**
+새 UI를 만들어냅니다. 화면마다 프리팹을 통째로 만들 필요가 없어집니다.
+
+**준비**: 씬에 `ComponentManager`(레이어 RectTransform들 + GameObjectCollection 카탈로그)를 두고,
+부품 프리팹(`label_part`, `button_part`, `container_part`...)을 카탈로그에 등록합니다.
+
+```csharp
+// 설계도 선언 — 아직 아무것도 생성되지 않는다
+var confirmPopup = ComponentBlueprint
+    .Create("popup_frame")                       // 루트 프리팹 (ViewComponent)
+        .Layout(Direction.Vertical, spacing: 12) // 디자인은 체인에
+        .Padding(16)
+    .WithModel(() => BuildPopupModel())          // 기능(모델)은 팩토리로
+    .Patch("title", "label_part").WithModel(() => Models.Label("확인"))
+    .Patch("buttons", "container_part").Layout(Direction.Horizontal, spacing: 8)
+    .Patch("buttons.ok", "button_part").WithModel(() => Models.Button())
+    .Patch("buttons.cancel", "button_part").WithModel(() => Models.Button());
+
+// 실행 — 이 순간 프리팹들이 인스턴스화·부착·바인딩된다
+var popup = confirmPopup.Open(layer: 1);
+```
+
+핵심 규칙:
+
+- 모델은 항상 **팩토리**(`() => ...`)로 — Open마다 새 인스턴스가 생겨 상태 공유 사고가 없습니다.
+- 루트 프리팹에 이미 있는 키는 인스턴스화 생략, 모델만 주입됩니다 (하이브리드).
+- 디자인(`Layout/Padding/Align/Size`)은 Blueprint 체인에, 기능은 모델 팩토리에 —
+  모델 안에서 `new LayoutFeature()`를 쓰면 Dev 빌드 경고가 알려줍니다.
+
+상세 규칙은 SINDY_COMPONENT.md §프리팹 조합 참조.
+
+---
+
 ## 다음 단계
 
 - 리스트/스크롤: `ScrollerFeature` + `ScrollerFeatureView` (SINDY_COMPONENT.md §ScrollerFeatureView — 셀 키/CellCatalog)

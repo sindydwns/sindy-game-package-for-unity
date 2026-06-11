@@ -84,6 +84,11 @@
 | TextFeature는 `PropModel<string>` 보유 | `ReactiveProperty<string>` 직접 노출 | 기존 Feature들(Visibility/Interactable)과 일관. TimerModel·FormatNumberPropModel 등 자가 갱신 모델을 생성자 주입으로 재사용 — B안은 수동 배선 보일러플레이트·누수 위험 |
 | Scroller는 셀 키 + 카탈로그 하이브리드 | (a) 셀 모델 서브클래스 유지 / (b) 섹션 명시 prefab 단독 | (a)는 "전용 모델 클래스 제거" 철학에 영구 예외 잔류, (b) 단독은 공용 셀(타이틀·필터)을 섹션마다 지정하는 번거로움. 키 교체로 3단계 해상 구조와 전역 등록 편의를 모두 보존 |
 | 네이밍: FeatureView | FeatureBinder / Ability | 직관성. Feature(모델)–FeatureView(뷰) 대칭이 이름에서 드러남 |
+| Blueprint 조립은 Open() 빌드 후처리 | 뷰 측 동적 해상 (모델에 프리팹 이름 탑재) | 모델에 뷰 정보가 실리면 MVVM 방향성 위반. 조립이 코드 한 곳에 모여 추적 용이 (2026-06: 기존 Open은 모델 트리만 만들고 PrefabName을 무시 — 조립 단계 미구현이었음을 평가에서 발견) |
+| 중간 경로 컨테이너 자동 생성 | 컨테이너 프리팹 명시 강제 | `"a.b"` 패치의 `a`는 대부분 구조용 빈 노드 — 강제 시 보일러플레이트 프리팹 양산. 명시가 필요하면 `Patch("a", "container")`로 여전히 가능 |
+| LayoutFeature.Apply는 full-spec | 부분 갱신 (지정 속성만 반영) | 부분 갱신은 셀 풀링·재바인딩에서 이전 모델의 padding/방향 잔존 — 실제 버그로 확인. Clear는 파괴 대신 비활성 토글 (풀링 성능) |
+| Margin API 제거 | offset 기반 유지 / wrapper 재구현 | offset 방식은 부모 LayoutGroup이 즉시 덮어써 가장 자연스러운 사용처에서 무효 — 오해 유발 API. 간격은 Padding/Spacing으로 충분, wrapper는 필요해질 때 재설계 |
+| 디자인 값 거처: 플로우=코드, variant 좌표=뷰 | 한쪽으로 통일 | 구조적 플로우(행·열·간격)는 Blueprint와 함께 선언돼야 조합이 자기완결적. 화면 변형별 절대 좌표는 디자이너가 씬에서 조정하므로 ResponsiveLayoutFeatureView(직렬화)에 |
 
 ---
 
