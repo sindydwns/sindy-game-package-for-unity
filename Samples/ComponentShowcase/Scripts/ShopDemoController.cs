@@ -105,7 +105,13 @@ namespace Sindy.Samples.ComponentShowcase
             // 스크롤러 — 섹션 2개
             vm["list"] = BuildScroller();
 
-            // 상세 패널 — 출력형 Feature는 전부 외부 모델 주입 생성자를 사용,
+            // 상세 패널 — 행(row)들은 LayoutFeature 수직 플로우로 배치한다.
+            // 절대 좌표 없이 행 순서·간격만 선언하면 화면 변형 전환 시 자동 재배치된다.
+            vm["detail"] = new ViewModel().With(new LayoutFeature()
+                .Layout(Direction.Vertical, spacing: 14)
+                .Padding(top: 12, right: 32, bottom: 16, left: 32));
+
+            // 출력형 Feature는 전부 외부 모델 주입 생성자를 사용,
             // Controller는 PropModel 필드만 보유한다.
             itemFrame = new PropModel<Sprite>();
             itemIcon = new PropModel<Sprite>();
