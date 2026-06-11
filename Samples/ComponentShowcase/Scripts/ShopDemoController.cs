@@ -11,23 +11,21 @@ namespace Sindy.Samples.ComponentShowcase
     /// <summary>
     /// SindyComponent 쇼케이스 — 미니 상점 데모.
     ///
-    /// 한 화면에서 시연하는 것:
-    /// - 출력: TextFeature(타이틀·이름·로그), ImageFeature(아이콘·9-slice 프레임 교체),
-    ///         FormatNumberPropModel(골드 자가 갱신 표시)
-    /// - 입력: ButtonFeature 클릭(구매) / 홀드(수량 ±, allowHold 옵션),
-    ///         ToggleFeature 스위치(BGM)·체크박스(구매 확인 생략) — 같은 Feature, 스킨만 다름
-    /// - 스크롤러: ScrollerFeature 섹션 2개(소모품=셀 키 해상, 이벤트 배너=ContentPrefab 직접 지정)
+    /// 이 데모가 보여주는 것은 개별 Feature가 아니라 **사용 패턴**이다:
+    ///
+    /// 1. 프리팹 조합 (ComponentBlueprint) — 씬에는 ComponentManager 셸만 있고,
+    ///    상점 화면은 카탈로그의 부품 프리팹(CaptionRow, InfoRow, QtyRow...)을
+    ///    설계도로 조합해 Open() 시점에 만들어낸다.
+    /// 2. 디자인/기능 분리 — 배치·간격·여백은 Blueprint 체인(BuildDetailPanel)에,
+    ///    모델 상태·구독은 기능 코드(BuildModel)에. 두 관심사가 파일 안에서도 나뉜다.
+    /// 3. 하이브리드 — 틀(헤더·스크롤러·로그 바)은 ShopFrame 프리팹에 두고
+    ///    모델만 주입(title/gold/list/log), 가변 부품(상세 패널)은 코드로 조합.
     ///
     /// 원칙: Controller는 ViewModel(Feature)만 건드린다. Unity UI 직접 호출 없음.
     /// 모든 화면 갱신은 FeatureView의 Bind 구독이 처리한다.
     /// </summary>
     public class ShopDemoController : MonoBehaviour
     {
-        [Header("뷰 (씬)")]
-        [SerializeField] private ViewComponent shopView;
-        [Tooltip("화면 변형 전환 시 가상화 재계산을 위해 Reload()를 호출할 스크롤러 허브")]
-        [SerializeField] private SindyComponent scrollerHub;
-
         [Header("스크롤러 설정")]
         [SerializeField] private SectionOption itemSectionOption;
         [SerializeField] private SectionOption bannerSectionOption;
@@ -51,9 +49,13 @@ namespace Sindy.Samples.ComponentShowcase
         private PropModel<string> buyLabel;
         private PropModel<bool> canBuy;
         private PropModel<string> logText;
+        private ButtonFeature minusBtn;
+        private ButtonFeature plusBtn;
+        private ButtonFeature buyBtn;
         private ToggleFeature bgm;
         private ToggleFeature skipConfirm;
 
+        private SindyComponent shopInstance;
         private ScreenFeature screen;
         private ShopItemData selected;
         private bool pendingConfirm;
@@ -63,12 +65,13 @@ namespace Sindy.Samples.ComponentShowcase
 
         private void Start()
         {
-            shop = BuildModel();
-            shopView.Bind(shop);
+            // 설계도 → Open(): 루트 프리팹 인스턴스화 + 부품 프리팹 조립 + 모델 바인딩
+            shopInstance = BuildBlueprint().Open();
 
             // 화면 변형 전환 시 스크롤러 가상화 재계산.
             // Bind 이후에 구독해야 ResponsiveLayoutFeatureView의 레이아웃 적용(먼저 구독됨)이
             // 끝난 뒤 Reload가 실행된다 — 새 뷰포트 크기 기준으로 재계산됨.
+            ((ViewComponent)shopInstance).TryGetView("list", out var scrollerHub);
             screen.Variant.Prop.Skip(1).Subscribe(v =>
             {
                 Log($"화면 변형 전환: {v}");
@@ -83,12 +86,49 @@ namespace Sindy.Samples.ComponentShowcase
         private void OnDestroy()
         {
             // 순서 중요: 1) FeatureView 구독 해제 → 2) 모델 내부 구독 해제
-            if (shopView != null) shopView.Bind(null);
+            if (shopInstance != null) shopInstance.Bind(null);
             shop?.Dispose();
         }
 
-        // ---------------- 모델 구성 ----------------
+        // ---------------- 설계도 (디자인 — 구조·배치·간격) ----------------
 
+        /// <summary>
+        /// 상점 화면 설계도. 틀(ShopFrame)에 상세 패널 Blueprint를 중첩 패치한다.
+        /// 'detail' 키는 프레임에 이미 존재하므로 인스턴스화는 생략되고(하이브리드)
+        /// DetailPanel의 루트 레이아웃과 모델만 주입된다.
+        /// </summary>
+        private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
+            .Create("ShopFrame")
+            .WithModel(BuildModel)
+            .Patch("detail", BuildDetailPanel()).WithModel(() => new ViewModel());
+
+        /// <summary>
+        /// 상세 패널 설계도 — 행 순서·간격·여백만 선언한다 (절대 좌표 없음).
+        /// 각 행은 카탈로그의 부품 프리팹. 모델 팩토리는 BuildModel이 만든
+        /// Feature/PropModel 필드를 ViewModel로 감싸기만 한다 (기능 코드는 아래쪽에).
+        /// </summary>
+        private ComponentBlueprint BuildDetailPanel() => ComponentBlueprint
+            .Create("DetailPanel")
+                .Layout(Direction.Vertical, spacing: 14)
+                .Padding(top: 12, right: 32, bottom: 16, left: 32)
+            .Patch("caption", "CaptionRow")
+                .WithModel(() => Models.Label("상세 패널 — Controller는 PropModel 값만 변경, 화면 갱신은 FeatureView 구독이 처리"))
+            .Patch("info", "InfoRow").WithModel(BuildInfoModel)
+            .Patch("frameCaption", "CaptionSmall")
+                .WithModel(() => Models.Label("ImageFeature ×2 — 아이콘(일반) / 등급별 9-slice 프레임 교체"))
+            .Patch("qty", "QtyRow").WithModel(BuildQtyModel)
+            .Patch("buy", "BuyButton").WithModel(BuildBuyModel)
+            .Patch("buyCaption", "CaptionSmall")
+                .WithModel(() => Models.Label("ButtonFeature 단순 클릭 + InteractableFeature — 골드 부족 시 비활성"))
+            .Patch("bgm", "BgmRow").WithModel(BuildBgmModel)
+            .Patch("skip", "SkipRow").WithModel(() => new ViewModel().With(skipConfirm));
+
+        // ---------------- 모델 구성 (기능 — 상태·구독·로직) ----------------
+
+        /// <summary>
+        /// 루트 모델. Open()이 패치 모델보다 먼저 실행하므로, 여기서 만든
+        /// Feature/PropModel 필드를 패치 팩토리들이 안전하게 참조할 수 있다.
+        /// </summary>
         private ViewModel BuildModel()
         {
             var vm = new ViewModel();
@@ -97,22 +137,15 @@ namespace Sindy.Samples.ComponentShowcase
             screen = new ScreenFeature();
             vm.With(screen);
 
-            // 헤더 — 자가 갱신 모델 주입 (gold.Source만 바꾸면 표시는 자동)
+            // 하이브리드 키 — 틀(ShopFrame)에 이미 있는 허브에 모델만 주입된다.
             gold = new FormatNumberPropModel<long>(startGold, v => $"{v:n0} G");
             vm["title"] = Models.Label("상점");
             vm["gold"] = Models.Label(gold);
-
-            // 스크롤러 — 섹션 2개
             vm["list"] = BuildScroller();
+            logText = new PropModel<string>("");
+            vm["log"] = Models.Label(logText);
 
-            // 상세 패널 — 행(row)들은 LayoutFeature 수직 플로우로 배치한다.
-            // 절대 좌표 없이 행 순서·간격만 선언하면 화면 변형 전환 시 자동 재배치된다.
-            vm["detail"] = new ViewModel().With(new LayoutFeature()
-                .Layout(Direction.Vertical, spacing: 14)
-                .Padding(top: 12, right: 32, bottom: 16, left: 32));
-
-            // 출력형 Feature는 전부 외부 모델 주입 생성자를 사용,
-            // Controller는 PropModel 필드만 보유한다.
+            // 상세 패널 상태 — 뷰는 전부 Blueprint가 조립한다 (BuildDetailPanel).
             itemFrame = new PropModel<Sprite>();
             itemIcon = new PropModel<Sprite>();
             itemName = new PropModel<string>();
@@ -120,37 +153,19 @@ namespace Sindy.Samples.ComponentShowcase
             qty = new FormatNumberPropModel<int>(1, v => $"× {v}");
             buyLabel = new PropModel<string>("구매");
             canBuy = new PropModel<bool>(false);
-            logText = new PropModel<string>("");
+            minusBtn = new ButtonFeature(allowHold: true);
+            plusBtn = new ButtonFeature(allowHold: true);
+            buyBtn = new ButtonFeature();
             bgm = new ToggleFeature(true);
             skipConfirm = new ToggleFeature(false);
 
-            vm["detail.frame"] = new ViewModel().With(new ImageFeature(itemFrame));
-            vm["detail.icon"] = new ViewModel().With(new ImageFeature(itemIcon));
-            vm["detail.name"] = new ViewModel().With(new TextFeature(itemName));
-            vm["detail.desc"] = new ViewModel().With(new TextFeature(itemDesc));
-            vm["detail.qty"] = new ViewModel().With(new TextFeature(qty));
-            vm["detail.minus"] = Models.Button(allowHold: true);
-            vm["detail.plus"] = Models.Button(allowHold: true);
-            vm["detail.buy"] = new ViewModel()
-                .With(new TextFeature(buyLabel))
-                .With(new ButtonFeature())
-                .With(new InteractableFeature(canBuy));
-            vm["detail.bgm"] = new ViewModel().With(bgm);
-            vm["detail.skip"] = new ViewModel().With(skipConfirm);
-
-            // 로그 바
-            vm["log"] = Models.Label(logText);
-
             // ---- 입력 구독 (구독 대상이 전부 shop 트리의 Subject/Prop이므로
             //      shop.Dispose()와 함께 정리된다) ----
-            var minus = vm["detail.minus"].Feature<ButtonFeature>();
-            var plus = vm["detail.plus"].Feature<ButtonFeature>();
-            minus.OnClick.Subscribe(_ => AddQty(-1));
-            minus.OnHold.Subscribe(_ => AddQty(-1));
-            plus.OnClick.Subscribe(_ => AddQty(+1));
-            plus.OnHold.Subscribe(_ => AddQty(+1));
-
-            vm["detail.buy"].Feature<ButtonFeature>().OnClick.Subscribe(_ => Buy());
+            minusBtn.OnClick.Subscribe(_ => AddQty(-1));
+            minusBtn.OnHold.Subscribe(_ => AddQty(-1));
+            plusBtn.OnClick.Subscribe(_ => AddQty(+1));
+            plusBtn.OnHold.Subscribe(_ => AddQty(+1));
+            buyBtn.OnClick.Subscribe(_ => Buy());
 
             bgm.IsOn.Prop.Skip(1).Subscribe(on => Log($"BGM {(on ? "켜짐" : "꺼짐")}"));
             skipConfirm.IsOn.Prop.Skip(1).Subscribe(on =>
@@ -161,6 +176,38 @@ namespace Sindy.Samples.ComponentShowcase
 
             gold.Source.Subscribe(_ => UpdateBuyState());
 
+            shop = vm;
+            return vm;
+        }
+
+        private ViewModel BuildInfoModel()
+        {
+            var vm = new ViewModel();
+            vm["frame"] = new ViewModel().With(new ImageFeature(itemFrame));
+            vm["icon"] = new ViewModel().With(new ImageFeature(itemIcon));
+            vm["name"] = new ViewModel().With(new TextFeature(itemName));
+            vm["desc"] = new ViewModel().With(new TextFeature(itemDesc));
+            return vm;
+        }
+
+        private ViewModel BuildQtyModel()
+        {
+            var vm = new ViewModel();
+            vm["minus"] = new ViewModel().With(minusBtn);
+            vm["qty"] = new ViewModel().With(new TextFeature(qty));
+            vm["plus"] = new ViewModel().With(plusBtn);
+            return vm;
+        }
+
+        private ViewModel BuildBuyModel() => new ViewModel()
+            .With(new TextFeature(buyLabel))
+            .With(buyBtn)
+            .With(new InteractableFeature(canBuy));
+
+        private ViewModel BuildBgmModel()
+        {
+            var vm = new ViewModel();
+            vm["switch"] = new ViewModel().With(bgm);
             return vm;
         }
 
