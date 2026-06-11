@@ -50,7 +50,11 @@ namespace Sindy.View.Features
 
             if (HasLayout)
             {
+                // 재바인딩 시 중복 추가 방지: 같은 방향의 기존 LayoutGroup을 재사용한다.
                 var group = LayoutDirection == Direction.Horizontal
+                    ? (HorizontalOrVerticalLayoutGroup)target.gameObject.GetComponent<HorizontalLayoutGroup>()
+                    : target.gameObject.GetComponent<VerticalLayoutGroup>();
+                group ??= LayoutDirection == Direction.Horizontal
                     ? (HorizontalOrVerticalLayoutGroup)target.gameObject.AddComponent<HorizontalLayoutGroup>()
                     : target.gameObject.AddComponent<VerticalLayoutGroup>();
 
