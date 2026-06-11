@@ -10,18 +10,20 @@ namespace Sindy.View
         [SerializeField] private List<RectTransform> parentRects;
         [SerializeField] private GameObjectCollection prefabs;
 
-        private void BuildComponent(ComponentPreset model)
+        private SindyComponent BuildComponent(ComponentPreset model)
         {
             var layer = parentRects[Mathf.Clamp(model.Layer, 0, parentRects.Count - 1)];
-            model.Build(layer);
+            return model.Build(layer);
         }
 
-        public static void Open(ComponentPreset preset)
+        /// <summary>프리셋을 빌드하고 생성된 인스턴스를 반환한다.</summary>
+        public static SindyComponent Open(ComponentPreset preset)
         {
-            Instance.BuildComponent(preset);
+            return Instance.BuildComponent(preset);
         }
 
-        public static void Open(string panelName, IViewModel data = null, int layer = 0)
+        /// <summary>등록된 프리팹을 빌드하고 생성된 인스턴스를 반환한다.</summary>
+        public static SindyComponent Open(string panelName, IViewModel data = null, int layer = 0)
         {
             var prefab = Instance.prefabs.GetGameObject<SindyComponent>(panelName);
             if (prefab == null)
@@ -29,7 +31,7 @@ namespace Sindy.View
                 throw new Exception($"Component '{panelName}' not found in ComponentManager prefabs.");
             }
             var preset = new ComponentPreset(prefab, data, layer);
-            Instance.BuildComponent(preset);
+            return Instance.BuildComponent(preset);
         }
 
         public int GetComponentCount(int layer)

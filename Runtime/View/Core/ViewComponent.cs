@@ -31,7 +31,8 @@ namespace Sindy.View
         private void OnModelChanged(IViewModel model)
         {
             // null 전파 시 자식 해제는 허브의 LinkState 연쇄가 이미 처리했다.
-            if (model == null) return;
+            // views는 AddComponent로 생성된 경우(Blueprint 자동 컨테이너 등) null일 수 있다.
+            if (model == null || views == null) return;
 
             foreach (var view in views)
             {
@@ -47,6 +48,34 @@ namespace Sindy.View
                     Debug.LogWarning($"ViewComponent: Model for view '{view.name}' not found in ViewModel.", this);
                 }
             }
+        }
+
+        /// <summary>키로 등록된 자식 허브를 조회한다.</summary>
+        public bool TryGetView(string key, out SindyComponent component)
+        {
+            if (views != null)
+            {
+                foreach (var view in views)
+                {
+                    if (view.name == key && view.component != null)
+                    {
+                        component = view.component;
+                        return true;
+                    }
+                }
+            }
+            component = null;
+            return false;
+        }
+
+        /// <summary>
+        /// 런타임에 자식 허브를 등록한다 (ComponentBlueprint 조립 등).
+        /// 등록 이후의 재바인딩에서 Inspector 등록분과 동일하게 모델이 주입된다.
+        /// </summary>
+        public void AddView(string key, SindyComponent component)
+        {
+            views ??= new List<ViewBehaviour>();
+            views.Add(new ViewBehaviour { name = key, component = component });
         }
 
         protected override void OnDestroy()
