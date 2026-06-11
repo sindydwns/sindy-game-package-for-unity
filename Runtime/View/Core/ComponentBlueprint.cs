@@ -286,8 +286,20 @@ namespace Sindy.View
             var indexByPath = new Dictionary<string, int>();
             var result = new List<PatchInstruction>();
 
-            foreach (var patch in EnumerateExpanded())
+            foreach (var raw in EnumerateExpanded())
             {
+                // Blueprint를 패치로 사용한 경우, 체인에서 레이아웃을 따로 지정하지 않았다면
+                // 해당 Blueprint의 루트 레이아웃이 패치 노드의 레이아웃이 된다.
+                var patch = raw;
+                if (patch.Blueprint != null && patch.Layout == null && patch.Blueprint.RootLayout != null)
+                {
+                    patch = new PatchInstruction(raw.Path, raw.Blueprint)
+                    {
+                        ModelFactory = raw.ModelFactory,
+                        Layout = raw.Blueprint.RootLayout,
+                    };
+                }
+
                 if (indexByPath.TryGetValue(patch.Path, out var index))
                 {
                     var prev = result[index];
