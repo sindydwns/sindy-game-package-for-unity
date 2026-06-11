@@ -89,13 +89,25 @@ namespace Sindy.View.Features
             PreferredHeight = PreferredHeight,
         };
 
+        /// <summary>
+        /// 이 Feature의 전체 상태를 대상에 반영한다 (full-spec).
+        /// 지정하지 않은 속성은 기본값으로 리셋되므로, 셀 풀링·재바인딩 시
+        /// 이전 모델의 레이아웃이 잔존하지 않는다.
+        /// </summary>
         public void Apply(RectTransform target)
         {
             if (target == null) return;
 
             if (HasLayout)
             {
-                // 재바인딩 시 중복 추가 방지: 같은 방향의 기존 LayoutGroup을 재사용한다.
+                // LayoutGroup은 DisallowMultipleComponent — 방향 전환 시 기존 그룹을 즉시 제거해야
+                // 새 방향 그룹을 추가할 수 있다 (재바인딩 시 그룹 충돌 방지).
+                var opposite = LayoutDirection == Direction.Horizontal
+                    ? (HorizontalOrVerticalLayoutGroup)target.gameObject.GetComponent<VerticalLayoutGroup>()
+                    : target.gameObject.GetComponent<HorizontalLayoutGroup>();
+                if (opposite != null)
+                    Object.DestroyImmediate(opposite);
+
                 var group = LayoutDirection == Direction.Horizontal
                     ? (HorizontalOrVerticalLayoutGroup)target.gameObject.GetComponent<HorizontalLayoutGroup>()
                     : target.gameObject.GetComponent<VerticalLayoutGroup>();
@@ -103,29 +115,42 @@ namespace Sindy.View.Features
                     ? (HorizontalOrVerticalLayoutGroup)target.gameObject.AddComponent<HorizontalLayoutGroup>()
                     : target.gameObject.AddComponent<VerticalLayoutGroup>();
 
+                group.enabled = true;
                 group.spacing = Spacing;
                 group.childForceExpandWidth = false;
                 group.childForceExpandHeight = false;
                 group.childControlWidth = true;
                 group.childControlHeight = true;
 
-                if (HasPadding)
-                    group.padding = new RectOffset(
+                // full-spec: 미지정이면 0/기본값으로 리셋
+                group.padding = HasPadding
+                    ? new RectOffset(
                         Mathf.RoundToInt(PaddingLeft),
                         Mathf.RoundToInt(PaddingRight),
                         Mathf.RoundToInt(PaddingTop),
-                        Mathf.RoundToInt(PaddingBottom));
-
-                if (HasAlignment)
-                    group.childAlignment = Alignment.Value;
+                        Mathf.RoundToInt(PaddingBottom))
+                    : new RectOffset(0, 0, 0, 0);
+                group.childAlignment = Alignment ?? TextAnchor.UpperLeft;
+            }
+            else
+            {
+                // 이 Feature에 레이아웃이 없으면 이전 모델이 남긴 그룹을 비활성화한다.
+                SetGroupsEnabled(target, false);
             }
 
             if (HasSize)
             {
                 var element = target.gameObject.GetComponent<LayoutElement>()
                               ?? target.gameObject.AddComponent<LayoutElement>();
-                if (PreferredWidth >= 0) element.preferredWidth = PreferredWidth;
-                if (PreferredHeight >= 0) element.preferredHeight = PreferredHeight;
+                element.enabled = true;
+                // full-spec: 미지정 축은 -1(미사용)로 리셋
+                element.preferredWidth = PreferredWidth;
+                element.preferredHeight = PreferredHeight;
+            }
+            else
+            {
+                var element = target.gameObject.GetComponent<LayoutElement>();
+                if (element != null) element.enabled = false;
             }
 
             if (HasMargin)
@@ -133,6 +158,25 @@ namespace Sindy.View.Features
                 target.offsetMin = new Vector2(MarginLeft, MarginBottom);
                 target.offsetMax = new Vector2(-MarginRight, -MarginTop);
             }
+        }
+
+        /// <summary>
+        /// 적용했던 레이아웃 영향을 비활성화한다 (모델 해제 시 LayoutFeatureView.Clear에서 호출).
+        /// 셀 풀링 성능을 위해 컴포넌트를 파괴하지 않고 비활성 토글만 한다 —
+        /// 다음 Apply가 전체 상태를 다시 설정한다.
+        /// </summary>
+        public static void Deactivate(RectTransform target)
+        {
+            if (target == null) return;
+            SetGroupsEnabled(target, false);
+            var element = target.gameObject.GetComponent<LayoutElement>();
+            if (element != null) element.enabled = false;
+        }
+
+        private static void SetGroupsEnabled(RectTransform target, bool enabled)
+        {
+            var group = target.gameObject.GetComponent<HorizontalOrVerticalLayoutGroup>();
+            if (group != null) group.enabled = enabled;
         }
     }
 }

@@ -18,6 +18,9 @@ namespace Sindy.Test
             FluentApplyCreatesGroup();
             ReApplyDoesNotDuplicate();
             SizeCreatesLayoutElementOnce();
+            DirectionSwitchReplacesGroup();
+            UnspecifiedPropertiesReset();
+            DeactivateDisablesThenApplyRestores();
         }
 
         private RectTransform NewRect()
@@ -73,6 +76,66 @@ namespace Sindy.Test
             Assert.AreEqual(1, elements.Length);
             Assert.AreEqual(100f, elements[0].preferredWidth);
             Assert.AreEqual(50f, elements[0].preferredHeight);
+            feature.Dispose();
+        }
+
+        // 방향 전환 재적용 시 기존 반대 방향 그룹이 제거되는지 확인 (풀링 재바인딩 충돌 방지)
+        private void DirectionSwitchReplacesGroup()
+        {
+            var rect = NewRect();
+            var vertical = new LayoutFeature().Layout(Direction.Vertical, 8);
+            vertical.Apply(rect);
+
+            var horizontal = new LayoutFeature().Layout(Direction.Horizontal, 4);
+            horizontal.Apply(rect);
+
+            Assert.IsNull(go.GetComponent<VerticalLayoutGroup>());
+            var group = go.GetComponent<HorizontalLayoutGroup>();
+            Assert.IsNotNull(group);
+            Assert.IsTrue(group.enabled);
+            Assert.AreEqual(4f, group.spacing);
+            vertical.Dispose();
+            horizontal.Dispose();
+        }
+
+        // full-spec: 다음 모델이 지정하지 않은 padding/alignment가 기본값으로 리셋되는지 확인
+        private void UnspecifiedPropertiesReset()
+        {
+            var rect = NewRect();
+            var padded = new LayoutFeature()
+                .Layout(Direction.Vertical, 8)
+                .Padding(20)
+                .Align(TextAnchor.MiddleCenter);
+            padded.Apply(rect);
+
+            var plain = new LayoutFeature().Layout(Direction.Vertical, 8);
+            plain.Apply(rect);
+
+            var group = go.GetComponent<VerticalLayoutGroup>();
+            Assert.AreEqual(0, group.padding.left);
+            Assert.AreEqual(0, group.padding.top);
+            Assert.AreEqual(TextAnchor.UpperLeft, group.childAlignment);
+            padded.Dispose();
+            plain.Dispose();
+        }
+
+        // Deactivate가 레이아웃 영향을 비활성화하고, 재Apply가 복원하는지 확인 (Clear 경로)
+        private void DeactivateDisablesThenApplyRestores()
+        {
+            var rect = NewRect();
+            var feature = new LayoutFeature()
+                .Layout(Direction.Vertical, 8)
+                .Size(width: 100);
+            feature.Apply(rect);
+
+            LayoutFeature.Deactivate(rect);
+            Assert.IsFalse(go.GetComponent<VerticalLayoutGroup>().enabled);
+            Assert.IsFalse(go.GetComponent<LayoutElement>().enabled);
+
+            feature.Apply(rect);
+            Assert.IsTrue(go.GetComponent<VerticalLayoutGroup>().enabled);
+            Assert.IsTrue(go.GetComponent<LayoutElement>().enabled);
+            Assert.AreEqual(100f, go.GetComponent<LayoutElement>().preferredWidth);
             feature.Dispose();
         }
 
