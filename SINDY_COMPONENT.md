@@ -120,7 +120,7 @@ vm.Feature<InteractableFeature>().Interactable.Value = false;
 | `PageFeature` | `PageFeatureView` | GameObject 리스트 중 1개 활성 |
 | `ListFeature` | `ListFeatureView` | 비가상화 아이템 리스트 |
 | `VisibilityFeature` | `VisibilityFeatureView` | GameObject.SetActive |
-| `LayoutFeature` | `LayoutFeatureView` | RectTransform 레이아웃 |
+| `LayoutFeature` | `LayoutFeatureView` | RectTransform 레이아웃 — fluent API: `new LayoutFeature().Layout(Direction.Vertical, 14).Padding(12)` (ComponentBlueprint 없이 단독 사용 가능) |
 | `InteractableFeature` | `InteractableFeatureView` | CanvasGroup interactable/blocksRaycasts/alpha |
 | `HighlightFeature` | `HighlightFeatureView` | 하이라이트 오브젝트 표시 |
 | `RaycastBlockFeature` | `RaycastBlockFeatureView` | CanvasGroup.blocksRaycasts |

@@ -25,6 +25,51 @@ namespace Sindy.View.Features
         internal bool HasAlignment => Alignment.HasValue;
         internal bool HasSize => PreferredWidth >= 0 || PreferredHeight >= 0;
 
+        // ── 공개 구성 API (ComponentBlueprint와 동일 시그니처) ─────────────────
+        // Blueprint 없이도 ViewModel.With(new LayoutFeature().Layout(...))로 사용할 수 있다.
+
+        /// <summary>자식 배치 방향과 간격을 지정한다.</summary>
+        public LayoutFeature Layout(Direction direction, float spacing = 0)
+        {
+            LayoutDirection = direction;
+            Spacing = spacing;
+            return this;
+        }
+
+        /// <summary>내부 여백을 지정한다 (사방 동일).</summary>
+        public LayoutFeature Padding(float all) => Padding(all, all, all, all);
+
+        /// <summary>내부 여백을 지정한다.</summary>
+        public LayoutFeature Padding(float top = 0, float right = 0, float bottom = 0, float left = 0)
+        {
+            PaddingTop = top; PaddingRight = right; PaddingBottom = bottom; PaddingLeft = left;
+            HasPadding = true;
+            return this;
+        }
+
+        /// <summary>자식 정렬 기준을 지정한다.</summary>
+        public LayoutFeature Align(TextAnchor anchor)
+        {
+            Alignment = anchor;
+            return this;
+        }
+
+        /// <summary>선호 크기를 지정한다. -1이면 미지정.</summary>
+        public LayoutFeature Size(float width = -1, float height = -1)
+        {
+            PreferredWidth = width;
+            PreferredHeight = height;
+            return this;
+        }
+
+        /// <summary>외부 여백을 지정한다.</summary>
+        public LayoutFeature Margin(float top = 0, float right = 0, float bottom = 0, float left = 0)
+        {
+            MarginTop = top; MarginRight = right; MarginBottom = bottom; MarginLeft = left;
+            HasMargin = true;
+            return this;
+        }
+
         internal LayoutFeature Clone() => new()
         {
             MarginTop = MarginTop,
