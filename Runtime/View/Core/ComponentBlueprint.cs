@@ -219,18 +219,35 @@ namespace Sindy.View
             {
                 var rootLayoutTemplate = _rootLayout ?? _baseBlueprint?.RootLayout;
                 if (rootLayoutTemplate != null)
-                    viewModel.With(rootLayoutTemplate.Clone());
+                    ApplyBlueprintLayout(viewModel, rootLayoutTemplate, "(root)", _prefabName);
 
                 foreach (var patch in patches)
                 {
                     // 모델 팩토리가 없는 패치(구조 전용 부품)는 빈 ViewModel로 자리를 만든다 —
                     // 뷰 조립과 Dispose 체인이 모델 트리와 1:1로 유지되도록.
                     var patchModel = patch.ModelFactory?.Invoke() ?? new ViewModel();
-                    if (patch.Layout != null && patchModel is ViewModel patchVM)
-                        patchVM.With(patch.Layout.Clone());
+                    if (patch.Layout != null)
+                    {
+                        if (patchModel is ViewModel patchVM)
+                            ApplyBlueprintLayout(patchVM, patch.Layout, patch.Path, _prefabName);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                        else
+                            Debug.LogWarning(
+                                $"ComponentBlueprint('{_prefabName}'): 패치 '{patch.Path}'의 모델이 ViewModel이 아니어서 " +
+                                $"Layout/Padding/Size 지정이 무시됩니다. ({patchModel.GetType().Name})");
+#endif
+                    }
                     viewModel.AddChild(patch.Path, patchModel, disposeWithParent: true);
                 }
             }
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            else if (patches.Count > 0)
+            {
+                Debug.LogWarning(
+                    $"ComponentBlueprint('{_prefabName}'): 루트 모델이 ViewModel이 아니어서 " +
+                    $"패치 {patches.Count}건이 무시됩니다. WithModel에 ViewModel을 지정하세요.");
+            }
+#endif
 
             var preset = new ComponentPreset(prefab, rootModel, layer);
             var instance = ComponentManager.Open(preset);
@@ -239,6 +256,22 @@ namespace Sindy.View
                 AssembleViews(instance, rootVM, patches);
 
             return instance;
+        }
+
+        /// <summary>
+        /// Blueprint의 LayoutFeature 클론을 모델에 부착한다.
+        /// 모델 팩토리가 이미 LayoutFeature를 넣어둔 경우 Blueprint가 덮어쓰므로 경고한다 —
+        /// 디자인은 Blueprint 체인에, 기능은 모델에 두는 분리 원칙 위반의 가시화.
+        /// </summary>
+        private static void ApplyBlueprintLayout(ViewModel target, LayoutFeature template, string path, string prefabName)
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (target.Feature<LayoutFeature>() != null)
+                Debug.LogWarning(
+                    $"ComponentBlueprint('{prefabName}'): '{path}' 모델에 이미 LayoutFeature가 있어 " +
+                    $"Blueprint의 레이아웃이 이를 덮어씁니다. 레이아웃 선언을 한 곳으로 모으세요.");
+#endif
+            target.With(template.Clone());
         }
 
         // ── 뷰 조립 ────────────────────────────────────────────────────────────
