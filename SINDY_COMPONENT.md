@@ -126,6 +126,7 @@ vm.Feature<InteractableFeature>().Interactable.Value = false;
 | `RaycastBlockFeature` | `RaycastBlockFeatureView` | CanvasGroup.blocksRaycasts |
 | `RedDotFeature` | `RedDotFeatureView` | 알림 뱃지 ([REDDOT.md](REDDOT.md)) |
 | `ScrollerFeature` | `ScrollerFeatureView` | 가상화 스크롤 (아래 참조) |
+| `ScreenFeature` | `ResponsiveLayoutFeatureView` | 반응형 레이아웃 (아래 참조) |
 
 대부분의 출력형 Feature는 두 가지 생성자를 제공합니다:
 단순 값(`new TextFeature("신디")`)과 **외부 모델 주입**(`new TextFeature(new TimerModel(60f))`).
@@ -270,6 +271,31 @@ scroller.Bind(new ViewModel().With(new ScrollerFeature(new[] { section, oneOff }
   CellCatalog 에셋은 이 제약이 없습니다.
 - 섹션 갱신은 새 `ScrollerFeature`를 가진 모델로 재Bind하거나, 같은 모델이면 허브의 `Reload()`를 호출합니다.
 - `RegisterCellType<TVM>` / `Section<TVM>` / `SetSections` 등 타입 키 API는 제거되었습니다.
+
+---
+
+## 반응형 레이아웃 (ScreenFeature ↔ ResponsiveLayoutFeatureView)
+
+모바일의 다양한 해상도·회전에 대응한다. **모델은 "지금 어떤 변형(variant)인가"라는
+의미적 상태만 알고, 실제 앵커·오프셋 좌표는 뷰의 직렬화 데이터에 둔다** (MVVM 경계 유지).
+
+```csharp
+// 모델 측 — 기본 selector는 가로/세로 2종 ("landscape"/"portrait")
+vm.With(new ScreenFeature());
+
+// 3종 이상이 필요하면 selector 주입
+vm.With(new ScreenFeature(s => s.Aspect >= 2f ? "wide" : s.IsLandscape ? "landscape" : "portrait"));
+```
+
+뷰 측은 루트 허브에 `ResponsiveLayoutFeatureView`를 부착하고 variant별로
+대상 RectTransform들의 RectState(앵커·오프셋·피벗)를 등록한다.
+코드 구성 시 `RectState.From(rect)`으로 현재 배치를 캡처할 수 있다.
+
+- `ScreenStateModel`은 `PropModel<ScreenState>` 파생 자가 갱신 모델(TimerModel 패턴) —
+  EveryUpdate 폴링하되 값이 바뀔 때만 방출. 테스트에서는 외부 주입으로 회전을 시뮬레이션한다.
+- 노치·홈바 보정은 `SafeAreaView`(모델 불필요, 순수 뷰 유틸)를 전체 화면 루트에 부착.
+- 변형 전환 후 ScrollRect 등 크기에 민감한 컴포넌트는 소비자가 재계산을 트리거한다
+  (예: 스크롤러 허브 `Reload()` — 구독 순서상 레이아웃 적용 이후에 실행되도록 Bind 후 구독).
 
 ---
 
