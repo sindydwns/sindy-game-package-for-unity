@@ -20,7 +20,7 @@ namespace Sindy.Test
             PatchWithoutModelChained();
             LayoutOnRoot();
             LayoutOnPatch();
-            MarginAfterWithModel();
+            SizeAfterWithModel();
             LayoutFullChain();
 
             // Blueprint
@@ -117,19 +117,18 @@ namespace Sindy.Test
             Assert.IsNotNull(builder);
         }
 
-        // WithModel() 이후에도 Margin/Size를 직전 Patch 대상에 지정할 수 있는지 확인
-        private void MarginAfterWithModel()
+        // WithModel() 이후에도 Size를 직전 Patch 대상에 지정할 수 있는지 확인
+        private void SizeAfterWithModel()
         {
             var builder = ComponentBlueprint.Create("root_prefab")
                 .WithModel(() => new ViewModel())
                 .Patch("header.title", "label").WithModel(() => new PropModel<string>("label"))
-                .Margin(bottom: 12)
                 .Size(width: 200);
 
             Assert.IsNotNull(builder);
         }
 
-        // Layout, Margin, Padding, Align, Size를 조합한 복합 체이닝이 예외 없이 동작하는지 확인
+        // Layout, Padding, Align, Size를 조합한 복합 체이닝이 예외 없이 동작하는지 확인
         private void LayoutFullChain()
         {
             var builder = ComponentBlueprint.Create("popup")
@@ -137,7 +136,6 @@ namespace Sindy.Test
                 .Layout(Direction.Vertical, spacing: 8)
                 .Padding(top: 16, right: 16, bottom: 16, left: 16)
                 .Patch("header", "label").WithModel(() => new PropModel<string>("title"))
-                .Margin(bottom: 12)
                 .Patch("body", "container")
                 .Layout(Direction.Horizontal, spacing: 4)
                 .Align(TextAnchor.MiddleLeft)
@@ -256,7 +254,7 @@ namespace Sindy.Test
             var bp = ComponentBlueprint.Create("container")
                 .Layout(Direction.Vertical, spacing: 8)
                 .Padding(16)
-                .Patch("item", "label").Margin(bottom: 4);
+                .Patch("item", "label").Size(height: 40);
 
             var builder = ComponentBlueprint.Create(bp)
                 .WithModel(() => new ViewModel());

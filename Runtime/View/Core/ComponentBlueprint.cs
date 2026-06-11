@@ -149,15 +149,6 @@ namespace Sindy.View
 
         // ── 레이아웃 ───────────────────────────────────────────────────────────
 
-        /// <summary>외부 여백을 지정한다.</summary>
-        public ComponentBlueprint Margin(float top = 0, float right = 0, float bottom = 0, float left = 0)
-        {
-            var f = GetOrCreateCurrentLayout();
-            f.MarginTop = top; f.MarginRight = right; f.MarginBottom = bottom; f.MarginLeft = left;
-            f.HasMargin = true;
-            return this;
-        }
-
         /// <summary>자식 배치 방향과 간격을 지정한다.</summary>
         public ComponentBlueprint Layout(Direction direction, float spacing = 0)
         {

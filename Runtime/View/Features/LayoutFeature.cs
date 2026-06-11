@@ -7,9 +7,6 @@ namespace Sindy.View.Features
 
     public class LayoutFeature : ModelFeature
     {
-        internal float MarginTop, MarginRight, MarginBottom, MarginLeft;
-        internal bool HasMargin;
-
         internal Direction? LayoutDirection;
         internal float Spacing;
 
@@ -62,21 +59,8 @@ namespace Sindy.View.Features
             return this;
         }
 
-        /// <summary>외부 여백을 지정한다.</summary>
-        public LayoutFeature Margin(float top = 0, float right = 0, float bottom = 0, float left = 0)
-        {
-            MarginTop = top; MarginRight = right; MarginBottom = bottom; MarginLeft = left;
-            HasMargin = true;
-            return this;
-        }
-
         internal LayoutFeature Clone() => new()
         {
-            MarginTop = MarginTop,
-            MarginRight = MarginRight,
-            MarginBottom = MarginBottom,
-            MarginLeft = MarginLeft,
-            HasMargin = HasMargin,
             LayoutDirection = LayoutDirection,
             Spacing = Spacing,
             PaddingTop = PaddingTop,
@@ -151,12 +135,6 @@ namespace Sindy.View.Features
             {
                 var element = target.gameObject.GetComponent<LayoutElement>();
                 if (element != null) element.enabled = false;
-            }
-
-            if (HasMargin)
-            {
-                target.offsetMin = new Vector2(MarginLeft, MarginBottom);
-                target.offsetMax = new Vector2(-MarginRight, -MarginTop);
             }
         }
 
