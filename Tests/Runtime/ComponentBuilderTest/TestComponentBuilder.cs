@@ -33,6 +33,51 @@ namespace Sindy.Test
             BlueprintLayoutApplied();
             BlueprintWithOverride();
             BlueprintFactoryCreatesFreshInstances();
+
+            // BuildModelTree (뷰 생성 없는 모델 트리 — ComponentManager 불필요)
+            BuildModelTreeAttachesLayout();
+            BuildModelTreeCreatesFreshTrees();
+        }
+
+        // BuildModelTree가 설계도의 레이아웃을 LayoutFeature로 부착한 완전한 트리를 만드는지 확인
+        private void BuildModelTreeAttachesLayout()
+        {
+            var bp = ComponentBlueprint.Create("panel")
+                .WithModel(() => new ViewModel())
+                .Layout(Direction.Vertical, spacing: 14)
+                .Patch("row", "row_prefab")
+                .Layout(Direction.Horizontal, spacing: 8)
+                .WithModel(() => new ViewModel())
+                .Patch("decor", "static_prefab"); // 모델 팩토리 없는 구조 전용 패치
+
+            var tree = (ViewModel)bp.BuildModelTree();
+
+            Assert.IsNotNull(tree.Feature<LayoutFeature>());
+            var row = tree.GetChild<ViewModel>("row");
+            Assert.IsNotNull(row);
+            Assert.IsNotNull(row.Feature<LayoutFeature>());
+            // 구조 전용 패치도 빈 ViewModel로 자리가 만들어진다
+            Assert.IsNotNull(tree.GetChild<IViewModel>("decor"));
+        }
+
+        // BuildModelTree를 두 번 호출하면 매번 새 인스턴스 트리가 생성되는지 확인
+        private void BuildModelTreeCreatesFreshTrees()
+        {
+            int calls = 0;
+            var bp = ComponentBlueprint.Create("panel")
+                .WithModel(() => new ViewModel())
+                .Patch("label", "label_prefab").WithModel(() =>
+                {
+                    calls++;
+                    return new PropModel<string>("text");
+                });
+
+            var first = bp.BuildModelTree();
+            var second = bp.BuildModelTree();
+
+            Assert.AreEqual(2, calls);
+            Assert.AreNotEqual(first, second);
+            Assert.AreNotEqual(first.GetChild<IViewModel>("label"), second.GetChild<IViewModel>("label"));
         }
 
         // Create() 호출 시 null이 아닌 Blueprint 인스턴스를 반환하는지 확인

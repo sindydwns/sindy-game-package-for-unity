@@ -212,6 +212,35 @@ namespace Sindy.View
                 throw new InvalidOperationException($"ComponentBlueprint: prefab '{_prefabName}' not found.");
 
             var patches = CollectFinalPatches();
+            var rootModel = BuildModelTree(patches);
+
+            var preset = new ComponentPreset(prefab, rootModel, layer);
+            var instance = ComponentManager.Open(preset);
+
+            if (rootModel is ViewModel rootVM && patches.Count > 0)
+                AssembleViews(instance, rootVM, patches);
+
+            return instance;
+        }
+
+        /// <summary>
+        /// 설계도가 정의한 모양 그대로 모델 트리만 생성한다 (뷰 생성 없음).
+        /// 팩토리가 실행되어 매번 새 인스턴스가 만들어지고, 설계도의 Layout/Padding/Size가
+        /// LayoutFeature로 부착된 완전한 트리를 반환한다.
+        ///
+        /// 용도: 같은 설계도로 이미 조립된 인스턴스에 새 모델을 재주입(풀링 등)할 때 —
+        /// 디자인을 손으로 복제하지 않고 설계도가 모델 모양을 책임진다.
+        /// 구조가 다른 인스턴스에 주입하면 일치하지 않는 키는 무시된다(재바인딩은 구조를 바꾸지 못함).
+        /// Open()도 내부적으로 이 메서드를 사용하므로 두 경로는 항상 같은 모양을 만든다.
+        /// </summary>
+        public IViewModel BuildModelTree()
+        {
+            FlushPendingPatch();
+            return BuildModelTree(CollectFinalPatches());
+        }
+
+        private IViewModel BuildModelTree(List<PatchInstruction> patches)
+        {
             var rootModel = _rootModelFactory?.Invoke()
                             ?? _baseBlueprint?.RootModelFactory?.Invoke();
 
@@ -248,14 +277,7 @@ namespace Sindy.View
                     $"패치 {patches.Count}건이 무시됩니다. WithModel에 ViewModel을 지정하세요.");
             }
 #endif
-
-            var preset = new ComponentPreset(prefab, rootModel, layer);
-            var instance = ComponentManager.Open(preset);
-
-            if (rootModel is ViewModel rootVM && patches.Count > 0)
-                AssembleViews(instance, rootVM, patches);
-
-            return instance;
+            return rootModel;
         }
 
         /// <summary>

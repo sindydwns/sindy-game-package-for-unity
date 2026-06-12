@@ -241,6 +241,29 @@ vm["rows"] = new ViewModel().With(new LayoutFeature().Layout(Direction.Vertical,
 `Patch(path, blueprint)`로 Blueprint를 중첩하면 하위 패치가 경로 접두어와 함께 전개되고,
 해당 Blueprint의 루트 레이아웃이 패치 노드의 레이아웃이 됩니다.
 
+### 재사용·재주입 — 생명주기 3패턴
+
+| 바뀌는 것 | 처방 | 방법 |
+|---|---|---|
+| 값 | **상태 변경** | 기존 모델의 PropModel 값만 변경 — 재바인딩 불필요 (기본 사용법) |
+| 구조·디자인 | **재-Open** | `Bind(null)` → 파괴 → 모델 `Dispose()` → 설계도 재실행 |
+| 내용 전체 (구조 동일) | **모델 재주입** | `BuildModelTree()`로 새 트리 생성 → 기존 인스턴스에 `Bind()` |
+
+```csharp
+// 모델 재주입 — 풀링된 패널에 새 내용을 통째로 주입
+var fresh = blueprint.BuildModelTree();   // 레이아웃 포함, 설계도가 모델 모양을 책임진다
+var old = instance.CurrentModel;
+instance.Bind(fresh);
+old?.Dispose();                           // 이전 모델 정리는 호출자 책임
+```
+
+`BuildModelTree()`는 Open()의 모델 구성 단계와 같은 코드를 공유하므로 두 경로는 항상
+같은 모양을 만든다. 재주입 코드에 `new LayoutFeature()`를 손으로 쓸 이유가 없다.
+
+주의: 재바인딩은 **구조를 바꾸지 못한다** (부품 인스턴스화는 Open()에서만 — 새 키는 무시,
+빠진 키는 경고 후 빈 상태). 같은 모델 인스턴스 재Bind는 same-instance 스킵되므로 `Reload()` 사용.
+Open()이 만든 모델은 인스턴스 파괴 시 자동 Dispose되지 않는다 — 모델 소유자가 정리할 것.
+
 ### LayoutFeature 의미론
 
 `Apply`는 **full-spec**입니다: Feature의 전체 상태를 대상에 반영하고, 지정하지 않은
