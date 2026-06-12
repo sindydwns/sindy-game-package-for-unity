@@ -34,8 +34,9 @@ Controller는 GameObject를 직접 만지지 않습니다. 모델 값 변경까�
 런타임 — Open()이 만들어낸 화면
 └─ ShopFrame 인스턴스
    ├─ Header / Scroller / LogBar   ← 프리팹에 미리 존재, 모델만 주입 (하이브리드)
-   └─ Detail                        ← Blueprint가 부품 8행을 순서대로 조립
-      CaptionRow → InfoRow → CaptionSmall → QtyRow → BuyButton → CaptionSmall → BgmRow → SkipRow
+   └─ Detail                        ← Blueprint가 부품 10행을 순서대로 조립
+      CaptionRow → InfoRow → CaptionSmall → QtyRow → BuyButton → CaptionSmall
+      → BgmRow → SkipRow → CaptionSmall → PartContainer(생명주기 데모 버튼 3개)
 ```
 
 씬에 상점 화면은 존재하지 않습니다. 카탈로그는 이름→프리팹 사전이라
@@ -72,22 +73,31 @@ private ComponentBlueprint BuildDetailPanel() => ComponentBlueprint
 3. **부품 조립** — 설계도의 각 Patch가 카탈로그에서 부품을 찾아
    상세 패널에 선언 순서대로 인스턴스화·부착·바인딩한다.
 
-## 재사용·재주입 시 주의
+## 생명주기 3패턴 — 상세 패널 하단 데모 버튼
+
+| 버튼 | 패턴 | 코드 | 일어나는 일 |
+|---|---|---|---|
+| 상점 교체 | **값 변경** | `SwapShop()` | 재바인딩 없이 PropModel 값·셀 목록만 교체 — 기본 사용법 |
+| 재시작 | **재-Open** | `Reopen()` | `Bind(null)` → 파괴 → 모델 `Dispose()` → 설계도 재실행. 상태 초기화 |
+| 모델 재주입 | **BuildModelTree** | `Reinject()` | 설계도가 새 모델 트리(레이아웃 포함)를 생성 → 기존 인스턴스에 `Bind`. 뷰 유지, 내용 통째 교체 |
+
+재-Open/재주입은 버튼 OnClick 방출 중 모델을 Dispose하지 않도록
+`pendingAction`으로 한 프레임 지연 후 실행한다 (`Update` 참조).
+
+### 재사용·재주입 시 주의
 
 - **같은 Blueprint 다회 Open**: Blueprint 자체는 안전하다(모델은 팩토리로 매번 새로 생성,
   레이아웃은 클론 적용). 단 **이 데모의 컨트롤러는 단일 인스턴스 전제** —
   모델 팩토리가 컨트롤러 필드(gold, qty...)를 공유하므로 두 번 Open하면
   필드가 마지막 인스턴스를 가리킨다. 다중 인스턴스가 필요하면 모델 컨텍스트를
   Open 단위 객체로 캡슐화할 것.
-- **모델 Dispose 소유권**: Open()이 만든 모델은 인스턴스 GameObject 파괴 시
-  자동 Dispose되지 않는다. 호출자가 모델(또는 `instance.CurrentModel`)을 보관했다가
-  `Bind(null)` → `Dispose()` 순으로 정리해야 한다 (이 데모는 `OnDestroy` 참조).
-- **기존 인스턴스에 새 모델 재주입(Bind)**: 같은 키 구조의 모델이면 동작한다 —
-  동적으로 조립된 자식들도 views에 등록되어 있어 재바인딩에 포함된다.
-  단 ① 재바인딩은 **구조를 바꾸지 못한다**(조립은 Open에서만 일어남 — 새 키는 경고 후 무시),
-  ② 디자인 Feature(LayoutFeature)는 설계도가 모델에 실어주는 것이므로 손으로 만든
-  대체 모델은 레이아웃을 잃는다. **구조·디자인이 필요한 교체는 재-Open이 정도(正道)**,
-  상태만 바꿀 때는 기존 모델의 PropModel 값을 변경하라(그게 이 아키텍처의 기본 사용법).
+- **모델 Dispose 소유권**: Open()/BuildModelTree()가 만든 모델은 인스턴스 GameObject
+  파괴 시 자동 Dispose되지 않는다. 호출자가 모델을 보관했다가
+  `Bind(null)` → `Dispose()` 순으로 정리해야 한다 (`OnDestroy`/`Reopen` 참조).
+- **재바인딩은 구조를 바꾸지 못한다**: 부품 인스턴스화는 Open()에서만 일어난다 —
+  새 키는 무시, 빠진 키는 경고 후 빈 상태. 구조가 바뀌는 교체는 재-Open으로.
+  재주입할 모델은 손으로 만들지 말고 같은 설계도의 `BuildModelTree()`로 만들 것 —
+  레이아웃(디자인)을 설계도가 책임지므로 `new LayoutFeature()`를 쓸 일이 없다.
 
 ## 파일 안내
 

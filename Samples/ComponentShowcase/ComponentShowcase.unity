@@ -335,6 +335,7 @@ MonoBehaviour:
   - {fileID: 8393637708541479624, guid: c7a9cf7cb5e7a4496ba37da553342b4b, type: 3}
   - {fileID: 6176698422189177632, guid: 0c12017608d074cbc84510a851ead711, type: 3}
   - {fileID: 8389654290113788973, guid: 4098da544ee624f3593d47d7557db3f6, type: 3}
+  - {fileID: 405453141339841267, guid: a86d1b6b9ca2c4ac69fbbb396f019582, type: 3}
 --- !u!114 &516979057
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -694,8 +695,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d8f5dc31fad546fea17dadb42e214dc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Sindy.Samples.ComponentShowcase.ShopDemoController
-  shopView: {fileID: 0}
-  scrollerHub: {fileID: 0}
   itemSectionOption: {fileID: 11400000, guid: a0a3e64bc7feb41ac9bc24736d686853, type: 2}
   bannerSectionOption: {fileID: 11400000, guid: 055401fc96b264f3392b7a77936022f0, type: 2}
   bannerPrefab: {fileID: 7407067886053649134, guid: cd98ffcd5a0294d36bc1a87e77abfb2d, type: 3}

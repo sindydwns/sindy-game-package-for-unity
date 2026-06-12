@@ -20,6 +20,9 @@ namespace Sindy.Samples.ComponentShowcase
     ///    모델 상태·구독은 기능 코드(BuildModel)에. 두 관심사가 파일 안에서도 나뉜다.
     /// 3. 하이브리드 — 틀(헤더·스크롤러·로그 바)은 ShopFrame 프리팹에 두고
     ///    모델만 주입(title/gold/list/log), 가변 부품(상세 패널)은 코드로 조합.
+    /// 4. 생명주기 3패턴 — 하단 데모 버튼으로 직접 시연:
+    ///    상점 교체 = 값 변경(재바인딩 없음) / 재시작 = 재-Open(파괴 후 재실행) /
+    ///    모델 재주입 = BuildModelTree(구조·레이아웃 유지, 내용 통째 교체).
     ///
     /// 원칙: Controller는 ViewModel(Feature)만 건드린다. Unity UI 직접 호출 없음.
     /// 모든 화면 갱신은 FeatureView의 Bind 구독이 처리한다.
@@ -40,6 +43,7 @@ namespace Sindy.Samples.ComponentShowcase
 
         // ---- 모델 (Controller가 건드리는 유일한 대상) ----
         private ViewModel shop;
+        private PropModel<string> titleText;
         private FormatNumberPropModel<long> gold;
         private FormatNumberPropModel<int> qty;
         private PropModel<string> itemName;
@@ -54,33 +58,37 @@ namespace Sindy.Samples.ComponentShowcase
         private ButtonFeature buyBtn;
         private ToggleFeature bgm;
         private ToggleFeature skipConfirm;
+        private ObservableList<IViewModel> itemCells;
+        private ViewModel listVm;
+        private readonly List<ViewModel> liveCells = new();
 
+        private ComponentBlueprint blueprint;
         private SindyComponent shopInstance;
+        private SindyComponent scrollerHub;
         private ScreenFeature screen;
         private ShopItemData selected;
         private bool pendingConfirm;
+        private int shopVariant; // 0=일반, 1=할인 — 처방1(값 변경) 시연용
+        private System.Action pendingAction; // 버튼 OnClick 방출 중 모델 파괴를 피하기 위한 1프레임 지연
         private readonly Queue<string> logLines = new();
         private const int MaxLogLines = 5;
         private const int MaxQty = 99;
 
         private void Start()
         {
-            // 설계도 → Open(): 루트 프리팹 인스턴스화 + 부품 프리팹 조립 + 모델 바인딩
-            shopInstance = BuildBlueprint().Open();
+            // 설계도는 한 번 만들고 재사용한다 — Open()/BuildModelTree() 모두 같은 설계도에서.
+            blueprint = BuildBlueprint();
+            OpenShop();
+        }
 
-            // 화면 변형 전환 시 스크롤러 가상화 재계산.
-            // Bind 이후에 구독해야 ResponsiveLayoutFeatureView의 레이아웃 적용(먼저 구독됨)이
-            // 끝난 뒤 Reload가 실행된다 — 새 뷰포트 크기 기준으로 재계산됨.
-            ((ViewComponent)shopInstance).TryGetView("list", out var scrollerHub);
-            screen.Variant.Prop.Skip(1).Subscribe(v =>
-            {
-                Log($"화면 변형 전환: {v}");
-                if (scrollerHub != null) scrollerHub.Reload();
-            });
-
-            if (items != null && items.Length > 0)
-                Select(items[0]);
-            Log("상점 데모 시작 — 셀을 눌러 아이템을 선택하세요");
+        private void Update()
+        {
+            // 재-Open/재주입은 버튼 OnClick 방출이 끝난 다음 프레임에 실행한다.
+            // 방출 중인 Subject를 Dispose하면 안 되기 때문.
+            if (pendingAction == null) return;
+            var action = pendingAction;
+            pendingAction = null;
+            action();
         }
 
         private void OnDestroy()
@@ -88,6 +96,83 @@ namespace Sindy.Samples.ComponentShowcase
             // 순서 중요: 1) FeatureView 구독 해제 → 2) 모델 내부 구독 해제
             if (shopInstance != null) shopInstance.Bind(null);
             shop?.Dispose();
+        }
+
+        // ---------------- 생명주기 (Open / 재-Open / 재주입) ----------------
+
+        /// <summary>설계도 실행 — 루트 프리팹 인스턴스화 + 부품 조립 + 모델 바인딩.</summary>
+        private void OpenShop()
+        {
+            shopInstance = blueprint.Open();
+            ((ViewComponent)shopInstance).TryGetView("list", out scrollerHub);
+            SubscribeScreen();
+
+            if (items != null && items.Length > 0)
+                Select(items[0]);
+            Log("상점 데모 시작 — 셀을 눌러 아이템을 선택하세요");
+        }
+
+        /// <summary>처방2 — 재-Open: 파괴 후 설계도 재실행. 구조·디자인·상태가 전부 새로 만들어진다.</summary>
+        private void Reopen()
+        {
+            pendingAction = () =>
+            {
+                var old = shop;
+                shopInstance.Bind(null);
+                Destroy(shopInstance.gameObject);
+                old?.Dispose();
+
+                OpenShop();
+                shopVariant = 0;
+                Log("처방2 — 재-Open: 파괴 후 설계도 재실행 (상태 초기화)");
+            };
+        }
+
+        /// <summary>
+        /// 처방3 — 모델 재주입: BuildModelTree()가 설계도 모양(레이아웃 포함)의 새 모델 트리를
+        /// 만들고, 기존 인스턴스에 Bind한다. 뷰는 그대로, 내용만 통째로 교체된다.
+        /// </summary>
+        private void Reinject()
+        {
+            pendingAction = () =>
+            {
+                var old = shop;
+                var fresh = blueprint.BuildModelTree(); // BuildModel이 다시 실행 → 필드들이 새 트리를 가리킨다
+                shopInstance.Bind(fresh);
+                old?.Dispose();
+
+                SubscribeScreen(); // screen은 새 모델의 Feature이므로 구독 재연결
+                shopVariant = 0;
+                if (items != null && items.Length > 0)
+                    Select(items[0]);
+                Log("처방3 — BuildModelTree 재주입: 뷰·레이아웃 유지, 내용 통째 교체");
+            };
+        }
+
+        /// <summary>처방1 — 값 변경: 재바인딩 없이 PropModel 값과 셀 목록만 바꿔 상점을 교체한다.</summary>
+        private void SwapShop()
+        {
+            shopVariant = 1 - shopVariant;
+            titleText.Value = shopVariant == 0 ? "상점" : "할인 상점";
+            PopulateCells();
+            scrollerHub?.Reload(); // 셀 수는 같지만 의도를 명확히 — 가상화 재계산
+            selected = null;
+            UpdateBuyState();
+            Log($"처방1 — 값 변경만으로 '{titleText.Value}' 전환 (재바인딩 없음)");
+        }
+
+        /// <summary>
+        /// 화면 변형 전환 시 스크롤러 가상화 재계산.
+        /// Bind 이후에 구독해야 ResponsiveLayoutFeatureView의 레이아웃 적용(먼저 구독됨)이
+        /// 끝난 뒤 Reload가 실행된다 — 새 뷰포트 크기 기준으로 재계산됨.
+        /// </summary>
+        private void SubscribeScreen()
+        {
+            screen.Variant.Prop.Skip(1).Subscribe(v =>
+            {
+                Log($"화면 변형 전환: {v}");
+                if (scrollerHub != null) scrollerHub.Reload();
+            });
         }
 
         // ---------------- 설계도 (디자인 — 구조·배치·간격) ----------------
@@ -121,13 +206,25 @@ namespace Sindy.Samples.ComponentShowcase
             .Patch("buyCaption", "CaptionSmall")
                 .WithModel(() => Models.Label("ButtonFeature 단순 클릭 + InteractableFeature — 골드 부족 시 비활성"))
             .Patch("bgm", "BgmRow").WithModel(BuildBgmModel)
-            .Patch("skip", "SkipRow").WithModel(() => new ViewModel().With(skipConfirm));
+            .Patch("skip", "SkipRow").WithModel(() => new ViewModel().With(skipConfirm))
+            .Patch("demoCaption", "CaptionSmall")
+                .WithModel(() => Models.Label("생명주기 3패턴 — 값 변경(상점 교체) · 재-Open(재시작) · BuildModelTree(모델 재주입)"))
+            .Patch("demo", "PartContainer")
+                .Layout(Direction.Horizontal, spacing: 8)
+                .WithModel(() => new ViewModel())
+            .Patch("demo.swap", "BuyButton").Size(width: 165, height: 56)
+                .WithModel(() => DemoButton("상점 교체", SwapShop))
+            .Patch("demo.reopen", "BuyButton").Size(width: 165, height: 56)
+                .WithModel(() => DemoButton("재시작", Reopen))
+            .Patch("demo.reinject", "BuyButton").Size(width: 165, height: 56)
+                .WithModel(() => DemoButton("모델 재주입", Reinject));
 
         // ---------------- 모델 구성 (기능 — 상태·구독·로직) ----------------
 
         /// <summary>
-        /// 루트 모델. Open()이 패치 모델보다 먼저 실행하므로, 여기서 만든
-        /// Feature/PropModel 필드를 패치 팩토리들이 안전하게 참조할 수 있다.
+        /// 루트 모델. Open()/BuildModelTree()가 패치 모델보다 먼저 실행하므로,
+        /// 여기서 만든 Feature/PropModel 필드를 패치 팩토리들이 안전하게 참조할 수 있다.
+        /// 주의: 팩토리가 컨트롤러 필드를 공유하므로 이 데모는 단일 인스턴스 전제다.
         /// </summary>
         private ViewModel BuildModel()
         {
@@ -138,8 +235,9 @@ namespace Sindy.Samples.ComponentShowcase
             vm.With(screen);
 
             // 하이브리드 키 — 틀(ShopFrame)에 이미 있는 허브에 모델만 주입된다.
+            titleText = new PropModel<string>("상점");
             gold = new FormatNumberPropModel<long>(startGold, v => $"{v:n0} G");
-            vm["title"] = Models.Label("상점");
+            vm["title"] = Models.Label(titleText);
             vm["gold"] = Models.Label(gold);
             vm["list"] = BuildScroller();
             logText = new PropModel<string>("");
@@ -211,18 +309,25 @@ namespace Sindy.Samples.ComponentShowcase
             return vm;
         }
 
+        /// <summary>생명주기 데모 버튼 — 클릭 구독은 버튼 모델에 묶여 모델과 함께 정리된다.</summary>
+        private ViewModel DemoButton(string label, System.Action onClick)
+        {
+            var vm = new ViewModel()
+                .With(new TextFeature(label))
+                .With(new ButtonFeature())
+                .With(new InteractableFeature());
+            vm.Feature<ButtonFeature>().OnClick.Subscribe(_ => onClick());
+            return vm;
+        }
+
         private ViewModel BuildScroller()
         {
-            var listVm = new ViewModel();
+            listVm = new ViewModel();
+            itemCells = new ObservableList<IViewModel>();
+            liveCells.Clear(); // 이전 모델의 셀은 이전 모델 Dispose가 정리한다
+            PopulateCells();
 
             // 소모품 섹션 — 공용 셀은 키로 해상 (CellCatalog 에셋)
-            var itemCells = new ObservableList<IViewModel>();
-            foreach (var data in GenerateEntries())
-            {
-                var cell = ShopCells.Item(data, Select);
-                cell.AddTo(listVm); // 셀 VM의 Dispose 책임을 모델 트리에 연결
-                itemCells.Add(cell);
-            }
             var itemSection = new Section(itemCells, itemSectionOption)
             {
                 ContentKey = ShopCellKeys.Item,
@@ -243,17 +348,36 @@ namespace Sindy.Samples.ComponentShowcase
             return listVm.With(new ScrollerFeature(new[] { itemSection, bannerSection }));
         }
 
-        /// <summary>직렬화된 원본 아이템을 레벨 변형으로 늘린다 — 가상화 확인용 데이터.</summary>
+        /// <summary>셀 목록을 현재 상점 변형(일반/할인)에 맞춰 다시 채운다 — 처방1의 핵심.</summary>
+        private void PopulateCells()
+        {
+            foreach (var cell in liveCells) cell.Dispose();
+            liveCells.Clear();
+            itemCells.Clear();
+
+            foreach (var data in GenerateEntries())
+            {
+                var cell = ShopCells.Item(data, Select);
+                cell.AddTo(listVm); // 셀 VM의 Dispose 책임을 모델 트리에 연결
+                liveCells.Add(cell);
+                itemCells.Add(cell);
+            }
+        }
+
+        /// <summary>직렬화된 원본 아이템을 레벨 변형으로 늘린다 — 가상화 확인용 데이터. 할인 상점은 반값.</summary>
         private List<ShopItemData> GenerateEntries()
         {
             var list = new List<ShopItemData>();
             if (items == null) return list;
+            var discount = shopVariant == 1;
             foreach (var item in items)
             {
                 for (var lv = 1; lv <= Mathf.Max(1, levelsPerItem); lv++)
                 {
-                    list.Add(new ShopItemData(
-                        $"{item.name} Lv.{lv}", item.description, item.price * lv, item.icon, item.frame));
+                    var price = item.price * lv;
+                    if (discount) price /= 2;
+                    var name = discount ? $"[할인] {item.name} Lv.{lv}" : $"{item.name} Lv.{lv}";
+                    list.Add(new ShopItemData(name, item.description, price, item.icon, item.frame));
                 }
             }
             return list;
