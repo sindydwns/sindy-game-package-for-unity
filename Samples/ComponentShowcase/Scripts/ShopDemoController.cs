@@ -47,23 +47,12 @@ namespace Sindy.Samples.ComponentShowcase
         private SindyComponent shopInstance;
         private SindyComponent scrollerHub;
         private ShopModel model; // 반응형 상태·상점 로직은 전부 이 안에 (BuildModel이 매 트리마다 새로 만든다)
-        private System.Action pendingAction; // 버튼 OnClick 방출 중 모델 파괴를 피하기 위한 1프레임 지연
 
         private void Start()
         {
             // 설계도는 한 번 만들고 재사용한다 — Open()/BuildModelTree() 모두 같은 설계도에서.
             blueprint = BuildBlueprint();
             OpenShop();
-        }
-
-        private void Update()
-        {
-            // 재-Open/재주입은 버튼 OnClick 방출이 끝난 다음 프레임에 실행한다.
-            // 방출 중인 Subject를 Dispose하면 안 되기 때문.
-            if (pendingAction == null) return;
-            var action = pendingAction;
-            pendingAction = null;
-            action();
         }
 
         private void OnDestroy()
@@ -75,49 +64,46 @@ namespace Sindy.Samples.ComponentShowcase
 
         // ---------------- 생명주기 (Open / 재-Open / 재주입) ----------------
 
-        /// <summary>설계도 실행 — 루트 프리팹 인스턴스화 + 부품 조립 + 모델 바인딩.</summary>
+        /// <summary>설계도 실행 — 루트 프리팹 인스턴스화 + 부품 조립 + 모델 바인딩 (최초 1회).</summary>
         private void OpenShop()
         {
-            shopInstance = blueprint.Open(); // BuildModel 실행 → model이 새 트리를 가리킨다
-            ((ViewComponent)shopInstance).TryGetView("list", out scrollerHub);
-            SubscribeScreen();
-
-            model.SelectFirst();
+            BindInstance(blueprint.Open()); // BuildModel 실행 → model이 새 트리를 가리킨다
             model.Log("상점 데모 시작 — 셀을 눌러 아이템을 선택하세요");
         }
 
-        /// <summary>처방2 — 재-Open: 파괴 후 설계도 재실행. 구조·디자인·상태가 전부 새로 만들어진다.</summary>
-        private void Reopen()
+        /// <summary>새로 열린(또는 재-Open된) 인스턴스 공통 후처리 — 허브 확보·화면 구독·초기 선택.</summary>
+        private void BindInstance(SindyComponent instance)
         {
-            pendingAction = () =>
-            {
-                var old = model;
-                shopInstance.Bind(null);
-                Destroy(shopInstance.gameObject);
-                old?.Dispose();
-
-                OpenShop(); // 새 model 생성 (변형도 기본값으로 초기화)
-                model.Log("처방2 — 재-Open: 파괴 후 설계도 재실행 (상태 초기화)");
-            };
+            shopInstance = instance;
+            ((ViewComponent)shopInstance).TryGetView("list", out scrollerHub);
+            SubscribeScreen();
+            model.SelectFirst();
         }
+
+        /// <summary>
+        /// 처방2 — 재-Open: 파괴 후 설계도 재실행. 구조·디자인·상태가 전부 새로 만들어진다.
+        /// 파괴·이전 모델 정리는 ReopenNextFrame이 방출 스택 밖에서 처리한다(disposeOld 기본 true).
+        /// </summary>
+        private void Reopen() => blueprint.ReopenNextFrame(shopInstance, onOpened: instance =>
+        {
+            BindInstance(instance); // Open()이 BuildModel 재실행 → model이 새 트리를 가리킨다
+            model.Log("처방2 — 재-Open: 파괴 후 설계도 재실행 (상태 초기화)");
+        });
 
         /// <summary>
         /// 처방3 — 모델 재주입: BuildModelTree()가 설계도 모양(레이아웃 포함)의 새 모델 트리를
         /// 만들고, 기존 인스턴스에 Bind한다. 뷰는 그대로, 내용만 통째로 교체된다.
+        /// Bind·이전 모델 정리는 RebindNextFrame이 방출 스택 밖에서 처리한다(disposeOld 기본 true).
         /// </summary>
         private void Reinject()
         {
-            pendingAction = () =>
+            var fresh = blueprint.BuildModelTree(); // BuildModel 재실행 → model이 새 트리를 가리킨다
+            shopInstance.RebindNextFrame(fresh, onRebound: () =>
             {
-                var old = model;
-                var fresh = blueprint.BuildModelTree(); // BuildModel 재실행 → model이 새 트리를 가리킨다
-                shopInstance.Bind(fresh);
-                old?.Dispose();
-
-                SubscribeScreen(); // screen은 새 모델의 Feature이므로 구독 재연결
+                SubscribeScreen(); // screen은 새 모델의 Feature이므로 Bind 이후 구독 재연결
                 model.SelectFirst();
                 model.Log("처방3 — BuildModelTree 재주입: 뷰·레이아웃 유지, 내용 통째 교체");
-            };
+            });
         }
 
         /// <summary>처방1 — 값 변경: 재바인딩 없이 PropModel 값과 셀 목록만 바꿔 상점을 교체한다.</summary>
