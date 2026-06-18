@@ -239,6 +239,39 @@ namespace Sindy.View
             return BuildModelTree(CollectFinalPatches());
         }
 
+        /// <summary>
+        /// 다음 프레임에 기존 인스턴스를 파괴하고 설계도를 재실행한다(재-Open).
+        /// 버튼 OnClick 방출 도중 호출해도 안전하다 — 파괴는 방출 스택을 벗어난 뒤
+        /// (<see cref="FrameDispatcher"/>) 일어나므로, 방출 중인 모델 트리를 자기 자신이 파괴하는
+        /// 재진입 오류가 발생하지 않는다.
+        ///
+        /// <paramref name="disposeOld"/>가 true면(기본) 파괴 직전 바인딩돼 있던 모델을 Dispose한다.
+        /// 모델을 공유·재사용한다면 false로 두고 호출부가 수명을 직접 관리한다.
+        /// 새로 열린 인스턴스는 <paramref name="onOpened"/> 콜백으로 전달된다.
+        /// </summary>
+        /// <param name="instance">파괴할 기존 인스턴스.</param>
+        /// <param name="disposeOld">이전 모델을 Dispose할지 여부. 기본 true.</param>
+        /// <param name="onOpened">재-Open 완료 후 새 인스턴스를 받아 후처리(선택).</param>
+        /// <param name="layer">새 인스턴스를 열 레이어.</param>
+        public void ReopenNextFrame(SindyComponent instance, bool disposeOld = true,
+            Action<SindyComponent> onOpened = null, int layer = 0)
+        {
+            var old = instance != null ? instance.CurrentModel : null;
+            FrameDispatcher.NextFrame(() =>
+            {
+                if (instance != null)
+                {
+                    instance.Bind(null);
+                    UnityEngine.Object.Destroy(instance.gameObject);
+                }
+                if (disposeOld)
+                {
+                    (old as IDisposable)?.Dispose();
+                }
+                onOpened?.Invoke(Open(layer));
+            });
+        }
+
         private IViewModel BuildModelTree(List<PatchInstruction> patches)
         {
             var rootModel = _rootModelFactory?.Invoke()

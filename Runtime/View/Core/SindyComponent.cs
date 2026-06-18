@@ -1,3 +1,4 @@
+using System;
 using R3;
 using UnityEngine;
 
@@ -55,6 +56,32 @@ namespace Sindy.View
             ValidateFeatureViews(newModel);
 #endif
             model.Value = newModel;
+            return this;
+        }
+
+        /// <summary>
+        /// 다음 프레임에 모델을 교체합니다. 버튼 OnClick 방출 도중 호출해도 안전합니다 —
+        /// 재바인딩과 이전 모델 정리는 방출 스택을 벗어난 뒤(<see cref="FrameDispatcher"/>) 실행됩니다.
+        ///
+        /// <paramref name="disposeOld"/>가 true면(기본) 교체 직전 바인딩돼 있던 모델을 Dispose합니다.
+        /// 같은 모델을 다른 뷰와 공유·재사용하는 경우 false로 두고 호출부가 수명을 직접 관리하세요
+        /// (이 컴포넌트는 caller-owns 모델 수명을 전제로 합니다).
+        /// </summary>
+        /// <param name="next">새로 바인딩할 모델.</param>
+        /// <param name="disposeOld">이전 모델을 Dispose할지 여부. 기본 true.</param>
+        /// <param name="onRebound">재바인딩 완료 후 실행할 후처리(선택). Bind 이후에 호출됩니다.</param>
+        public SindyComponent RebindNextFrame(IViewModel next, bool disposeOld = true, Action onRebound = null)
+        {
+            var old = model.Value; // 교체 요청 시점에 바인딩돼 있던 모델
+            FrameDispatcher.NextFrame(() =>
+            {
+                Bind(next);
+                if (disposeOld && !ReferenceEquals(old, next))
+                {
+                    (old as IDisposable)?.Dispose();
+                }
+                onRebound?.Invoke();
+            });
             return this;
         }
 
