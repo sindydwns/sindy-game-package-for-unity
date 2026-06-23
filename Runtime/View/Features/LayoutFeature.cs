@@ -18,9 +18,14 @@ namespace Sindy.View.Features
         internal float PreferredWidth = -1;
         internal float PreferredHeight = -1;
 
+        internal float FlexibleWidth = -1;
+        internal float FlexibleHeight = -1;
+
         internal bool HasLayout => LayoutDirection.HasValue;
         internal bool HasAlignment => Alignment.HasValue;
         internal bool HasSize => PreferredWidth >= 0 || PreferredHeight >= 0;
+        internal bool HasFlexible => FlexibleWidth >= 0 || FlexibleHeight >= 0;
+        internal bool HasLayoutElement => HasSize || HasFlexible;
 
         // ── 공개 구성 API (ComponentBlueprint와 동일 시그니처) ─────────────────
         // Blueprint 없이도 ViewModel.With(new LayoutFeature().Layout(...))로 사용할 수 있다.
@@ -59,6 +64,18 @@ namespace Sindy.View.Features
             return this;
         }
 
+        /// <summary>
+        /// 유연 크기 가중치를 지정한다 (LayoutElement.flexibleWidth/Height). -1이면 미지정.
+        /// 부모 LayoutGroup의 남는 공간을 형제들과 가중치 비율로 나눠 갖는다 —
+        /// 예: 행에서 라벨이 남은 가로폭을 모두 채우게 하려면 Flexible(width: 1).
+        /// </summary>
+        public LayoutFeature Flexible(float width = -1, float height = -1)
+        {
+            FlexibleWidth = width;
+            FlexibleHeight = height;
+            return this;
+        }
+
         internal LayoutFeature Clone() => new()
         {
             LayoutDirection = LayoutDirection,
@@ -71,6 +88,8 @@ namespace Sindy.View.Features
             Alignment = Alignment,
             PreferredWidth = PreferredWidth,
             PreferredHeight = PreferredHeight,
+            FlexibleWidth = FlexibleWidth,
+            FlexibleHeight = FlexibleHeight,
         };
 
         /// <summary>
@@ -122,7 +141,7 @@ namespace Sindy.View.Features
                 SetGroupsEnabled(target, false);
             }
 
-            if (HasSize)
+            if (HasLayoutElement)
             {
                 var element = target.gameObject.GetComponent<LayoutElement>()
                               ?? target.gameObject.AddComponent<LayoutElement>();
@@ -130,6 +149,8 @@ namespace Sindy.View.Features
                 // full-spec: 미지정 축은 -1(미사용)로 리셋
                 element.preferredWidth = PreferredWidth;
                 element.preferredHeight = PreferredHeight;
+                element.flexibleWidth = FlexibleWidth;
+                element.flexibleHeight = FlexibleHeight;
             }
             else
             {

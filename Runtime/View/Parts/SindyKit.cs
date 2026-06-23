@@ -24,12 +24,12 @@ namespace Sindy.View
             .Patch("icon", PartKeys.Icon).Size(96, 96)
             .Patch("label", PartKeys.Label);
 
-        /// <summary>아이콘 + 라벨 (가로 행). 라벨은 좌측 정렬(프레임워크에 flexible 크기 API 없음).</summary>
+        /// <summary>아이콘 + 라벨 (가로 행). 라벨이 남는 가로폭을 채운다(Flexible).</summary>
         public static readonly ComponentBlueprint LabeledRow = ComponentBlueprint
             .Create(PartKeys.Container)
                 .Layout(Direction.Horizontal, spacing: 16).Align(TextAnchor.MiddleLeft)
             .Patch("icon", PartKeys.Icon).Size(96, 96)
-            .Patch("label", PartKeys.Label);
+            .Patch("label", PartKeys.Label).Flexible(1);
 
         /// <summary>버튼 + 가운데 라벨.</summary>
         public static readonly ComponentBlueprint ButtonLabel = ComponentBlueprint
@@ -37,15 +37,17 @@ namespace Sindy.View
                 .Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter)
             .Patch("label", PartKeys.Label);
 
-        /// <summary>라벨 + (우측) 토글 행. 사이의 spacer가 토글을 오른쪽 끝으로 민다.</summary>
+        /// <summary>라벨 + (우측) 토글 행. 라벨이 남는 폭을 채워 토글을 오른쪽 끝으로 민다(Flexible).</summary>
         public static readonly ComponentBlueprint ToggleRow = ComponentBlueprint
             .Create(PartKeys.Container)
                 .Layout(Direction.Horizontal, spacing: 16).Align(TextAnchor.MiddleLeft).Size(-1, 96)
-            .Patch("label", PartKeys.Label)
-            .Patch("spacer", PartKeys.Spacer)
+            .Patch("label", PartKeys.Label).Flexible(1)
             .Patch("toggle", PartKeys.Toggle).Size(96, 96);
 
-        /// <summary>패널 + 제목 + 내용 컨테이너 + 버튼 행.</summary>
+        /// <summary>
+        /// 패널 + 제목 + 내용 컨테이너 + 버튼 행.
+        /// 제목 크기를 키우려면 모델에서 지정: Patch("title", PartKeys.Label).WithModel(() => Models.Label("제목", 48)).
+        /// </summary>
         public static readonly ComponentBlueprint Popup = ComponentBlueprint
             .Create(PartKeys.Panel)
                 .Layout(Direction.Vertical, spacing: 24).Padding(32)

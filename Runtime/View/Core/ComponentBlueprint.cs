@@ -187,6 +187,15 @@ namespace Sindy.View
             return this;
         }
 
+        /// <summary>유연 크기 가중치를 지정한다. 남는 공간을 형제와 비율로 나눠 갖는다. -1이면 미지정.</summary>
+        public ComponentBlueprint Flexible(float width = -1, float height = -1)
+        {
+            var f = GetOrCreateCurrentLayout();
+            f.FlexibleWidth = width;
+            f.FlexibleHeight = height;
+            return this;
+        }
+
         private LayoutFeature GetOrCreateCurrentLayout()
         {
             if (_pendingPatch != null)

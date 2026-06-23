@@ -16,10 +16,11 @@ namespace Sindy.View
     /// </summary>
     public static class Models
     {
-        public static ViewModel Label(string text) => new ViewModel().With(new TextFeature(text));
+        /// <summary>라벨. fontSize가 0 이하이면 프리팹/Variant 기본 크기를 유지한다.</summary>
+        public static ViewModel Label(string text, float fontSize = 0f) => new ViewModel().With(new TextFeature(text, fontSize));
 
-        /// <summary>TimerModel·FormatNumberPropModel 등 자가 갱신 모델 주입.</summary>
-        public static ViewModel Label(PropModel<string> text) => new ViewModel().With(new TextFeature(text));
+        /// <summary>TimerModel·FormatNumberPropModel 등 자가 갱신 모델 주입. fontSize 0 이하이면 기본 크기 유지.</summary>
+        public static ViewModel Label(PropModel<string> text, float fontSize = 0f) => new ViewModel().With(new TextFeature(text, fontSize));
 
         public static ViewModel Icon(Sprite sprite) => new ViewModel().With(new ImageFeature(sprite));
 
