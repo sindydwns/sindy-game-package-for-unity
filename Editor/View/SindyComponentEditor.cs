@@ -34,14 +34,15 @@ namespace Sindy.Editor.View
             EditorGUI.indentLevel++;
             foreach (var view in featureViews)
             {
+                var viewName = view.GetType().Name;
                 if (modelFeatureTypes != null)
                 {
                     var matched = modelFeatureTypes.Remove(view.FeatureType);
-                    EditorGUILayout.LabelField($"{(matched ? "✓" : "✗")} {view.FeatureType.Name}");
+                    EditorGUILayout.LabelField($"{(matched ? "✓" : "✗")} {viewName}  →  {view.FeatureType.Name}");
                 }
                 else
                 {
-                    EditorGUILayout.LabelField("• " + view.FeatureType.Name);
+                    EditorGUILayout.LabelField($"• {viewName}  →  {view.FeatureType.Name}");
                 }
             }
 
