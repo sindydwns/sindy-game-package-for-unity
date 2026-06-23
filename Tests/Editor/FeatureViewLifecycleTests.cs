@@ -20,7 +20,7 @@ namespace Sindy.Test
     /// - same-instance 스킵 / Reload() 강제 재초기화
     /// - Bind(null)/Feature 없는 모델 → Clear 훅
     /// - LinkState 부모-자식 연쇄 해제
-    /// - ViewComponent 키 매핑
+    /// - SindyComponent 트리 키 매핑
     /// - Dev 빌드 Feature↔FeatureView 미스매치 경고
     ///
     /// EditMode에서는 Unity가 Awake/OnDestroy를 자동 호출하지 않으므로
@@ -329,22 +329,22 @@ namespace Sindy.Test
             model.Dispose();
         }
 
-        // ───────────────────────── ViewComponent 키 매핑 ─────────────────────────
+        // ───────────────────────── SindyComponent 트리 키 매핑 ─────────────────────────
 
         [Test]
-        public void ViewComponent_BindsChildrenByKey()
+        public void SindyComponent_BindsChildrenByKey()
         {
             var rootGo = new GameObject("root");
             spawned.Add(rootGo);
-            var root = rootGo.AddComponent<ViewComponent>();
+            var root = rootGo.AddComponent<SindyComponent>();
             InvokeNonPublic(root, "Awake");
 
             var (child, childView) = NewHub("child");
             childView.InvokeAwake();
 
             // Inspector 와이어링 시뮬레이션
-            var viewsField = typeof(ViewComponent).GetField("views", BindingFlags.Instance | BindingFlags.NonPublic);
-            viewsField.SetValue(root, new List<ViewComponent.ViewBehaviour>
+            var viewsField = typeof(SindyComponent).GetField("views", BindingFlags.Instance | BindingFlags.NonPublic);
+            viewsField.SetValue(root, new List<SindyComponent.ViewBehaviour>
             {
                 new() { name = "probe", component = child },
             });

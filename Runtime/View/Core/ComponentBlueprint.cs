@@ -31,9 +31,9 @@ namespace Sindy.View
     ///   - 1회용 개념이 없다. Cancel()이 없고, 버리면 그만이다.
     ///
     /// 조립 규칙 (Open):
-    ///   - 패치 경로에 해당하는 키가 루트 프리팹(ViewComponent)에 이미 있으면 인스턴스화를
+    ///   - 패치 경로에 해당하는 키가 루트 프리팹(SindyComponent)에 이미 있으면 인스턴스화를
     ///     생략하고 모델만 주입한다 — 틀은 프리팹에, 가변 부품은 코드에 두는 하이브리드 허용.
-    ///   - 중간 경로(컨테이너)가 없으면 RectTransform+ViewComponent 빈 컨테이너를 자동 생성한다.
+    ///   - 중간 경로(컨테이너)가 없으면 RectTransform+SindyComponent 빈 컨테이너를 자동 생성한다.
     ///   - 같은 경로를 여러 번 패치하면 마지막 선언이 우선하되, 지정하지 않은
     ///     모델 팩토리/레이아웃은 이전 선언에서 승계한다 (파생 Blueprint의 부분 재정의).
     ///   - 형제 순서 = 같은 깊이에서의 패치 선언 순서.
@@ -381,14 +381,10 @@ namespace Sindy.View
         /// </summary>
         private static void AssembleViews(SindyComponent rootInstance, ViewModel rootModel, List<PatchInstruction> patches)
         {
-            if (rootInstance is not ViewComponent rootView)
-                throw new InvalidOperationException(
-                    $"ComponentBlueprint: 패치를 부착하려면 루트 프리팹 '{rootInstance.name}'에 ViewComponent가 필요합니다.");
-
             foreach (var patch in patches)
             {
                 var tokens = patch.Path.Split('.', StringSplitOptions.RemoveEmptyEntries);
-                var parent = rootView;
+                var parent = rootInstance;
                 IViewModel parentModel = rootModel;
 
                 for (var i = 0; i < tokens.Length - 1; i++)
@@ -398,22 +394,17 @@ namespace Sindy.View
             }
         }
 
-        /// <summary>중간 경로 노드를 찾고, 없으면 빈 컨테이너(RectTransform+ViewComponent)를 자동 생성한다.</summary>
-        private static (ViewComponent, IViewModel) EnsureContainer(ViewComponent parent, IViewModel parentModel, string token)
+        /// <summary>중간 경로 노드를 찾고, 없으면 빈 컨테이너(RectTransform+SindyComponent)를 자동 생성한다.</summary>
+        private static (SindyComponent, IViewModel) EnsureContainer(SindyComponent parent, IViewModel parentModel, string token)
         {
             var childModel = parentModel?.GetChild<IViewModel>(token);
 
             if (parent.TryGetView(token, out var existing))
-            {
-                if (existing is not ViewComponent vc)
-                    throw new InvalidOperationException(
-                        $"ComponentBlueprint: 키 '{token}'의 기존 허브가 ViewComponent가 아니어서 하위 패치를 부착할 수 없습니다. ({parent.name})");
-                return (vc, childModel);
-            }
+                return (existing, childModel);
 
             var go = new GameObject(token, typeof(RectTransform));
             go.transform.SetParent(parent.transform, false);
-            var container = go.AddComponent<ViewComponent>();
+            var container = go.AddComponent<SindyComponent>();
             if (childModel?.Feature<LayoutFeature>() != null)
                 go.AddComponent<LayoutFeatureView>();
 
@@ -424,7 +415,7 @@ namespace Sindy.View
         }
 
         /// <summary>말단 패치를 부착한다. 키가 이미 존재하면 모델 주입만, 없으면 프리팹을 인스턴스화한다.</summary>
-        private static void AttachLeaf(ViewComponent parent, IViewModel parentModel, string token, PatchInstruction patch)
+        private static void AttachLeaf(SindyComponent parent, IViewModel parentModel, string token, PatchInstruction patch)
         {
             var childModel = parentModel?.GetChild<IViewModel>(token);
 

@@ -107,7 +107,7 @@ loginApi.Request.Send(new LoginReq { Id = "sindy" });   // 발행 → 로딩 →
 - `GET`/`DELETE`는 body를 직렬화하지 않습니다. body가 필요 없는 요청은 `TReq = Unit`을 사용합니다.
 - 에러가 나도 내부 스트림은 끊기지 않습니다 — `Response.Error`에 전달 후 다음 `Send`를 계속 받습니다.
 - `Request`/`Response`는 `this["request"]`/`this["response"]` 자식으로도 등록되어
-  ViewComponent 키 매핑에 그대로 올릴 수 있습니다.
+  SindyComponent 키 매핑에 그대로 올릴 수 있습니다.
 - `Dispose()`가 Request/Response를 함께 정리합니다.
 
 ---

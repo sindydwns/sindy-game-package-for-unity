@@ -81,7 +81,7 @@ namespace Sindy.Samples.ComponentShowcase
         private void BindInstance(SindyComponent instance)
         {
             shopInstance = instance;
-            ((ViewComponent)shopInstance).TryGetView("list", out scrollerHub);
+            shopInstance.TryGetView("list", out scrollerHub);
             SubscribeScreen();
             currentModel.SelectFirst();
         }

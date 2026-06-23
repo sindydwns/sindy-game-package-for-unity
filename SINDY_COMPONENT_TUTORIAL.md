@@ -152,11 +152,11 @@ skill.Feature<ButtonFeature>().OnClick.Subscribe(_ =>
 
 ---
 
-## Step 5. ViewComponent — 코드 없이 키로 매핑
+## Step 5. 자식 허브 키 매핑 — 코드 없이 트리 구성
 
 **상황:** 자식이 많은 UI 루트. 자식 바인딩 코드를 일일이 쓰기 싫을 때.
 
-**씬 구성:** 루트에 `ViewComponent` 추가 → Inspector의 `views` 리스트에 (자식 허브, "키이름") 쌍 등록.
+**씬 구성:** 루트 `SindyComponent`의 Inspector `views` 리스트에 (자식 허브, "키이름") 쌍 등록.
 각 항목 옆에 그 오브젝트의 FeatureView 목록(예: `Text, Button`)이 회색 라벨로 표시됨.
 
 ```csharp
@@ -169,7 +169,7 @@ shop["hp.bar"] = Models.Gauge(0.7f);                                     // "." 
 shopView.Bind(shop);   // views 리스트 순회하며 shop[키]를 각 허브에 자동 Bind + SetParent
 ```
 
-키가 ViewModel에 없으면 `ViewComponent: Model for view 'xxx' not found` 경고가 출력됩니다.
+키가 ViewModel에 없으면 `SindyComponent: Model for view 'xxx' not found` 경고가 출력됩니다.
 
 확인/취소 팝업은 `Models.Notice`로:
 
@@ -278,7 +278,7 @@ model.Dispose();    // 2. 모델 내부 구독 해제 (EveryUpdate 등)
 
 ## Step 8. ComponentBlueprint — 프리팹 조합
 
-Step 5의 ViewComponent는 프리팹에 **이미 배치된** 자식에 모델을 꽂았습니다.
+Step 5의 키 매핑은 프리팹에 **이미 배치된** 자식에 모델을 꽂았습니다.
 Blueprint는 한 걸음 더 나아가, 카탈로그에 등록한 부품 프리팹을 **코드에서 조합해**
 새 UI를 만들어냅니다. 화면마다 프리팹을 통째로 만들 필요가 없어집니다.
 
@@ -288,7 +288,7 @@ Blueprint는 한 걸음 더 나아가, 카탈로그에 등록한 부품 프리�
 ```csharp
 // 설계도 선언 — 아직 아무것도 생성되지 않는다
 var confirmPopup = ComponentBlueprint
-    .Create("popup_frame")                       // 루트 프리팹 (ViewComponent)
+    .Create("popup_frame")                       // 루트 프리팹 (SindyComponent)
         .Layout(Direction.Vertical, spacing: 12) // 디자인은 체인에
         .Padding(16)
     .WithModel(() => BuildPopupModel())          // 기능(모델)은 팩토리로

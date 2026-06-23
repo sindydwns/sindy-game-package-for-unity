@@ -146,12 +146,13 @@ notice["confirm"].Feature<ButtonFeature>().OnClick.Subscribe(_ => Delete());
 
 ---
 
-## UI 트리 구조 — ViewComponent
+## UI 트리 구조 — 자식 허브 키 매핑
 
 Feature는 "한 오브젝트의 능력" 축, ViewModel 자식은 "UI 트리 구조" 축. 공존한다.
 
-루트에 `ViewComponent`를 두고 Inspector의 `views` 리스트에 (자식 허브, "키이름") 쌍을 등록하면,
-모델의 `model["키"]` 자식이 각 허브에 자동 주입되고 `SetParent`로 연쇄 해제가 연결됩니다.
+`SindyComponent`는 허브이자 트리 노드다. Inspector의 `views` 리스트에 (자식 허브, "키이름") 쌍을
+등록하면, 모델의 `model["키"]` 자식이 각 허브에 자동 주입되고 `SetParent`로 연쇄 해제가 연결됩니다.
+`views`를 비워 두면 순수 허브로 동작하므로, 리프와 트리 노드를 같은 컴포넌트로 다룰 수 있습니다.
 
 ```csharp
 var shop = new ViewModel();
@@ -162,7 +163,7 @@ shop["buy"]   = new ViewModel().With(new TextFeature("구매")).With(new ButtonF
 shopView.Bind(shop);
 ```
 
-- 키가 ViewModel에 없으면 `ViewComponent: Model for view 'xxx' not found` 경고가 출력됩니다.
+- 키가 ViewModel에 없으면 `SindyComponent: Model for view 'xxx' not found` 경고가 출력됩니다.
 - Inspector 각 항목 옆에 해당 오브젝트의 **FeatureView 목록**(예: `Text, Button`)이 회색 라벨로 표시됩니다.
 
 ### Composite와 SetParent
@@ -228,10 +229,10 @@ vm["rows"] = new ViewModel().With(new LayoutFeature().Layout(Direction.Vertical,
 
 ### 조립 규칙 (Open)
 
-1. **하이브리드** — 패치 경로의 키가 루트 프리팹(ViewComponent)에 이미 있으면
+1. **하이브리드** — 패치 경로의 키가 루트 프리팹(SindyComponent)에 이미 있으면
    인스턴스화를 생략하고 모델만 주입한다. 틀은 프리팹에, 가변 부품은 코드에.
 2. **자동 컨테이너** — 중간 경로(`"footer.confirm"`의 `footer`)가 없으면
-   RectTransform+ViewComponent 빈 컨테이너가 자동 생성된다.
+   RectTransform+SindyComponent 빈 컨테이너가 자동 생성된다.
 3. **재정의 승계** — 같은 경로를 다시 패치하면 마지막 선언이 우선하되, 지정하지 않은
    모델 팩토리/레이아웃은 이전 선언에서 승계한다. 재정의된 base 팩토리는 실행되지 않는다.
 4. **형제 순서** = 같은 깊이에서의 패치 선언 순서 (프리팹 기존 자식이 먼저).
@@ -318,7 +319,7 @@ model.Dispose();   // 2. 모델 내부 구독 해제 (EveryUpdate, CombineLatest
 [SindyComponent] TextFeatureView가 있으나 모델에 TextFeature가 없습니다. (SkillSlot)
 ```
 
-FeatureView가 하나도 없는 허브(ViewComponent 트리 노드 등)는 검증 대상에서 제외됩니다.
+FeatureView가 하나도 없는 허브(트리 노드 등)는 검증 대상에서 제외됩니다.
 SindyComponent Inspector 하단에는 부착된 FeatureView 목록이 표시되고,
 플레이 중에는 바인딩된 모델과의 매칭 상태(✓/✗)가 함께 표시됩니다.
 

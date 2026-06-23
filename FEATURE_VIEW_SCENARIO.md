@@ -39,7 +39,7 @@
 | `[SupportedFeature(...)]` + ValidateSupportedFeatures | FeatureView 부착 = 구조적 선언, Dev 빌드 일회 스캔 검증 |
 | `BindCommonFeatures` (Visibility/Layout 하드코딩) | VisibilityFeatureView / LayoutFeatureView로 일반화 |
 | 허브 disposables 단일 리스트 | FeatureView 각자 disposables 소유 |
-| 복합 컴포넌트 (NoticeComponent 등) | 단순 조합 → FeatureView 조합, 트리 구조 → ViewComponent 유지 |
+| 복합 컴포넌트 (NoticeComponent 등) | 단순 조합 → FeatureView 조합, 트리 구조 → SindyComponent 키 매핑 |
 | `TimerModel`/`FormatNumberPropModel` (PropModel<string> 파생) | `new TextFeature(model)` 생성자 주입으로 그대로 재사용 |
 | `RegisterCellType<TVM>` / `RegisterGlobalCellType<TVM>` (타입 키) | `RegisterCell(key, prefab)` / 전역 CellCatalog 에셋 (셀 키) |
 | `Section<TVM>` (제네릭) | `Section` (비제네릭) + `ContentKey` 또는 `ContentPrefab` |

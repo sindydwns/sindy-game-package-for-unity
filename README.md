@@ -83,7 +83,7 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 
 | 문서 | 내용 |
 |------|------|
-| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | **현행 레퍼런스** — SindyComponent(허브)·FeatureView 아키텍처, Feature 쌍 목록, ViewComponent, ScrollerFeatureView |
+| [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | **현행 레퍼런스** — SindyComponent(허브·트리 노드)·FeatureView 아키텍처, Feature 쌍 목록, 키 매핑, ScrollerFeatureView |
 | [SINDY_COMPONENT_TUTORIAL.md](./SINDY_COMPONENT_TUTORIAL.md) | View/MVVM 스텝 바이 스텝 실습 — 라벨부터 커스텀 Feature까지 |
 | [FEATURE_VIEW_SCENARIO.md](./FEATURE_VIEW_SCENARIO.md) | FeatureView 전환 설계 결정 기록(Decision Log)·마이그레이션 대응표 — 보존용 |
 | [HTTP.md](./HTTP.md) | HTTP 모듈 — ApiModel, Retry/Timeout/OfflineCache 합성, 토큰 자동 갱신, 페이지네이션 |

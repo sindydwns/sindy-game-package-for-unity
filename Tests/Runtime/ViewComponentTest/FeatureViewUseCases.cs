@@ -100,10 +100,10 @@ namespace Sindy.Test
         }
 
         // ─────────────────────────────────────────────────────────
-        // 5. UI 트리 구조 — ViewComponent 키 매핑 (Feature 축과 공존)
-        //    씬: 팝업 루트에 ViewComponent → views 리스트에 자식 허브+키 등록
+        // 5. UI 트리 구조 — SindyComponent 키 매핑 (Feature 축과 공존)
+        //    씬: 팝업 루트에 SindyComponent → views 리스트에 자식 허브+키 등록
         // ─────────────────────────────────────────────────────────
-        static void Case5_ShopPopup(ViewComponent shopView)
+        static void Case5_ShopPopup(SindyComponent shopView)
         {
             var shop = new ViewModel();
             shop["title"] = Models.Label("상점");
@@ -121,7 +121,7 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────
         // 6. 확인/취소 팝업 — Models.Notice 팩토리 (구 NoticeComponent 대체)
         // ─────────────────────────────────────────────────────────
-        static void Case6_Notice(ViewComponent noticeView)
+        static void Case6_Notice(SindyComponent noticeView)
         {
             var notice = Models.Notice("알림", "정말 삭제할까요?", hasCancel: true);
             noticeView.Bind(notice);
