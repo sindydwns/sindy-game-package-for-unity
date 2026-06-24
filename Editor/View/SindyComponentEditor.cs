@@ -10,9 +10,9 @@ namespace Sindy.Editor.View
     /// <summary>
     /// SindyComponent(허브) Inspector.
     ///
-    /// 모델 ↔ 뷰의 키 매칭 상태를 두 축의 표로 보여주는 디버깅 패널을 그린다.
-    /// - 능력 축: FeatureView ↔ ModelFeature (Type 키)
-    /// - 구조 축: views 리스트의 문자열 키 ↔ 모델 자식
+    /// 모델 ↔ 뷰의 키 매칭 상태를 두 개의 표로 보여주는 디버깅 패널을 그린다.
+    /// - Feature 매칭: FeatureView ↔ ModelFeature (Type 키)
+    /// - 자식 매칭: views 리스트의 문자열 키 ↔ 모델 자식
     ///
     /// 런타임에는 매칭 미스매치를 조용히 통과시키므로(설계 의도), 진단은 이 표로 한다.
     /// 플레이 중에는 바인딩된 실제 모델과 대조해 매칭(✓)/미스매치(⚠)를 표시하고,
@@ -54,11 +54,11 @@ namespace Sindy.Editor.View
             if (hasViews) DrawStructureAxis(views, model);
         }
 
-        /// <summary>능력 축: FeatureView ↔ ModelFeature 매칭 표.</summary>
+        /// <summary>Feature 매칭: FeatureView ↔ ModelFeature 매칭 표.</summary>
         private static void DrawFeatureAxis(IFeatureView[] featureViews, IViewModel model)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("능력 축 (Feature ↔ View)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Feature 매칭 (Feature ↔ View)", EditorStyles.boldLabel);
             DrawHeader("", "FeatureView", "ModelFeature");
 
             var modelFeatures = model != null ? new HashSet<Type>(model.GetFeatureTypes()) : null;
@@ -88,11 +88,11 @@ namespace Sindy.Editor.View
             }
         }
 
-        /// <summary>구조 축: views 리스트 문자열 키 ↔ 모델 자식 매칭 표.</summary>
+        /// <summary>자식 매칭: views 리스트 문자열 키 ↔ 모델 자식 매칭 표.</summary>
         private static void DrawStructureAxis(IReadOnlyList<SindyComponent.ViewBehaviour> views, IViewModel model)
         {
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("구조 축 (Key ↔ Child Hub)", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("자식(Child) 매칭 (Key ↔ Child Hub)", EditorStyles.boldLabel);
             DrawHeader("", "키", "연결 허브", "모델 자식");
 
             // GetChildNames()는 최상위 레벨 키만 반환한다. 점 표기 하위 키 비교는 최상위 기준.
