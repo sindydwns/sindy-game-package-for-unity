@@ -328,14 +328,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: Sindy::Sindy.Common.GameObjectCollection
   prefabs:
   - {fileID: 1302995250202294138, guid: 3fc5b4f4514df4d2db7166b953c784af, type: 3}
-  - {fileID: 3865421153446173023, guid: 77b432f5dcddd49dd86e258dc4abba3a, type: 3}
-  - {fileID: 7066480218244364710, guid: 5337ee206db4e409687806a3708a450e, type: 3}
-  - {fileID: 54390990012074050, guid: 6fe47bc868e2f4671ac7e1b76199db96, type: 3}
-  - {fileID: 4621915931749829664, guid: 308b3f58ea75149cf8117baf7454618c, type: 3}
-  - {fileID: 8393637708541479624, guid: c7a9cf7cb5e7a4496ba37da553342b4b, type: 3}
-  - {fileID: 6176698422189177632, guid: 0c12017608d074cbc84510a851ead711, type: 3}
-  - {fileID: 8389654290113788973, guid: 4098da544ee624f3593d47d7557db3f6, type: 3}
-  - {fileID: 405453141339841267, guid: a86d1b6b9ca2c4ac69fbbb396f019582, type: 3}
+  - {fileID: 1511972778347645948, guid: f5fdef23de99446c797e05ee145d2d21, type: 3}
+  - {fileID: 523680397683910799, guid: d982defe10bbc4ae083e867c82a335e0, type: 3}
+  - {fileID: 5176500474305846492, guid: e49871c886a2b4cd5bfac9ea25ee6ddc, type: 3}
+  - {fileID: 2607544445886829032, guid: 40c60d0912b7f46dca1d7fbd81685b17, type: 3}
+  - {fileID: 5832472611213936591, guid: e5eeb914488bc4040a83e7296e34f0fc, type: 3}
+  - {fileID: 12739336406297858, guid: ea15e3f9222714afe858043a24285952, type: 3}
+  - {fileID: 1329144337085483291, guid: 6566a54290ebe4e7db1da5811206fa8e, type: 3}
+  - {fileID: 5557955420596098552, guid: 8f44b875f63fe413ab1ab2ca32790b24, type: 3}
+  - {fileID: 1504085058134388076, guid: 80ad461f01f3248a7871086a7992fadb, type: 3}
 --- !u!114 &516979057
 MonoBehaviour:
   m_ObjectHideFlags: 0

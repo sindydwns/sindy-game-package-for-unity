@@ -38,6 +38,20 @@ namespace Sindy.Samples.ComponentShowcase
         public PropModel<string> Title { get; }
         public ToggleFeature SkipConfirm { get; }
 
+        // 원자 부품 조립용 상태 노출 — Blueprint가 부품별로 모델을 구성하므로
+        // 단일 프리팹 시절의 Build*Model 팩토리 대신 PropModel/Feature를 직접 참조한다.
+        public PropModel<Sprite> ItemFrame => itemFrame;
+        public PropModel<Sprite> ItemIcon => itemIcon;
+        public PropModel<string> ItemName => itemName;
+        public PropModel<string> ItemDesc => itemDesc;
+        public PropModel<string> Qty => qty;
+        public PropModel<string> BuyLabel => buyLabel;
+        public PropModel<bool> CanBuy => canBuy;
+        public ButtonFeature MinusBtn => minusBtn;
+        public ButtonFeature PlusBtn => plusBtn;
+        public ButtonFeature BuyBtn => buyBtn;
+        public ToggleFeature Bgm => bgm;
+
         // ---- 상세 패널 상태 (전부 ShopModel 내부에서만 변이) ----
         private readonly FormatNumberPropModel<long> gold;
         private readonly FormatNumberPropModel<int> qty;
@@ -123,39 +137,6 @@ namespace Sindy.Samples.ComponentShowcase
         }
 
         public void Dispose() => Root?.Dispose();
-
-        // ---------------- 설계도가 호출하는 패치 모델 팩토리 ----------------
-
-        public ViewModel BuildInfoModel()
-        {
-            var vm = new ViewModel();
-            vm["frame"] = new ViewModel().With(new ImageFeature(itemFrame));
-            vm["icon"] = new ViewModel().With(new ImageFeature(itemIcon));
-            vm["name"] = new ViewModel().With(new TextFeature(itemName));
-            vm["desc"] = new ViewModel().With(new TextFeature(itemDesc));
-            return vm;
-        }
-
-        public ViewModel BuildQtyModel()
-        {
-            var vm = new ViewModel();
-            vm["minus"] = new ViewModel().With(minusBtn);
-            vm["qty"] = new ViewModel().With(new TextFeature(qty));
-            vm["plus"] = new ViewModel().With(plusBtn);
-            return vm;
-        }
-
-        public ViewModel BuildBuyModel() => new ViewModel()
-            .With(new TextFeature(buyLabel))
-            .With(buyBtn)
-            .With(new InteractableFeature(canBuy));
-
-        public ViewModel BuildBgmModel()
-        {
-            var vm = new ViewModel();
-            vm["switch"] = new ViewModel().With(bgm);
-            return vm;
-        }
 
         private ViewModel BuildScroller()
         {
