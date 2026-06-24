@@ -18,6 +18,7 @@ namespace Sindy.Samples.ComponentShowcase
         public long price;
         public Sprite icon;
         public Sprite frame;
+        [System.NonSerialized] public int level;
 
         public ShopItemData() { }
 
@@ -47,9 +48,18 @@ namespace Sindy.Samples.ComponentShowcase
             cell["icon"] = Models.Icon(data.icon);
             cell["name"] = Models.Label(data.name);
             cell["price"] = Models.Label(new FormatNumberPropModel<long>(data.price, v => $"{v:n0}G"));
+            cell["iconTile"] = new ViewModel().With(new ColorFeature(Tier(data.level).color));
 
             cell.Feature<ButtonFeature>().OnClick.Subscribe(_ => onSelect?.Invoke(data));
             return cell;
+        }
+
+        /// <summary>레벨 기반 등급 — 1-2 일반, 3-4 고급, 5-6 희귀.</summary>
+        public static (string text, Color color) Tier(int level)
+        {
+            if (level >= 5) return ("희귀", new Color(0.40f, 0.62f, 0.95f));
+            if (level >= 3) return ("고급", new Color(0.45f, 0.72f, 0.40f));
+            return ("일반", new Color(0.62f, 0.65f, 0.71f));
         }
 
         /// <summary>섹션 헤더 셀. TextFeature 하나면 충분하다.</summary>

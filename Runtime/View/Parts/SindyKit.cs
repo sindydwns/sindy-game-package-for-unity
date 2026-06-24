@@ -34,7 +34,7 @@ namespace Sindy.View
         /// <summary>버튼 + 가운데 라벨.</summary>
         public static readonly ComponentBlueprint ButtonLabel = ComponentBlueprint
             .Create(PartKeys.Button)
-                .Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter)
+                .Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter).Size(-1, 96)
             .Patch("label", PartKeys.Label);
 
         /// <summary>라벨 + (우측) 토글 행. 라벨이 남는 폭을 채워 토글을 오른쪽 끝으로 민다(Flexible).</summary>

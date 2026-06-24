@@ -169,12 +169,9 @@ namespace Sindy.Samples.ComponentShowcase
                 .Layout(Direction.Vertical, spacing: 14)
                 .Padding(top: 12, right: 32, bottom: 16, left: 32)
 
-            // 캡션
-            .Patch("caption", PartKeys.Label)
-                .WithModel(() => Models.Label("상세 패널 — Controller는 PropModel 값만 변경, 화면 갱신은 FeatureView 구독이 처리", 22))
 
             // InfoRow → 컨테이너 + 프레임(아이콘 중첩) + 이름 + 설명 (ImageFeature ×2)
-            .Patch("info", PartKeys.Container).Layout(Direction.Vertical, spacing: 6).Align(TextAnchor.UpperCenter)
+            .Patch("info", PartKeys.Container).Layout(Direction.Vertical, spacing: 6).Align(TextAnchor.UpperCenter).Flexible(1)
                 .WithModel(() => new ViewModel())
             .Patch("info.frame", PartKeys.Icon).Size(120, 120)
                 .WithModel(() => new ViewModel().With(new ImageFeature(currentModel.ItemFrame)))
@@ -182,16 +179,17 @@ namespace Sindy.Samples.ComponentShowcase
                 .WithModel(() => new ViewModel().With(new ImageFeature(currentModel.ItemIcon)))
             .Patch("info.name", PartKeys.Label)
                 .WithModel(() => Models.Label(currentModel.ItemName))
+            .Patch("info.tier", PartKeys.Label)
+                .WithModel(() => Models.Label(currentModel.TierText, 22).With(new ColorFeature(currentModel.TierColor)))
             .Patch("info.desc", PartKeys.Label)
                 .WithModel(() => Models.Label(currentModel.ItemDesc, 22))
 
-            .Patch("frameCaption", PartKeys.Label)
-                .WithModel(() => Models.Label("ImageFeature ×2 — 아이콘(일반) / 등급별 프레임 교체", 22))
 
             // QtyRow → 가로 컨테이너: 캡션 + 마이너스(ButtonLabel) + 수량 + 플러스(ButtonLabel)
-            .Patch("qty", PartKeys.Container).Layout(Direction.Horizontal, spacing: 8).Align(TextAnchor.MiddleLeft)
+            .Patch("qty", PartKeys.Container).Layout(Direction.Horizontal, spacing: 8).Align(TextAnchor.MiddleLeft).Flexible(1)
                 .WithModel(() => new ViewModel())
             .Patch("qty.caption", PartKeys.Label).WithModel(() => Models.Label("수량"))
+            .Patch("qty.gap", PartKeys.Spacer).Flexible(1).WithModel(() => new ViewModel())
             .Patch("qty.minus", SindyKit.ButtonLabel).WithModel(() => new ViewModel().With(currentModel.MinusBtn))
             .Patch("qty.minus.label", PartKeys.Label).WithModel(() => Models.Label("−"))
             .Patch("qty.value", PartKeys.Label).WithModel(() => Models.Label(currentModel.Qty))
@@ -199,32 +197,26 @@ namespace Sindy.Samples.ComponentShowcase
             .Patch("qty.plus.label", PartKeys.Label).WithModel(() => Models.Label("+"))
 
             // BuyButton → ButtonLabel (버튼 허브: ButtonFeature + InteractableFeature, 라벨 자식)
-            .Patch("buy", SindyKit.ButtonLabel)
-                .WithModel(() => new ViewModel().With(currentModel.BuyBtn).With(new InteractableFeature(currentModel.CanBuy)))
+            .Patch("buy", SindyKit.ButtonLabel).Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter).Size(-1, 96).Flexible(1)
+                .WithModel(() => new ViewModel().With(currentModel.BuyBtn).With(new InteractableFeature(currentModel.CanBuy))
+                    .With(new ColorFeature(new Color(0.231f, 0.510f, 0.965f))))
             .Patch("buy.label", PartKeys.Label).WithModel(() => Models.Label(currentModel.BuyLabel))
-            .Patch("buyCaption", PartKeys.Label)
-                .WithModel(() => Models.Label("ButtonFeature 클릭 + InteractableFeature — 골드 부족 시 비활성", 22))
 
-            // BgmRow / SkipRow → SindyKit.ToggleRow
-            .Patch("bgm", SindyKit.ToggleRow).WithModel(() => new ViewModel())
-            .Patch("bgm.label", PartKeys.Label).WithModel(() => Models.Label("배경음 (BGM)"))
-            .Patch("bgm.toggle", PartKeys.Toggle).WithModel(() => new ViewModel().With(currentModel.Bgm))
-            .Patch("skip", SindyKit.ToggleRow).WithModel(() => new ViewModel())
+            // SkipRow → SindyKit.ToggleRow
+            .Patch("skip", SindyKit.ToggleRow).Layout(Direction.Horizontal, spacing: 16).Align(TextAnchor.MiddleLeft).Size(-1, 96).Flexible(1).WithModel(() => new ViewModel())
             .Patch("skip.label", PartKeys.Label).WithModel(() => Models.Label("구매 확인 생략"))
             .Patch("skip.toggle", PartKeys.Toggle).WithModel(() => new ViewModel().With(currentModel.SkipConfirm))
 
             // 데모 버튼 — 생명주기 3패턴 직접 시연
-            .Patch("demoCaption", PartKeys.Label)
-                .WithModel(() => Models.Label("생명주기 3패턴 — 값 변경(상점 교체) · 재-Open(재시작) · BuildModelTree(모델 재주입)", 22))
             .Patch("demo", PartKeys.Container)
-                .Layout(Direction.Horizontal, spacing: 8)
+                .Layout(Direction.Horizontal, spacing: 8).Flexible(1)
                 .WithModel(() => new ViewModel())
-            .Patch("demo.swap", SindyKit.ButtonLabel).WithModel(() => DemoButton(SwapShop))
-            .Patch("demo.swap.label", PartKeys.Label).WithModel(() => Models.Label("상점 교체"))
-            .Patch("demo.reopen", SindyKit.ButtonLabel).WithModel(() => DemoButton(Reopen))
-            .Patch("demo.reopen.label", PartKeys.Label).WithModel(() => Models.Label("재시작"))
-            .Patch("demo.reinject", SindyKit.ButtonLabel).WithModel(() => DemoButton(Reinject))
-            .Patch("demo.reinject.label", PartKeys.Label).WithModel(() => Models.Label("모델 재주입"));
+            .Patch("demo.swap", SindyKit.ButtonLabel).Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter).Size(-1, 96).Flexible(1).WithModel(() => DemoButton(SwapShop))
+            .Patch("demo.swap.label", PartKeys.Label).WithModel(() => Models.Label("상점 교체", 28))
+            .Patch("demo.reopen", SindyKit.ButtonLabel).Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter).Size(-1, 96).Flexible(1).WithModel(() => DemoButton(Reopen))
+            .Patch("demo.reopen.label", PartKeys.Label).WithModel(() => Models.Label("재시작", 28))
+            .Patch("demo.reinject", SindyKit.ButtonLabel).Layout(Direction.Horizontal, spacing: 0).Padding(8, 24, 8, 24).Align(TextAnchor.MiddleCenter).Size(-1, 96).Flexible(1).WithModel(() => DemoButton(Reinject))
+            .Patch("demo.reinject.label", PartKeys.Label).WithModel(() => Models.Label("모델 재주입", 28));
 
         /// <summary>
         /// 루트 모델 팩토리. Open()/BuildModelTree()가 패치 모델보다 먼저 실행하므로,

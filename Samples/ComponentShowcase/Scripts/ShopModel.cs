@@ -37,6 +37,8 @@ namespace Sindy.Samples.ComponentShowcase
         public ScreenFeature Screen { get; }
         public PropModel<string> Title { get; }
         public ToggleFeature SkipConfirm { get; }
+        public PropModel<string> TierText => tierText;
+        public PropModel<Color> TierColor => tierColor;
 
         // 원자 부품 조립용 상태 노출 — Blueprint가 부품별로 모델을 구성하므로
         // 단일 프리팹 시절의 Build*Model 팩토리 대신 PropModel/Feature를 직접 참조한다.
@@ -50,7 +52,6 @@ namespace Sindy.Samples.ComponentShowcase
         public ButtonFeature MinusBtn => minusBtn;
         public ButtonFeature PlusBtn => plusBtn;
         public ButtonFeature BuyBtn => buyBtn;
-        public ToggleFeature Bgm => bgm;
 
         // ---- 상세 패널 상태 (전부 ShopModel 내부에서만 변이) ----
         private readonly FormatNumberPropModel<long> gold;
@@ -62,10 +63,11 @@ namespace Sindy.Samples.ComponentShowcase
         private readonly PropModel<string> buyLabel;
         private readonly PropModel<bool> canBuy;
         private readonly PropModel<string> logText;
+        private readonly PropModel<string> tierText;
+        private readonly PropModel<Color> tierColor;
         private readonly ButtonFeature minusBtn;
         private readonly ButtonFeature plusBtn;
         private readonly ButtonFeature buyBtn;
-        private readonly ToggleFeature bgm;
 
         // ---- 스크롤러 셀 ----
         private ViewModel listVm;
@@ -113,8 +115,9 @@ namespace Sindy.Samples.ComponentShowcase
             minusBtn = new ButtonFeature(allowHold: true);
             plusBtn = new ButtonFeature(allowHold: true);
             buyBtn = new ButtonFeature();
-            bgm = new ToggleFeature(true);
             SkipConfirm = new ToggleFeature(false);
+            tierText = new PropModel<string>("");
+            tierColor = new PropModel<Color>(Color.white);
 
             // ---- 입력 구독 (구독 대상이 전부 Root 트리의 Subject/Prop이므로
             //      Dispose()와 함께 정리된다) ----
@@ -124,7 +127,6 @@ namespace Sindy.Samples.ComponentShowcase
             plusBtn.OnHold.Subscribe(_ => AddQty(+1));
             buyBtn.OnClick.Subscribe(_ => Buy());
 
-            bgm.IsOn.Prop.Skip(1).Subscribe(on => Log($"BGM {(on ? "켜짐" : "꺼짐")}"));
             SkipConfirm.IsOn.Prop.Skip(1).Subscribe(on =>
             {
                 pendingConfirm = false;
@@ -195,7 +197,7 @@ namespace Sindy.Samples.ComponentShowcase
                     var price = item.price * lv;
                     if (discount) price /= 2;
                     var name = discount ? $"[할인] {item.name} Lv.{lv}" : $"{item.name} Lv.{lv}";
-                    list.Add(new ShopItemData(name, item.description, price, item.icon, item.frame));
+                    list.Add(new ShopItemData(name, item.description, price, item.icon, item.frame) { level = lv });
                 }
             }
             return list;
@@ -236,6 +238,9 @@ namespace Sindy.Samples.ComponentShowcase
             itemIcon.Value = data.icon;
             itemName.Value = data.name;
             itemDesc.Value = data.description;
+            var tier = ShopCells.Tier(data.level);
+            tierText.Value = tier.text;
+            tierColor.Value = tier.color;
             qty.Source.Value = 1;
             UpdateBuyState();
             Log($"선택: {data.name}");

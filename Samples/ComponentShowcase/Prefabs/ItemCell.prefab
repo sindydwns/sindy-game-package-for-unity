@@ -151,6 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
+  views: []
 --- !u!114 &5665160274058656172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -196,6 +197,7 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 4771415634466913128}
   - {fileID: 6776934061616327475}
   - {fileID: 9022137033059843322}
   - {fileID: 1070022085021231691}
@@ -263,6 +265,8 @@ MonoBehaviour:
     component: {fileID: 423993051184997539}
   - name: price
     component: {fileID: 3635006713076562042}
+  - name: iconTile
+    component: {fileID: 4215381955741142997}
 --- !u!114 &1565601904596955580
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -428,6 +432,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
+  views: []
 --- !u!114 &2318122168439294841
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -530,6 +535,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
+  views: []
 --- !u!114 &3680952948705670421
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -543,3 +549,106 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Sindy::Sindy.View.FeatureViews.ImageFeatureView
   image: {fileID: 8560574719314723776}
+--- !u!1 &5469361988951898250
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4771415634466913128}
+  - component: {fileID: 2571374791968367464}
+  - component: {fileID: 1921999863783610103}
+  - component: {fileID: 4215381955741142997}
+  - component: {fileID: 8708623218366923567}
+  m_Layer: 0
+  m_Name: IconTile
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &4771415634466913128
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5469361988951898250}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 4232581933912672689}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0.5}
+  m_AnchorMax: {x: 0, y: 0.5}
+  m_AnchoredPosition: {x: 8, y: 0}
+  m_SizeDelta: {x: 84, y: 84}
+  m_Pivot: {x: 0, y: 0.5}
+--- !u!222 &2571374791968367464
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5469361988951898250}
+  m_CullTransparentMesh: 1
+--- !u!114 &1921999863783610103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5469361988951898250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.55, g: 0.58, b: 0.64, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 21300000, guid: 17fc8424723554ccc96c94cdd5aca5a0, type: 3}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4215381955741142997
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5469361988951898250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
+  views: []
+--- !u!114 &8708623218366923567
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5469361988951898250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9e772f4370a645038e003439d15fddb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Sindy::Sindy.View.FeatureViews.ColorFeatureView
+  target: {fileID: 1921999863783610103}
