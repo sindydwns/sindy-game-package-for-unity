@@ -62,14 +62,11 @@ namespace Sindy.View
             {
                 if (view.component == null) continue;
 
+                // 키가 매칭되지 않으면 조용히 통과한다(pub/sub 설계). 미스매치 진단은 Inspector 표 참고.
                 var childModel = newModel[view.name];
                 if (childModel != null)
                 {
                     view.component.Bind(childModel).SetParent(this);
-                }
-                else
-                {
-                    Debug.LogWarning($"SindyComponent: Model for view '{view.name}' not found in ViewModel.", this);
                 }
             }
         }
@@ -121,9 +118,6 @@ namespace Sindy.View
             LinkState.ClearChildrenLinks();
             LinkState.DetachFromParent();
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            ValidateFeatureViews(newModel);
-#endif
             model.Value = newModel;
             return this;
         }
@@ -185,52 +179,20 @@ namespace Sindy.View
             model.Dispose();
         }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        /// <summary>
-        /// Editor/Dev 빌드 한정 일회 스캔 검증 (릴리스 빌드 비용 0).
-        /// 모델의 Feature 목록과 부착된 FeatureView 목록의 미스매치를 경고한다.
-        /// FeatureView가 하나도 없는 허브(트리 노드 등)는 검증 대상에서 제외한다.
-        /// </summary>
-        private void ValidateFeatureViews(IViewModel newModel)
-        {
-            if (newModel == null) return;
-            var views = GetComponents<IFeatureView>();
-            if (views.Length == 0) return;
-
-            foreach (var featureType in newModel.GetFeatureTypes())
-            {
-                var matched = false;
-                foreach (var view in views)
-                {
-                    if (view.FeatureType == featureType) { matched = true; break; }
-                }
-                if (!matched)
-                {
-                    Debug.LogWarning($"[SindyComponent] 모델의 {featureType.Name}에 매칭되는 FeatureView가 없습니다. ({name})", this);
-                }
-            }
-
-            foreach (var view in views)
-            {
-                var matched = false;
-                foreach (var featureType in newModel.GetFeatureTypes())
-                {
-                    if (view.FeatureType == featureType) { matched = true; break; }
-                }
-                if (!matched)
-                {
-                    Debug.LogWarning($"[SindyComponent] {view.GetType().Name}가 있으나 모델에 {view.FeatureType.Name}가 없습니다. ({name})", this);
-                }
-            }
-        }
-#endif
-
         [Serializable]
         public class ViewBehaviour
         {
             public string name;
             public SindyComponent component;
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Inspector 디버깅 표 전용: 런타임 시점의 실제 views 목록(동적 AddView 포함)을 노출한다.
+        /// 직렬화 데이터가 아닌 필드를 직접 읽어 Blueprint 등이 동적 추가한 항목까지 반영한다.
+        /// </summary>
+        internal IReadOnlyList<ViewBehaviour> ViewsForEditor => views;
+#endif
 
 #if UNITY_EDITOR
         [CustomPropertyDrawer(typeof(ViewBehaviour))]

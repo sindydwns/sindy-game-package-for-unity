@@ -10,6 +10,7 @@ namespace Sindy.View
     {
         public T GetChild<T>(string name) where T : IViewModel;
         public IViewModel this[string name] { get; set; }
+        public IEnumerable<string> GetChildNames();
         public IEnumerable<Type> GetFeatureTypes();
         public T Feature<T>() where T : ModelFeature;
     }
@@ -45,6 +46,12 @@ namespace Sindy.View
         public IEnumerable<Type> GetFeatureTypes()
         {
             return features?.Keys ?? Enumerable.Empty<Type>();
+        }
+
+        /// <summary>최상위 레벨 자식 모델의 키 목록. (점 표기 하위 키는 포함하지 않는다.)</summary>
+        public IEnumerable<string> GetChildNames()
+        {
+            return children.Keys;
         }
 
         protected void Dispose(Result _) => Dispose();
