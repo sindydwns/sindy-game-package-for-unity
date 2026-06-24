@@ -30,6 +30,10 @@ R3(Reactive Extensions for Unity) 기반 MVVM 패턴을 중심으로, 에디터 
 
 → [상세 문서](./SINDY_COMPONENT.md)
 
+패키지를 받자마자 조합을 시작할 수 있도록 라벨·아이콘·버튼·컨테이너 등 **기본 부품 프리팹 9종 + 합성 Blueprint(SindyKit)**를 동봉합니다. 무채색 Variant base로 제공되어 프로젝트가 스타일만 덮어쓰면 됩니다.
+
+→ [기본 부품 키트](./Runtime/View/Parts/README.md)
+
 ### Scroller (ScrollerFeatureView)
 
 뷰포트에 보이는 셀만 인스턴스화하는 가상화 스크롤 리스트입니다. 다수 섹션 적층, 헤더/푸터/빈 콘텐츠 처리, 그리드 자동 산출(컬럼 수 동적 계산), Easing 기반 스크롤 점프를 지원합니다.
@@ -85,6 +89,7 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 |------|------|
 | [SINDY_COMPONENT.md](./SINDY_COMPONENT.md) | **현행 레퍼런스** — SindyComponent(허브·트리 노드)·FeatureView 아키텍처, Feature 쌍 목록, 키 매핑, ScrollerFeatureView |
 | [SINDY_COMPONENT_TUTORIAL.md](./SINDY_COMPONENT_TUTORIAL.md) | View/MVVM 스텝 바이 스텝 실습 — 라벨부터 커스텀 Feature까지 |
+| [Runtime/View/Parts/README.md](./Runtime/View/Parts/README.md) | 기본 부품 키트 — 원자 부품 9종·SindyKit Blueprint·Variant 스타일·카탈로그 연결 |
 | [FEATURE_VIEW_SCENARIO.md](./FEATURE_VIEW_SCENARIO.md) | FeatureView 전환 설계 결정 기록(Decision Log)·마이그레이션 대응표 — 보존용 |
 | [HTTP.md](./HTTP.md) | HTTP 모듈 — ApiModel, Retry/Timeout/OfflineCache 합성, 토큰 자동 갱신, 페이지네이션 |
 | [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotFeature/RedDotFeatureView 연결 방법 |
