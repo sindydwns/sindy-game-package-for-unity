@@ -84,9 +84,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7521854285328018739}
+  - component: {fileID: 555983841505576184}
   - component: {fileID: 5883174209659307344}
   - component: {fileID: 689617060190500731}
-  - component: {fileID: 555983841505576184}
   - component: {fileID: 3773981534924445226}
   m_Layer: 0
   m_Name: toggle
@@ -115,6 +115,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 96, y: 96}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &555983841505576184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1504085058134388076}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
+  views: []
 --- !u!114 &5883174209659307344
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -183,19 +196,6 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &555983841505576184
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1504085058134388076}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
-  views: []
 --- !u!114 &3773981534924445226
 MonoBehaviour:
   m_ObjectHideFlags: 0

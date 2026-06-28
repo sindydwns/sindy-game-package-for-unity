@@ -10,8 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1364906528729797535}
   - component: {fileID: 5054994634640233515}
-  - component: {fileID: 7578861196808843595}
   - component: {fileID: 7820940999886359568}
+  - component: {fileID: 7578861196808843595}
   - component: {fileID: 9123052785452444829}
   m_Layer: 0
   m_Name: panel
@@ -47,6 +47,19 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2607544445886829032}
   m_CullTransparentMesh: 1
+--- !u!114 &7820940999886359568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2607544445886829032}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
+  views: []
 --- !u!114 &7578861196808843595
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -77,19 +90,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &7820940999886359568
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2607544445886829032}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a187086b64b97451399da4bd30a8aa45, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Sindy::Sindy.View.SindyComponent
-  views: []
 --- !u!114 &9123052785452444829
 MonoBehaviour:
   m_ObjectHideFlags: 0
