@@ -1,12 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
 using R3;
 using UnityEngine;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Sindy.View
 {
@@ -105,10 +100,7 @@ namespace Sindy.View
         /// </summary>
         public SindyComponent Bind(IViewModel newModel)
         {
-            if (ReferenceEquals(newModel, model.Value))
-            {
-                return this;
-            }
+            if (ReferenceEquals(newModel, model.Value)) return this;
 
             // 이전 모델 기준의 부모-자식 연쇄 해제
             foreach (var child in LinkState.GetChildrenSnapshot())
@@ -192,96 +184,6 @@ namespace Sindy.View
         /// 직렬화 데이터가 아닌 필드를 직접 읽어 Blueprint 등이 동적 추가한 항목까지 반영한다.
         /// </summary>
         internal IReadOnlyList<ViewBehaviour> ViewsForEditor => views;
-#endif
-
-#if UNITY_EDITOR
-        [CustomPropertyDrawer(typeof(ViewBehaviour))]
-        public class ViewBehaviourDrawer : PropertyDrawer
-        {
-            private static GUIStyle featureListStyle;
-
-            public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
-            {
-                return EditorGUIUtility.singleLineHeight;
-            }
-
-            public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-            {
-                EditorGUI.BeginProperty(position, label, property);
-
-                position = EditorGUI.PrefixLabel(position, GUIUtility.GetControlID(FocusType.Passive), GUIContent.none);
-
-                int indent = EditorGUI.indentLevel;
-                EditorGUI.indentLevel = 0;
-
-                var componentProperty = property.FindPropertyRelative("component");
-                var featureListText = ResolveFeatureViewList(componentProperty.objectReferenceValue);
-
-                float componentWidth = 150f;
-                float spacing = 4f;
-
-                featureListStyle ??= new GUIStyle(EditorStyles.miniLabel)
-                {
-                    alignment = TextAnchor.MiddleLeft,
-                    normal = { textColor = Color.gray }
-                };
-
-                float featureListWidth = 0f;
-                if (!string.IsNullOrEmpty(featureListText))
-                {
-                    featureListWidth = featureListStyle.CalcSize(new GUIContent(featureListText)).x + spacing;
-                }
-
-                float nameWidth = position.width - componentWidth - spacing - featureListWidth;
-
-                Rect componentRect = new(position.x, position.y, componentWidth, position.height);
-                Rect nameRect = new(position.x + componentWidth + spacing, position.y, nameWidth, position.height);
-
-                EditorGUI.PropertyField(componentRect, componentProperty, GUIContent.none);
-                EditorGUI.PropertyField(nameRect, property.FindPropertyRelative("name"), GUIContent.none);
-
-                if (!string.IsNullOrEmpty(featureListText))
-                {
-                    Rect featureListRect = new(nameRect.xMax + spacing, position.y, featureListWidth, position.height);
-                    GUI.Label(featureListRect, featureListText, featureListStyle);
-                }
-
-                EditorGUI.indentLevel = indent;
-                EditorGUI.EndProperty();
-            }
-
-            /// <summary>
-            /// 연결된 허브 오브젝트의 FeatureView 목록을 "Text, Button" 형태로 표시한다.
-            /// 어떤 Feature를 가진 모델을 연결해야 하는지 한눈에 확인할 수 있다.
-            /// FeatureView가 없는 트리 노드는 "View"로 표시한다.
-            /// </summary>
-            private static string ResolveFeatureViewList(UnityEngine.Object component)
-            {
-                if (component is not SindyComponent sindy) return null;
-
-                var featureViews = sindy.GetComponents<IFeatureView>();
-                if (featureViews.Length == 0)
-                {
-                    return "View";
-                }
-
-                var sb = new StringBuilder();
-                foreach (var view in featureViews)
-                {
-                    if (sb.Length > 0) sb.Append(", ");
-                    sb.Append(ShortFeatureName(view.FeatureType.Name));
-                }
-                return sb.ToString();
-            }
-
-            private static string ShortFeatureName(string featureTypeName)
-            {
-                const string suffix = "Feature";
-                return featureTypeName.EndsWith(suffix)
-                    ? featureTypeName.Substring(0, featureTypeName.Length - suffix.Length)
-                    : featureTypeName;
-            }
-        }
 #endif
     }
 }

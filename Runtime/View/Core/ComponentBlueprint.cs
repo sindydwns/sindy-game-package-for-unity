@@ -42,19 +42,19 @@ namespace Sindy.View
     {
         // ── 내부 자료 ──────────────────────────────────────────────────────────
 
-        private readonly string _prefabName;
-        private readonly ComponentBlueprint _baseBlueprint;
-        private Func<IViewModel> _rootModelFactory;
+        private readonly string prefabName;
+        private readonly ComponentBlueprint baseBlueprint;
+        private Func<IViewModel> rootModelFactory;
 
-        private readonly List<PatchInstruction> _patches = new();
-        private PatchInstruction _pendingPatch;
-        private PatchInstruction _lastFlushedPatch;
-        private LayoutFeature _rootLayout;
+        private readonly List<PatchInstruction> patches = new();
+        private PatchInstruction pendingPatch;
+        private PatchInstruction lastFlushedPatch;
+        private LayoutFeature rootLayout;
 
-        internal string PrefabName => _prefabName;
-        internal LayoutFeature RootLayout => _rootLayout;
-        internal Func<IViewModel> RootModelFactory => _rootModelFactory;
-        internal IReadOnlyList<PatchInstruction> PatchEntries => _patches;
+        internal string PrefabName => prefabName;
+        internal LayoutFeature RootLayout => rootLayout;
+        internal Func<IViewModel> RootModelFactory => rootModelFactory;
+        internal IReadOnlyList<PatchInstruction> PatchEntries => patches;
 
         internal class PatchInstruction
         {
@@ -73,7 +73,7 @@ namespace Sindy.View
             public PatchInstruction(string path, ComponentBlueprint blueprint)
             {
                 Path = path;
-                PrefabName = blueprint._prefabName;
+                PrefabName = blueprint.prefabName;
                 Blueprint = blueprint;
             }
         }
@@ -82,13 +82,13 @@ namespace Sindy.View
 
         private ComponentBlueprint(string prefabName)
         {
-            _prefabName = prefabName;
+            this.prefabName = prefabName;
         }
 
         private ComponentBlueprint(ComponentBlueprint template)
         {
-            _baseBlueprint = template;
-            _prefabName = template._prefabName;
+            baseBlueprint = template;
+            prefabName = template.prefabName;
         }
 
         /// <summary>프리팹 이름으로 새 Blueprint를 생성한다.</summary>
@@ -105,17 +105,17 @@ namespace Sindy.View
         /// </summary>
         public ComponentBlueprint WithModel(Func<IViewModel> factory)
         {
-            if (_pendingPatch != null)
+            if (pendingPatch != null)
             {
-                _pendingPatch.ModelFactory = factory;
-                _patches.Add(_pendingPatch);
-                _lastFlushedPatch = _pendingPatch;
-                _pendingPatch = null;
+                pendingPatch.ModelFactory = factory;
+                patches.Add(pendingPatch);
+                lastFlushedPatch = pendingPatch;
+                pendingPatch = null;
             }
             else
             {
-                _rootModelFactory = factory;
-                _lastFlushedPatch = null;
+                rootModelFactory = factory;
+                lastFlushedPatch = null;
             }
             return this;
         }
@@ -126,8 +126,8 @@ namespace Sindy.View
         public ComponentBlueprint Patch(string path, string prefabName)
         {
             FlushPendingPatch();
-            _pendingPatch = new PatchInstruction(path, prefabName);
-            _lastFlushedPatch = null;
+            pendingPatch = new PatchInstruction(path, prefabName);
+            lastFlushedPatch = null;
             return this;
         }
 
@@ -135,16 +135,16 @@ namespace Sindy.View
         public ComponentBlueprint Patch(string path, ComponentBlueprint blueprint)
         {
             FlushPendingPatch();
-            _pendingPatch = new PatchInstruction(path, blueprint);
-            _lastFlushedPatch = null;
+            pendingPatch = new PatchInstruction(path, blueprint);
+            lastFlushedPatch = null;
             return this;
         }
 
         private void FlushPendingPatch()
         {
-            if (_pendingPatch == null) return;
-            _patches.Add(_pendingPatch);
-            _pendingPatch = null;
+            if (pendingPatch == null) return;
+            patches.Add(pendingPatch);
+            pendingPatch = null;
         }
 
         // ── 레이아웃 ───────────────────────────────────────────────────────────
@@ -198,11 +198,11 @@ namespace Sindy.View
 
         private LayoutFeature GetOrCreateCurrentLayout()
         {
-            if (_pendingPatch != null)
-                return _pendingPatch.Layout ??= new LayoutFeature();
-            if (_lastFlushedPatch != null)
-                return _lastFlushedPatch.Layout ??= new LayoutFeature();
-            return _rootLayout ??= new LayoutFeature();
+            if (pendingPatch != null)
+                return pendingPatch.Layout ??= new LayoutFeature();
+            if (lastFlushedPatch != null)
+                return lastFlushedPatch.Layout ??= new LayoutFeature();
+            return rootLayout ??= new LayoutFeature();
         }
 
         // ── 실행 ───────────────────────────────────────────────────────────────
@@ -216,9 +216,9 @@ namespace Sindy.View
         {
             FlushPendingPatch();
 
-            var prefab = ComponentManager.GetPrefab<SindyComponent>(_prefabName);
+            var prefab = ComponentManager.GetPrefab<SindyComponent>(prefabName);
             if (prefab == null)
-                throw new InvalidOperationException($"ComponentBlueprint: prefab '{_prefabName}' not found.");
+                throw new InvalidOperationException($"ComponentBlueprint: prefab '{prefabName}' not found.");
 
             var patches = CollectFinalPatches();
             var rootModel = BuildModelTree(patches);
@@ -283,14 +283,14 @@ namespace Sindy.View
 
         private IViewModel BuildModelTree(List<PatchInstruction> patches)
         {
-            var rootModel = _rootModelFactory?.Invoke()
-                            ?? _baseBlueprint?.RootModelFactory?.Invoke();
+            var rootModel = rootModelFactory?.Invoke()
+                            ?? baseBlueprint?.RootModelFactory?.Invoke();
 
             if (rootModel is ViewModel viewModel)
             {
-                var rootLayoutTemplate = _rootLayout ?? _baseBlueprint?.RootLayout;
+                var rootLayoutTemplate = rootLayout ?? baseBlueprint?.RootLayout;
                 if (rootLayoutTemplate != null)
-                    ApplyBlueprintLayout(viewModel, rootLayoutTemplate, "(root)", _prefabName);
+                    ApplyBlueprintLayout(viewModel, rootLayoutTemplate, "(root)", prefabName);
 
                 foreach (var patch in patches)
                 {
@@ -300,11 +300,11 @@ namespace Sindy.View
                     if (patch.Layout != null)
                     {
                         if (patchModel is ViewModel patchVM)
-                            ApplyBlueprintLayout(patchVM, patch.Layout, patch.Path, _prefabName);
+                            ApplyBlueprintLayout(patchVM, patch.Layout, patch.Path, prefabName);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                         else
                             Debug.LogWarning(
-                                $"ComponentBlueprint('{_prefabName}'): 패치 '{patch.Path}'의 모델이 ViewModel이 아니어서 " +
+                                $"ComponentBlueprint('{prefabName}'): 패치 '{patch.Path}'의 모델이 ViewModel이 아니어서 " +
                                 $"Layout/Padding/Size 지정이 무시됩니다. ({patchModel.GetType().Name})");
 #endif
                     }
@@ -315,7 +315,7 @@ namespace Sindy.View
             else if (patches.Count > 0)
             {
                 Debug.LogWarning(
-                    $"ComponentBlueprint('{_prefabName}'): 루트 모델이 ViewModel이 아니어서 " +
+                    $"ComponentBlueprint('{prefabName}'): 루트 모델이 ViewModel이 아니어서 " +
                     $"패치 {patches.Count}건이 무시됩니다. WithModel에 ViewModel을 지정하세요.");
             }
 #endif
@@ -455,14 +455,14 @@ namespace Sindy.View
 
         private IEnumerable<PatchInstruction> EnumerateExpanded()
         {
-            if (_baseBlueprint != null)
+            if (baseBlueprint != null)
             {
-                _baseBlueprint.FlushPendingPatch();
-                foreach (var pi in ExpandBlueprint(null, _baseBlueprint))
+                baseBlueprint.FlushPendingPatch();
+                foreach (var pi in ExpandBlueprint(null, baseBlueprint))
                     yield return pi;
             }
 
-            foreach (var patch in _patches)
+            foreach (var patch in patches)
             {
                 yield return patch;
                 if (patch.Blueprint != null)
@@ -476,7 +476,7 @@ namespace Sindy.View
 
         private static IEnumerable<PatchInstruction> ExpandBlueprint(string parentPath, ComponentBlueprint blueprint)
         {
-            foreach (var entry in blueprint._patches)
+            foreach (var entry in blueprint.patches)
             {
                 var fullPath = parentPath != null ? $"{parentPath}.{entry.Path}" : entry.Path;
 

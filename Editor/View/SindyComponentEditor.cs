@@ -98,10 +98,10 @@ namespace Sindy.Editor.View
             // GetChildNames()는 최상위 레벨 키만 반환한다. 점 표기 하위 키 비교는 최상위 기준.
             var modelChildren = model != null ? new HashSet<string>(model.GetChildNames()) : null;
 
-            foreach (var vb in views)
+            foreach (var view in views)
             {
-                var key = string.IsNullOrEmpty(vb.name) ? "(키 없음)" : vb.name;
-                var hub = vb.component != null ? vb.component.name : "(허브 없음)";
+                var key = string.IsNullOrEmpty(view.name) ? "(키 없음)" : view.name;
+                var hub = view.component != null ? view.component.name : "(허브 없음)";
 
                 if (modelChildren == null)
                 {
@@ -109,9 +109,9 @@ namespace Sindy.Editor.View
                 }
                 else
                 {
-                    bool matched = !string.IsNullOrEmpty(vb.name) && model[vb.name] != null;
-                    if (!string.IsNullOrEmpty(vb.name))
-                        modelChildren.Remove(vb.name.Split('.')[0]);
+                    bool matched = !string.IsNullOrEmpty(view.name) && model[view.name] != null;
+                    if (!string.IsNullOrEmpty(view.name))
+                        modelChildren.Remove(view.name.Split('.')[0]);
                     DrawRow(matched ? "✓" : "⚠", matched,
                         key, hub, matched ? "있음" : "(모델에 없음)");
                 }
