@@ -81,4 +81,4 @@ ComponentBlueprint.Create(SindyKit.Dialog)
 
 - `Popup`/`Card`의 제목·라벨 폰트 크기는 기본 36입니다. 제목을 키우려면 모델에서 `Models.Empty().AddTextFeature("제목", 48)`처럼 크기를 지정하거나, 큰 폰트 `label` Variant를 별도 키로 등록하세요.
 - `LabeledRow`/`ToggleRow`의 라벨은 `Flexible(1)`로 남는 가로폭을 채웁니다. 더 복잡한 다자식 행(여러 칼럼 등)은 SindyKit 대신 원자 부품을 직접 조합하세요.
-- 부품 인스턴스의 GameObject 이름은 **패치 키가 아니라 프리팹 이름**(`label` 등)입니다. 코드에서 자식을 찾을 때는 `hub.TryGetView("키", out var child)`로 키 기준 조회를 쓰세요.
+- 부품 인스턴스의 GameObject 이름은 `키 (프리팹명)` 형식입니다(예: `name (label)`) — 하이라키에서 어떤 키에 어떤 부품이 붙었는지 바로 보입니다. 코드에서 자식을 찾을 때는 이름이 아니라 `hub.TryGetView("키", out var child)`로 키 기준 조회를 쓰세요.
