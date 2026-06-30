@@ -310,6 +310,8 @@ namespace Sindy.View
             var preset = new ComponentPreset(prefab, rootModel, layer);
             var instance = ComponentManager.Open(preset);
 
+            EnsureLayoutView(instance, rootLayout ?? baseBlueprint?.RootLayout);
+
             if (rootModel is ViewModel rootVM && patches.Count > 0)
                 AssembleViews(instance, rootVM, patches);
 
@@ -536,6 +538,7 @@ namespace Sindy.View
                     throw new InvalidOperationException(
                         $"ComponentBlueprint: 재사용할 뷰 '{token}'가 없습니다. " +
                         $"새로 생성하려면 Patch(\"{patch.Path}\", prefab)을 사용하세요. (path: {patch.Path})");
+                EnsureLayoutView(existing, patch.Layout);
                 if (childModel != null)
                     existing.Bind(childModel).SetParent(parent);
                 return;
@@ -554,12 +557,21 @@ namespace Sindy.View
 
             var child = UnityEngine.Object.Instantiate(prefab, parent.transform, false);
             child.name = $"{token} ({prefab.name})";
-            if (patch.Layout != null && child.GetComponent<LayoutFeatureView>() == null)
-                child.gameObject.AddComponent<LayoutFeatureView>();
+            EnsureLayoutView(child, patch.Layout);
 
             parent.AddView(token, child);
             if (childModel != null)
                 child.Bind(childModel).SetParent(parent);
+        }
+
+        /// <summary>
+        /// 패치가 레이아웃을 선언했으면 대상 뷰에 LayoutFeatureView를 보장한다(없으면 부착).
+        /// 생성·재사용·루트 어느 경로든 동일하게 Layout 선언이 화면에 반영되도록 한다.
+        /// </summary>
+        private static void EnsureLayoutView(SindyComponent view, LayoutFeature layout)
+        {
+            if (layout != null && view.GetComponent<LayoutFeatureView>() == null)
+                view.gameObject.AddComponent<LayoutFeatureView>();
         }
 
         // ── Blueprint 전개 ─────────────────────────────────────────────────────

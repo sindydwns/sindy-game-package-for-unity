@@ -120,8 +120,10 @@ namespace Sindy.View.Features
 
                 group.enabled = true;
                 group.spacing = Spacing;
-                group.childForceExpandWidth = false;
-                group.childForceExpandHeight = false;
+                // 교차축(cross-axis)은 자식을 늘려 채우고, 주축(main-axis)은 자식의 LayoutElement(preferred/flexible)로 결정한다.
+                // 세로 배치 → 교차축은 가로, 가로 배치 → 교차축은 세로.
+                group.childForceExpandWidth = LayoutDirection == Direction.Vertical;
+                group.childForceExpandHeight = LayoutDirection == Direction.Horizontal;
                 group.childControlWidth = true;
                 group.childControlHeight = true;
 

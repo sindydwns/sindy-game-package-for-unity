@@ -320,6 +320,10 @@ Open()이 만든 모델은 인스턴스 파괴 시 자동 Dispose되지 않는�
 LayoutGroup은 제거됩니다. 따라서 셀 풀링·재바인딩에서 이전 모델의 디자인이 잔존하지 않습니다.
 모델 해제 시 `LayoutFeatureView.Clear`가 레이아웃 영향을 비활성화합니다(파괴 아님 — 풀링 성능).
 
+자식 크기 정책은 `childControl = true` 고정이며, **교차축(cross-axis)은 force-expand로 채우고
+주축(main-axis)은 자식의 `LayoutElement`(preferred/flexible)로 결정**합니다. 즉 세로 배치는
+가로폭을, 가로 배치는 세로높이를 자식이 채우고, 주축 크기·확장은 `Size`/`Flexible`로 조절합니다.
+
 `Margin`은 제공하지 않습니다. uGUI에서 offset 기반 margin은 부모 LayoutGroup이 즉시
 덮어써 무효이므로, 간격은 부모의 `Padding`/`Layout(spacing:)`으로 해결합니다.
 

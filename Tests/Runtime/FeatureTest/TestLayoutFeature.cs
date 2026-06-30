@@ -19,8 +19,29 @@ namespace Sindy.Test
             ReApplyDoesNotDuplicate();
             SizeCreatesLayoutElementOnce();
             DirectionSwitchReplacesGroup();
+            CrossAxisForceExpand();
             UnspecifiedPropertiesReset();
             DeactivateDisablesThenApplyRestores();
+        }
+
+        // 교차축 force-expand: Vertical은 가로(width)를, Horizontal은 세로(height)를 채운다.
+        private void CrossAxisForceExpand()
+        {
+            var rect = NewRect();
+            var vertical = new LayoutFeature().Layout(Direction.Vertical, 8);
+            vertical.Apply(rect);
+            var vg = go.GetComponent<VerticalLayoutGroup>();
+            Assert.IsTrue(vg.childForceExpandWidth);
+            Assert.IsFalse(vg.childForceExpandHeight);
+            vertical.Dispose();
+
+            var rect2 = NewRect();
+            var horizontal = new LayoutFeature().Layout(Direction.Horizontal, 8);
+            horizontal.Apply(rect2);
+            var hg = go.GetComponent<HorizontalLayoutGroup>();
+            Assert.IsFalse(hg.childForceExpandWidth);
+            Assert.IsTrue(hg.childForceExpandHeight);
+            horizontal.Dispose();
         }
 
         private RectTransform NewRect()
