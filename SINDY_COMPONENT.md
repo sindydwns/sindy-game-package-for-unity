@@ -310,7 +310,8 @@ blueprint.ReopenNextFrame(instance, onOpened: newInstance => { /* 새 인스턴�
 `RebindNextFrame`/`ReopenNextFrame`은 교체·파괴를 **다음 프레임**(`FrameDispatcher`)에 수행하므로
 버튼 `OnClick` 방출 도중 호출해도 방출 중인 모델 트리를 자기 자신이 파괴하는 재진입 오류가 없다.
 둘 다 `disposeOld` 인자(기본 `true`)로 이전 모델을 자동 Dispose하며, 모델을 다른 뷰와 공유·재사용한다면
-`false`로 두고 호출부가 수명을 직접 관리한다. 방출 스택 밖에서 즉시 처리해도 되는 경우엔
+`false`로 두고 호출부가 수명을 직접 관리한다. 단 `RebindNextFrame`은 새 모델이 이전 모델과
+같은 인스턴스면 Dispose를 건너뛴다. 방출 스택 밖에서 즉시 처리해도 되는 경우엔
 `instance.Bind(fresh)` / `instance.Bind(null)`를 직접 호출하고 이전 모델을 손수 `Dispose()`해도 된다.
 
 `BuildModelTree()`는 Open()의 모델 구성 단계와 같은 코드를 공유하므로 두 경로는 항상

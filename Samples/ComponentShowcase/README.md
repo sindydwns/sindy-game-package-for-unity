@@ -99,7 +99,7 @@ private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
 
 `ReopenNextFrame`/`RebindNextFrame`은 교체·파괴를 다음 프레임으로 미루므로 버튼 `OnClick` 방출 중에
 호출해도 방출 스택 안에서 자기 모델을 파괴하는 재진입 오류가 없다. 둘 다 `disposeOld`(기본 true)로
-이전 모델을 자동 정리한다.
+이전 모델을 자동 정리한다(`RebindNextFrame`은 새 모델이 이전 모델과 같은 인스턴스면 건너뛴다).
 
 ### 재사용·재주입 시 주의
 
