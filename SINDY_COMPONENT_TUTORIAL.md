@@ -304,7 +304,8 @@ var popup = confirmPopup.Open(layer: 1);
 핵심 규칙:
 
 - 모델은 항상 **팩토리**(`() => ...`)로 — Open마다 새 인스턴스가 생겨 상태 공유 사고가 없습니다.
-- 루트 프리팹에 이미 있는 키는 인스턴스화 생략, 모델만 주입됩니다 (하이브리드).
+- 호출 형태가 의도를 정합니다: `Patch(path, prefab)`는 새로 생성, `Patch(path)`는 기존 인스턴스 재사용(모델만 주입).
+  중간 경로는 먼저 패치해 둬야 하며, 미등록 경로는 자동 생성하지 않고 예외입니다.
 - 디자인(`Layout/Padding/Align/Size`)은 Blueprint 체인에, 기능은 모델 팩토리에 —
   모델 안에서 `new LayoutFeature()`를 쓰면 Dev 빌드 경고가 알려줍니다.
 

@@ -30,13 +30,16 @@ namespace Sindy.View
     ///   - Open()은 Blueprint 상태를 변경하지 않는다. 여러 번 호출해도 동일 결과.
     ///   - 1회용 개념이 없다. Cancel()이 없고, 버리면 그만이다.
     ///
-    /// 조립 규칙 (Open):
-    ///   - 패치 경로에 해당하는 키가 루트 프리팹(SindyComponent)에 이미 있으면 인스턴스화를
-    ///     생략하고 모델만 주입한다 — 틀은 프리팹에, 가변 부품은 코드에 두는 하이브리드 허용.
-    ///   - 중간 경로(컨테이너)가 없으면 RectTransform+SindyComponent 빈 컨테이너를 자동 생성한다.
+    /// 조립 규칙 (Open) — 호출 형태가 의도를 결정한다:
+    ///   - Patch(path, prefab) / Patch(path, blueprint): 그 키에 새 인스턴스를 생성한다.
+    ///     키가 이미 존재하면 예외(충돌).
+    ///   - Patch(path): 그 키의 기존 인스턴스를 재사용해 모델만 주입한다. 키가 없으면 예외.
+    ///   - 중간 경로 토큰은 등록된 키로 내려가기만 한다. 없으면 예외 — 자동 생성하지 않는다.
+    ///   - "등록된 키" = 프리팹에 미리 배치된 키 또는 같은 Open에서 앞선 Patch가 생성한 키.
     ///   - 같은 경로를 여러 번 패치하면 마지막 선언이 우선하되, 지정하지 않은
     ///     모델 팩토리/레이아웃은 이전 선언에서 승계한다 (파생 Blueprint의 부분 재정의).
     ///   - 형제 순서 = 같은 깊이에서의 패치 선언 순서.
+    ///   - PatchEach(path, items, ...): 컬렉션을 컨테이너 키 아래 자식으로 펼쳐 연속 추가한다.
     /// </summary>
     public class ComponentBlueprint
     {
@@ -63,6 +66,12 @@ namespace Sindy.View
             public readonly ComponentBlueprint Blueprint;
             public Func<IViewModel> ModelFactory;
             public LayoutFeature Layout;
+
+            /// <summary>재사용 패치 — 프리팹/블루프린트 없이 기존 뷰에 모델만 주입한다.</summary>
+            public PatchInstruction(string path)
+            {
+                Path = path;
+            }
 
             public PatchInstruction(string path, string prefabName)
             {
@@ -136,6 +145,60 @@ namespace Sindy.View
         {
             FlushPendingPatch();
             pendingPatch = new PatchInstruction(path, blueprint);
+            lastFlushedPatch = null;
+            return this;
+        }
+
+        /// <summary>
+        /// 경로의 기존 인스턴스를 재사용한다 — 프리팹을 새로 만들지 않고 모델만 주입한다.
+        /// 프리팹에 미리 배치됐거나 앞선 Patch가 생성한 키에 쓴다. 키가 없으면 Open 시 예외.
+        /// </summary>
+        public ComponentBlueprint Patch(string path)
+        {
+            FlushPendingPatch();
+            pendingPatch = new PatchInstruction(path);
+            lastFlushedPatch = null;
+            return this;
+        }
+
+        // ── 연속 추가 (PatchEach) ───────────────────────────────────────────────
+
+        /// <summary>컬렉션을 단일 프리팹으로 펼쳐 컨테이너 키 아래 자식으로 추가한다(선언 순서 유지).</summary>
+        public ComponentBlueprint PatchEach<T>(string path, IEnumerable<T> items, string prefabName, Func<T, IViewModel> model)
+            => PatchEach(path, items, _ => prefabName, model);
+
+        /// <summary>컬렉션을 아이템별 프리팹으로 펼쳐 컨테이너 키 아래 자식으로 추가한다(이질 유닛, 선언 순서 유지).</summary>
+        public ComponentBlueprint PatchEach<T>(string path, IEnumerable<T> items, Func<T, string> prefabSelector, Func<T, IViewModel> model)
+        {
+            FlushPendingPatch();
+            var i = 0;
+            foreach (var item in items)
+            {
+                var captured = item;
+                patches.Add(new PatchInstruction($"{path}.{i}", prefabSelector(captured))
+                {
+                    ModelFactory = () => model(captured),
+                });
+                i++;
+            }
+            lastFlushedPatch = null;
+            return this;
+        }
+
+        /// <summary>컬렉션을 아이템별 서브 블루프린트로 펼쳐 컨테이너 키 아래 자식으로 추가한다(선언 순서 유지).</summary>
+        public ComponentBlueprint PatchEach<T>(string path, IEnumerable<T> items, Func<T, ComponentBlueprint> blueprintSelector, Func<T, IViewModel> model)
+        {
+            FlushPendingPatch();
+            var i = 0;
+            foreach (var item in items)
+            {
+                var captured = item;
+                patches.Add(new PatchInstruction($"{path}.{i}", blueprintSelector(captured))
+                {
+                    ModelFactory = () => model(captured),
+                });
+                i++;
+            }
             lastFlushedPatch = null;
             return this;
         }
@@ -385,8 +448,8 @@ namespace Sindy.View
         }
 
         /// <summary>
-        /// 루트 인스턴스에 패치 프리팹들을 인스턴스화·부착·바인딩한다.
-        /// 키가 이미 존재하면 인스턴스화를 생략하고 모델만 주입한다.
+        /// 루트 인스턴스에 패치들을 적용한다 — 중간 경로는 등록된 키로 내려가고(없으면 예외),
+        /// 말단은 호출 형태에 따라 생성(Patch(path, prefab)) 또는 재사용(Patch(path))한다.
         /// </summary>
         private static void AssembleViews(SindyComponent rootInstance, ViewModel rootModel, List<PatchInstruction> patches)
         {
@@ -397,44 +460,54 @@ namespace Sindy.View
                 IViewModel parentModel = rootModel;
 
                 for (var i = 0; i < tokens.Length - 1; i++)
-                    (parent, parentModel) = EnsureContainer(parent, parentModel, tokens[i]);
+                    (parent, parentModel) = ResolveContainer(parent, parentModel, tokens[i], patch.Path);
 
                 AttachLeaf(parent, parentModel, tokens[^1], patch);
             }
         }
 
-        /// <summary>중간 경로 노드를 찾고, 없으면 빈 컨테이너(RectTransform+SindyComponent)를 자동 생성한다.</summary>
-        private static (SindyComponent, IViewModel) EnsureContainer(SindyComponent parent, IViewModel parentModel, string token)
+        /// <summary>
+        /// 중간 경로 노드를 등록된 키에서 찾아 내려간다. 없으면 예외 — 자동 생성하지 않는다.
+        /// (이 경로를 먼저 Patch로 생성해야 한다.)
+        /// </summary>
+        private static (SindyComponent, IViewModel) ResolveContainer(
+            SindyComponent parent, IViewModel parentModel, string token, string fullPath)
         {
-            var childModel = parentModel?.GetChild<IViewModel>(token);
-
             if (parent.TryGetView(token, out var existing))
-                return (existing, childModel);
+                return (existing, parentModel?.GetChild<IViewModel>(token));
 
-            var go = new GameObject(token, typeof(RectTransform));
-            go.transform.SetParent(parent.transform, false);
-            var container = go.AddComponent<SindyComponent>();
-            if (childModel?.Feature<LayoutFeature>() != null)
-                go.AddComponent<LayoutFeatureView>();
-
-            parent.AddView(token, container);
-            if (childModel != null)
-                container.Bind(childModel).SetParent(parent);
-            return (container, childModel);
+            throw new InvalidOperationException(
+                $"ComponentBlueprint: 중간 경로 '{token}'가 등록되어 있지 않습니다. " +
+                $"이 경로를 먼저 Patch로 생성하세요. (path: {fullPath})");
         }
 
-        /// <summary>말단 패치를 부착한다. 키가 이미 존재하면 모델 주입만, 없으면 프리팹을 인스턴스화한다.</summary>
+        /// <summary>
+        /// 말단 패치를 부착한다 — 호출 형태가 동작을 결정한다.
+        /// 프리팹/블루프린트가 있으면 새로 인스턴스화하고(키 충돌 시 예외),
+        /// 없으면(Patch(path)) 기존 인스턴스를 재사용해 모델만 주입한다(키 없으면 예외).
+        /// </summary>
         private static void AttachLeaf(SindyComponent parent, IViewModel parentModel, string token, PatchInstruction patch)
         {
             var childModel = parentModel?.GetChild<IViewModel>(token);
+            var creates = !string.IsNullOrEmpty(patch.PrefabName) || patch.Blueprint != null;
 
-            if (parent.TryGetView(token, out var existing))
+            if (!creates)
             {
-                // 하이브리드 규칙: 프리팹에 이미 배치된 키 — 인스턴스화 생략, 모델만 주입
+                // 재사용: Patch(path) — 기존 뷰에 모델만 주입
+                if (!parent.TryGetView(token, out var existing))
+                    throw new InvalidOperationException(
+                        $"ComponentBlueprint: 재사용할 뷰 '{token}'가 없습니다. " +
+                        $"새로 생성하려면 Patch(\"{patch.Path}\", prefab)을 사용하세요. (path: {patch.Path})");
                 if (childModel != null)
                     existing.Bind(childModel).SetParent(parent);
                 return;
             }
+
+            // 생성: Patch(path, prefab|blueprint) — 키가 이미 있으면 충돌 예외
+            if (parent.TryGetView(token, out _))
+                throw new InvalidOperationException(
+                    $"ComponentBlueprint: 키 '{token}'가 이미 존재합니다. " +
+                    $"모델만 주입하려면 인자 없이 Patch(\"{patch.Path}\")를 사용하세요. (path: {patch.Path})");
 
             var prefab = ComponentManager.GetPrefab<SindyComponent>(patch.PrefabName);
             if (prefab == null)

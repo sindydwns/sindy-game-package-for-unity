@@ -196,10 +196,11 @@ static readonly ComponentBlueprint Card = ComponentBlueprint
     .Patch("icon", "icon_part")
     .Patch("title", "label_part");
 
-// 조합 + 실행
+// 조합 + 실행 — 중간 경로(footer)는 자식보다 먼저 명시적으로 패치한다
 ComponentBlueprint
     .Create("popup_frame").WithModel(() => BuildPopupModel())
     .Patch("header", Card).WithModel(() => BuildHeaderModel())
+    .Patch("footer", "container_part").Layout(Direction.Horizontal, spacing: 8)
     .Patch("footer.confirm", "button_part").WithModel(() => Models.Button())
     .Open(layer: 1);
 ```
@@ -227,20 +228,65 @@ vm["rows"] = new ViewModel().With(new LayoutFeature().Layout(Direction.Vertical,
 **화면 변형별 절대 좌표·앵커**는 뷰의 `ResponsiveLayoutFeatureView`(씬 직렬화)에 둡니다.
 모델은 variant 키만 압니다 (반응형 레이아웃 섹션 참조).
 
-### 조립 규칙 (Open)
+### 조립 규칙 (Open) — 호출 형태가 의도를 결정한다
 
-1. **하이브리드** — 패치 경로의 키가 루트 프리팹(SindyComponent)에 이미 있으면
-   인스턴스화를 생략하고 모델만 주입한다. 틀은 프리팹에, 가변 부품은 코드에.
-2. **자동 컨테이너** — 중간 경로(`"footer.confirm"`의 `footer`)가 없으면
-   RectTransform+SindyComponent 빈 컨테이너가 자동 생성된다.
+호출 형태마다 동작이 고정되어 있어, 같은 코드는 항상 같은 결과를 낸다. 침묵 생성·침묵 생략이 없다.
+
+| 호출 형태 | 의미 | 키가 이미 있을 때 | 키가 없을 때 |
+|---|---|---|---|
+| `Patch(path, prefab)` / `Patch(path, blueprint)` | 그 키에 **새 인스턴스 생성** | 예외(충돌) | 생성·등록 |
+| `Patch(path)` | 그 키의 **기존 인스턴스 재사용**(모델만 주입) | 재사용 | 예외 |
+| 중간 경로 토큰 | 등록된 키로 **내려가기만** | 통과 | 예외(자동 생성 안 함) |
+
+1. **생성 vs 재사용** — 2번째 인자가 있으면 새로 만들고, 없으면 기존 인스턴스를 재사용한다.
+   "등록된 키" = 프리팹에 미리 배치된 키 또는 **같은 Open에서 앞선 Patch가 생성한 키**. 즉 생성 = 등록.
+2. **미등록 경로 = 예외** — 중간 경로가 등록돼 있지 않으면 빈 컨테이너를 자동 생성하지 않고 예외를 던진다.
+   `"footer.confirm"`을 쓰려면 `footer`를 먼저 `Patch("footer", ...)`로 만들어야 한다.
 3. **재정의 승계** — 같은 경로를 다시 패치하면 마지막 선언이 우선하되, 지정하지 않은
    모델 팩토리/레이아웃은 이전 선언에서 승계한다. 재정의된 base 팩토리는 실행되지 않는다.
 4. **형제 순서** = 같은 깊이에서의 패치 선언 순서 (프리팹 기존 자식이 먼저).
 5. **패치 프리팹 미등록** = 즉시 예외. 설계도 오류는 빨리 실패한다.
 
+> 사전 배치된 슬롯 안에 부품을 넣으려면 더 깊은 경로로 패치한다 — 예: `Patch("title.label", "label_part")`
+> (`title`은 프리팹의 컨테이너 슬롯, `label`은 그 안에 생성). 슬롯 자체에 모델만 주입하려면 `Patch("title")`.
+
 파생 설계도는 `Create(템플릿)`으로 만들고 일부 경로만 재정의합니다.
 `Patch(path, blueprint)`로 Blueprint를 중첩하면 하위 패치가 경로 접두어와 함께 전개되고,
-해당 Blueprint의 루트 레이아웃이 패치 노드의 레이아웃이 됩니다.
+해당 Blueprint의 루트 레이아웃이 패치 노드의 레이아웃이 됩니다. 서브 블루프린트는
+자기 루트 기준 경로로 작성되며 부모 경로를 모릅니다(붙을 때 접두어가 전개됨).
+
+### 동적 배치 — 타입·데이터별로 구조 바꾸기
+
+Blueprint는 코드로 만들어지므로, 조건/반복으로 `Patch(path, prefab)`를 이어 붙이면 그것이 곧
+동적 배치다. 형제 순서 = 선언 순서이고, 모든 leaf가 생성 형태라 위 규칙과 충돌하지 않는다.
+
+```csharp
+var bp = ComponentBlueprint.Create("popup_frame").WithModel(BuildModel)
+    .Patch("content", "container_part").Layout(Direction.Vertical, spacing: 12).WithModel(() => new ViewModel());
+
+bp.Patch("content.icon", "icon_part").WithModel(() => Icon(d));          // 공통
+if (d.Kind == PopupKind.Describe)                                        // 설명형
+{
+    bp.Patch("content.desc", "label_part").WithModel(() => Models.Label(d.Desc));
+    bp.Patch("content.detail", SindyKit.ButtonLabel).WithModel(() => DetailButton(d));
+}
+else                                                                     // 사용형
+{
+    bp.Patch("content.effect", "label_part").WithModel(() => Models.Label(d.Effect));
+    bp.Patch("content.use", SindyKit.ButtonLabel).WithModel(() => UseButton(d));
+    bp.Patch("content.remove", SindyKit.ButtonLabel).WithModel(() => RemoveButton(d));
+}
+```
+
+개수가 데이터로 정해지는 반복은 `PatchEach`로 수동 인덱싱 없이 펼친다. 컨테이너 키 아래에
+선언 순서대로 자식을 추가한다(전제: 컨테이너를 먼저 패치). 아이템별로 프리팹/서브 블루프린트를 고를 수 있다.
+
+```csharp
+bp.PatchEach("content", d.Effects, "label_part", e => Models.Label(e));            // 단일 프리팹
+bp.PatchEach("content", d.Rows, r => r.PrefabKey, r => r.BuildModel());            // 이질 유닛
+```
+
+> 팝업을 연 뒤에도 내용이 추가/삭제/재정렬되는 경우는 Blueprint가 아니라 `ListFeature`/`ScrollerFeature`의 영역이다.
 
 ### 재사용·재주입 — 생명주기 3패턴
 

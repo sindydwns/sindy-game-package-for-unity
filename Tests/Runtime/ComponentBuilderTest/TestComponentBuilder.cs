@@ -18,6 +18,8 @@ namespace Sindy.Test
             PatchChaining();
             MultiplePatchesChained();
             PatchWithoutModelChained();
+            PatchReuseChained();
+            PatchEachChained();
             LayoutOnRoot();
             LayoutOnPatch();
             SizeAfterWithModel();
@@ -135,6 +137,28 @@ namespace Sindy.Test
                 .Patch("first_path", "first_prefab")
                 .Patch("second_path", "second_prefab")
                 .WithModel(() => new PropModel<string>("second"));
+
+            Assert.IsNotNull(builder);
+        }
+
+        // Patch(path) 재사용 형태(인자 없음)가 WithModel과 체이닝되는지 확인
+        private void PatchReuseChained()
+        {
+            var builder = ComponentBlueprint.Create("root_prefab")
+                .WithModel(() => new ViewModel())
+                .Patch("slot").WithModel(() => new PropModel<string>("reuse"));
+
+            Assert.IsNotNull(builder);
+        }
+
+        // PatchEach가 컬렉션을 받아 체이닝되는지 확인
+        private void PatchEachChained()
+        {
+            var items = new[] { "a", "b" };
+            var builder = ComponentBlueprint.Create("root_prefab")
+                .WithModel(() => new ViewModel())
+                .Patch("list", "container").WithModel(() => new ViewModel())
+                .PatchEach("list", items, "label", s => new PropModel<string>(s));
 
             Assert.IsNotNull(builder);
         }

@@ -33,8 +33,8 @@ Controller는 GameObject를 직접 만지지 않습니다. 모델 값 변경까�
 
 런타임 — Open()이 만들어낸 화면
 └─ ShopFrame 인스턴스
-   ├─ Header / Scroller / LogBar   ← 프리팹에 미리 존재, 모델만 주입 (하이브리드)
-   └─ Detail                        ← Blueprint가 부품 10행을 순서대로 조립
+   ├─ Header / Scroller / LogBar   ← 프리팹에 미리 존재, 루트 모델 트리로 주입
+   └─ Detail                        ← 사전 배치된 슬롯을 재사용해 Blueprint가 행을 순서대로 조립
       CaptionRow → InfoRow → CaptionSmall → QtyRow → BuyButton → CaptionSmall
       → BgmRow → SkipRow → CaptionSmall → PartContainer(생명주기 데모 버튼 3개)
 ```
@@ -48,17 +48,21 @@ Controller는 GameObject를 직접 만지지 않습니다. 모델 값 변경까�
 
 | 구역 | 메서드 | 내용 | 금지 |
 |---|---|---|---|
-| **디자인** | `BuildDetailPanel()` | 수직 플로우·간격 14·행 순서 등 구조와 배치 선언 | 로직 0줄 |
+| **디자인** | `BuildBlueprint()` | 수직 플로우·간격 14·행 순서 등 구조와 배치 선언 | 로직 0줄 |
 | **기능** | `BuildModel()` | 골드·수량 상태(PropModel), 버튼 구독, 구매 로직 | 좌표·간격 0줄 |
 
 ```csharp
 // 디자인 — 설계도(데이터). 선언 시점엔 아무것도 생성되지 않는다.
-private ComponentBlueprint BuildDetailPanel() => ComponentBlueprint
-    .Create("DetailPanel")
+private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
+    .Create("ShopFrame")
+    .WithModel(BuildModel)
+    // 사전 배치된 Detail 슬롯을 재사용(Patch("detail"))하고 그 안에 내용을 채운다
+    .Patch("detail")
         .Layout(Direction.Vertical, spacing: 14)
         .Padding(top: 12, right: 32, bottom: 16, left: 32)
-    .Patch("caption", "CaptionRow").WithModel(() => Models.Label("..."))
-    .Patch("info", "InfoRow").WithModel(BuildInfoModel)
+        .WithModel(() => new ViewModel())
+    .Patch("detail.info", PartKeys.Container).WithModel(() => new ViewModel())
+    .Patch("detail.info.name", PartKeys.Label).WithModel(() => Models.Label(currentModel.ItemName))
     ...
 ```
 
@@ -69,9 +73,10 @@ private ComponentBlueprint BuildDetailPanel() => ComponentBlueprint
 1. **모델 트리 생성** — 루트 팩토리(`BuildModel`)가 먼저 실행되어 상태·구독이 준비되고,
    패치 팩토리들이 그 필드를 ViewModel로 감싼다.
 2. **틀 인스턴스화** — ShopFrame이 Canvas 아래 생성되고 모델이 바인딩된다.
-   틀에 이미 있는 키(title/gold/list/log/detail)는 모델만 주입된다.
-3. **부품 조립** — 설계도의 각 Patch가 카탈로그에서 부품을 찾아
-   상세 패널에 선언 순서대로 인스턴스화·부착·바인딩한다.
+   틀에 미리 있는 키(title/gold/list/log)는 루트 모델 트리로 주입되고,
+   detail 슬롯은 `Patch("detail")`로 재사용되어 레이아웃·모델만 주입된다.
+3. **부품 조립** — 설계도의 각 `Patch(path, prefab)`가 카탈로그에서 부품을 찾아
+   상세 패널(detail.*)에 선언 순서대로 인스턴스화·부착·바인딩한다.
 
 ## 생명주기 3패턴 — 상세 패널 하단 데모 버튼
 
