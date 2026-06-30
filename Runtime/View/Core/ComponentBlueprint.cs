@@ -67,6 +67,12 @@ namespace Sindy.View
             public Func<IViewModel> ModelFactory;
             public LayoutFeature Layout;
 
+            /// <summary>
+            /// 이 패치 모델을 부모 모델의 Dispose 체인에 연결할지 여부. 기본 true.
+            /// false면 부모 모델을 Dispose해도 이 모델은 해제되지 않으므로 호출자가 직접 수명을 관리해야 한다.
+            /// </summary>
+            public bool DisposeWithParent = true;
+
             /// <summary>재사용 패치 — 프리팹/블루프린트 없이 기존 뷰에 모델만 주입한다.</summary>
             public PatchInstruction(string path)
             {
@@ -111,12 +117,18 @@ namespace Sindy.View
         /// <summary>
         /// 직전 Create() 또는 Patch()에 팩토리로 모델을 지정한다.
         /// Open() 시점에 팩토리가 실행되어 매번 새 인스턴스가 생성된다.
+        ///
+        /// <paramref name="disposeWithParent"/>가 true면(기본) 이 패치 모델은 부모(루트) 모델의
+        /// Dispose 체인에 연결되어 부모를 Dispose할 때 함께 해제된다. false면 부모를 Dispose해도
+        /// 이 모델은 살아남으므로 호출자가 직접 수명을 관리해야 한다(예: 다른 뷰와 공유하는 모델).
+        /// 루트 모델 지정 시에는 부모가 없으므로 이 인자는 효과가 없다.
         /// </summary>
-        public ComponentBlueprint WithModel(Func<IViewModel> factory)
+        public ComponentBlueprint WithModel(Func<IViewModel> factory, bool disposeWithParent = true)
         {
             if (pendingPatch != null)
             {
                 pendingPatch.ModelFactory = factory;
+                pendingPatch.DisposeWithParent = disposeWithParent;
                 patches.Add(pendingPatch);
                 lastFlushedPatch = pendingPatch;
                 pendingPatch = null;
@@ -125,9 +137,18 @@ namespace Sindy.View
             {
                 rootModelFactory = factory;
                 lastFlushedPatch = null;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (!disposeWithParent)
+                    Debug.LogWarning(
+                        $"ComponentBlueprint('{prefabName}'): 루트 모델에는 부모가 없어 " +
+                        $"disposeWithParent가 의미 없습니다(무시됨). 패치 모델에만 지정하세요.");
+#endif
             }
             return this;
         }
+
+        public ComponentBlueprint WithModel(bool disposeWithParent = true)
+            => WithModel(() => new ViewModel(), disposeWithParent);
 
         // ── 패치 ───────────────────────────────────────────────────────────────
 
@@ -371,7 +392,7 @@ namespace Sindy.View
                                 $"Layout/Padding/Size 지정이 무시됩니다. ({patchModel.GetType().Name})");
 #endif
                     }
-                    viewModel.AddChild(patch.Path, patchModel, disposeWithParent: true);
+                    viewModel.AddChild(patch.Path, patchModel, patch.DisposeWithParent);
                 }
             }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -424,6 +445,7 @@ namespace Sindy.View
                     {
                         ModelFactory = raw.ModelFactory,
                         Layout = raw.Blueprint.RootLayout,
+                        DisposeWithParent = raw.DisposeWithParent,
                     };
                 }
 
@@ -435,6 +457,22 @@ namespace Sindy.View
                         : new PatchInstruction(patch.Path, patch.PrefabName);
                     merged.ModelFactory = patch.ModelFactory ?? prev.ModelFactory;
                     merged.Layout = patch.Layout ?? prev.Layout;
+                    // DisposeWithParent는 모델 팩토리에 딸린 속성이므로 '채택된 팩토리'를 따라가야 한다.
+                    //
+                    // 위에서 ModelFactory는 null이면 이전 것을 승계한다(?? prev). 하지만 DisposeWithParent는
+                    // bool(기본 true)이라 "지정 안 함"과 "true로 지정함"을 구분할 수 없다. 그래서 새 패치가
+                    // 모델을 실제로 줬는지(ModelFactory != null)를 신호로 삼아 플래그가 팩토리와 함께 움직이게 한다.
+                    //   - 새 모델을 줬으면        → 그 새 모델의 플래그(patch)를 쓴다.
+                    //   - 모델을 안 주고 레이아웃 등만 바꿨으면 → 승계한 팩토리의 플래그(prev)를 그대로 쓴다.
+                    //
+                    // 이 가드가 없으면, 모델을 건드리지 않은 파생 패치의 기본값 true가 승계된 팩토리의
+                    // 의도(예: 공유 모델이라 false)를 덮어써 원치 않는 연쇄 Dispose가 발생한다.
+                    // 예) Base: Patch("item","cell").WithModel(()=>shared, disposeWithParent:false)
+                    //     Derived(Base 파생): Patch("item","cell").Layout(...)   // WithModel 호출 없음
+                    //     → patch.ModelFactory == null 이므로 prev의 false를 유지한다.
+                    merged.DisposeWithParent = patch.ModelFactory != null
+                        ? patch.DisposeWithParent
+                        : prev.DisposeWithParent;
                     result[index] = merged;
                 }
                 else
@@ -558,6 +596,7 @@ namespace Sindy.View
                     : new PatchInstruction(fullPath, entry.PrefabName);
                 pi.Layout = entry.Layout;
                 pi.ModelFactory = entry.ModelFactory;
+                pi.DisposeWithParent = entry.DisposeWithParent;
                 yield return pi;
 
                 if (entry.Blueprint != null)
