@@ -553,7 +553,7 @@ namespace Sindy.View
                     $"ComponentBlueprint: patch prefab '{patch.PrefabName}' not found. (path: {patch.Path})");
 
             var child = UnityEngine.Object.Instantiate(prefab, parent.transform, false);
-            child.name = prefab.name;
+            child.name = $"{token} ({prefab.name})";
             if (patch.Layout != null && child.GetComponent<LayoutFeatureView>() == null)
                 child.gameObject.AddComponent<LayoutFeatureView>();
 
