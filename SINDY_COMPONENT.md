@@ -295,16 +295,24 @@ bp.PatchEach("content", d.Rows, r => r.PrefabKey, r => r.BuildModel());         
 | 바뀌는 것 | 처방 | 방법 |
 |---|---|---|
 | 값 | **상태 변경** | 기존 모델의 PropModel 값만 변경 — 재바인딩 불필요 (기본 사용법) |
-| 구조·디자인 | **재-Open** | `Bind(null)` → 파괴 → 모델 `Dispose()` → 설계도 재실행 |
-| 내용 전체 (구조 동일) | **모델 재주입** | `BuildModelTree()`로 새 트리 생성 → 기존 인스턴스에 `Bind()` |
+| 구조·디자인 | **재-Open** | `blueprint.ReopenNextFrame(instance)` — 파괴 → 모델 Dispose → 설계도 재실행 |
+| 내용 전체 (구조 동일) | **모델 재주입** | `instance.RebindNextFrame(blueprint.BuildModelTree())` — 새 트리를 기존 인스턴스에 Bind |
 
 ```csharp
 // 모델 재주입 — 풀링된 패널에 새 내용을 통째로 주입
 var fresh = blueprint.BuildModelTree();   // 레이아웃 포함, 설계도가 모델 모양을 책임진다
-var old = instance.CurrentModel;
-instance.Bind(fresh);
-old?.Dispose();                           // 이전 모델 정리는 호출자 책임
+instance.RebindNextFrame(fresh, onRebound: () => { /* Bind 이후 후처리 */ });
+
+// 재-Open — 기존 인스턴스 파괴 후 설계도 재실행
+blueprint.ReopenNextFrame(instance, onOpened: newInstance => { /* 새 인스턴스 후처리 */ });
 ```
+
+`RebindNextFrame`/`ReopenNextFrame`은 교체·파괴를 **다음 프레임**(`FrameDispatcher`)에 수행하므로
+버튼 `OnClick` 방출 도중 호출해도 방출 중인 모델 트리를 자기 자신이 파괴하는 재진입 오류가 없다.
+둘 다 `disposeOld` 인자(기본 `true`)로 이전 모델을 자동 Dispose하며, 모델을 다른 뷰와 공유·재사용한다면
+`false`로 두고 호출부가 수명을 직접 관리한다. 단 `RebindNextFrame`은 새 모델이 이전 모델과
+같은 인스턴스면 Dispose를 건너뛴다. 방출 스택 밖에서 즉시 처리해도 되는 경우엔
+`instance.Bind(fresh)` / `instance.Bind(null)`를 직접 호출하고 이전 모델을 손수 `Dispose()`해도 된다.
 
 `BuildModelTree()`는 Open()의 모델 구성 단계와 같은 코드를 공유하므로 두 경로는 항상
 같은 모양을 만든다. 재주입 코드에 `new LayoutFeature()`를 손으로 쓸 이유가 없다.
@@ -312,6 +320,10 @@ old?.Dispose();                           // 이전 모델 정리는 호출자 �
 주의: 재바인딩은 **구조를 바꾸지 못한다** (부품 인스턴스화는 Open()에서만 — 새 키는 무시,
 빠진 키는 경고 후 빈 상태). 같은 모델 인스턴스 재Bind는 same-instance 스킵되므로 `Reload()` 사용.
 Open()이 만든 모델은 인스턴스 파괴 시 자동 Dispose되지 않는다 — 모델 소유자가 정리할 것.
+
+패치 모델의 수명은 기본적으로 루트(부모) 모델의 Dispose 체인에 연결됩니다(루트를 Dispose하면 함께 해제).
+다른 곳과 공유하는 모델을 패치로 꽂을 때는 `WithModel(factory, disposeWithParent: false)`로 연쇄 해제에서
+빼고 호출부가 직접 수명을 관리합니다.
 
 ### LayoutFeature 의미론
 

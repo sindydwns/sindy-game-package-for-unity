@@ -25,44 +25,55 @@ Controller는 GameObject를 직접 만지지 않습니다. 모델 값 변경까�
 ├─ ComponentManager        레이어 RectTransform + 프리팹 카탈로그(GameObjectCollection)
 └─ ShopDemo                ShopDemoController — 설계도 작성·실행
 
-부품 프리팹 카탈로그 — Prefabs/
-├─ ShopFrame               틀: 헤더·스크롤러(가상화 기계장치)·로그바·빈 상세 패널 영역
+프리팹 — Prefabs/
+├─ ShopFrame               틀: 헤더·스크롤러(가상화 기계장치)·로그바·빈 상세 패널 슬롯(detail)
 │                          + 반응형 variant 좌표(ResponsiveLayoutFeatureView, 디자이너 몫)
-└─ CaptionRow · CaptionSmall · InfoRow · QtyRow · BuyButton · BgmRow · SkipRow
-                           상세 패널 행 부품 — 내부 FeatureView 배선·키 매핑 완성 상태
+└─ ItemCell · HeaderCell · BannerCell
+                           스크롤러 셀 프리팹 — 섹션 콘텐츠/헤더/배너
+
+상세 패널 부품은 별도 프리팹이 아니라 **기본 부품 키트**(PartKeys.Container/Icon/Label/
+Spacer/Toggle)와 합성 Blueprint(SindyKit.ButtonLabel/ToggleRow)를 코드에서 경로로 조합합니다.
 
 런타임 — Open()이 만들어낸 화면
 └─ ShopFrame 인스턴스
-   ├─ Header / Scroller / LogBar   ← 프리팹에 미리 존재, 루트 모델 트리로 주입
-   └─ Detail                        ← 사전 배치된 슬롯을 재사용해 Blueprint가 행을 순서대로 조립
-      CaptionRow → InfoRow → CaptionSmall → QtyRow → BuyButton → CaptionSmall
-      → BgmRow → SkipRow → CaptionSmall → PartContainer(생명주기 데모 버튼 3개)
+   ├─ title / gold / list / log     ← 프리팹에 미리 존재, 루트 모델 트리로 주입
+   └─ detail                        ← 사전 배치된 슬롯(Patch("detail"))을 재사용해 행을 순서대로 조립
+      info(아이콘+이름+티어+설명) → qty(수량 ±) → buy(구매 버튼)
+      → skip(구매 확인 생략 토글) → demo(생명주기 3패턴 버튼)
 ```
 
 씬에 상점 화면은 존재하지 않습니다. 카탈로그는 이름→프리팹 사전이라
-코드가 `"QtyRow"` 같은 문자열만으로 부품을 찾습니다.
+코드가 `PartKeys.Label`·`ShopCellKeys.Item` 같은 키 문자열만으로 부품·셀을 찾습니다.
 
-## ShopDemoController — 디자인과 기능의 분리
+## 디자인과 기능의 분리 — 파일로 나뉜다
 
-코드가 두 구역으로 나뉘어 있는 것이 이 데모의 핵심입니다.
+코드가 디자인과 기능 두 축으로 분리돼 있는 것이 이 데모의 핵심입니다. 두 축은 **파일로도 나뉩니다.**
 
-| 구역 | 메서드 | 내용 | 금지 |
+| 축 | 위치 | 내용 | 금지 |
 |---|---|---|---|
-| **디자인** | `BuildBlueprint()` | 수직 플로우·간격 14·행 순서 등 구조와 배치 선언 | 로직 0줄 |
-| **기능** | `BuildModel()` | 골드·수량 상태(PropModel), 버튼 구독, 구매 로직 | 좌표·간격 0줄 |
+| **디자인** | `ShopDemoController.BuildBlueprint()` | 수직 플로우·간격 14·행 순서 등 구조와 배치 선언 | 로직 0줄 |
+| **기능** | `ShopModel` | 골드·수량 상태(PropModel), 버튼 구독, 구매 로직 | 좌표·간격 0줄 |
+
+`Controller`는 생명주기·설계도·뷰 연결만 담당하고, 반응형 상태와 상점 로직은 전부 `ShopModel` 한 곳에 모입니다.
+`BuildModel()`은 새 `ShopModel`을 만들어 그 `Root` 트리를 돌려줄 뿐이고, 설계도의 패치 팩토리는
+`currentModel`을 **지연 참조**하므로 재주입 시 항상 최신 세대의 모델을 가리킵니다.
 
 ```csharp
 // 디자인 — 설계도(데이터). 선언 시점엔 아무것도 생성되지 않는다.
 private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
     .Create("ShopFrame")
-    .WithModel(BuildModel)
-    // 사전 배치된 Detail 슬롯을 재사용(Patch("detail"))하고 그 안에 내용을 채운다
+    .WithModel(BuildModel)                       // 루트 팩토리 = new ShopModel(...).Root
+    // 사전 배치된 detail 슬롯을 재사용(Patch("detail"))하고 그 안에 내용을 채운다
     .Patch("detail")
         .Layout(Direction.Vertical, spacing: 14)
         .Padding(top: 12, right: 32, bottom: 16, left: 32)
         .WithModel(() => new ViewModel())
-    .Patch("detail.info", PartKeys.Container).WithModel(() => new ViewModel())
+    // 복합 행은 전용 프리팹 대신 원자 부품을 경로로 중첩 조합한다
+    .Patch("detail.info", PartKeys.Container).Layout(Direction.Vertical, spacing: 6).WithModel(() => new ViewModel())
     .Patch("detail.info.name", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature(currentModel.ItemName))
+    // 버튼·토글 행은 합성 Blueprint로 치환
+    .Patch("detail.buy", SindyKit.ButtonLabel).WithModel(() => new ViewModel().With(currentModel.BuyBtn))
+    .Patch("detail.buy.label", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature(currentModel.BuyLabel))
     ...
 ```
 
@@ -83,18 +94,19 @@ private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
 | 버튼 | 패턴 | 코드 | 일어나는 일 |
 |---|---|---|---|
 | 상점 교체 | **값 변경** | `SwapShop()` | 재바인딩 없이 PropModel 값·셀 목록만 교체 — 기본 사용법 |
-| 재시작 | **재-Open** | `Reopen()` | `Bind(null)` → 파괴 → 모델 `Dispose()` → 설계도 재실행. 상태 초기화 |
-| 모델 재주입 | **BuildModelTree** | `Reinject()` | 설계도가 새 모델 트리(레이아웃 포함)를 생성 → 기존 인스턴스에 `Bind`. 뷰 유지, 내용 통째 교체 |
+| 재시작 | **재-Open** | `blueprint.ReopenNextFrame(instance, onOpened:)` | 파괴 → 모델 `Dispose()` → 설계도 재실행. 상태 초기화 |
+| 모델 재주입 | **BuildModelTree** | `instance.RebindNextFrame(blueprint.BuildModelTree(), onRebound:)` | 설계도가 새 모델 트리(레이아웃 포함)를 생성 → 기존 인스턴스에 `Bind`. 뷰 유지, 내용 통째 교체 |
 
-재-Open/재주입은 버튼 OnClick 방출 중 모델을 Dispose하지 않도록
-`pendingAction`으로 한 프레임 지연 후 실행한다 (`Update` 참조).
+`ReopenNextFrame`/`RebindNextFrame`은 교체·파괴를 다음 프레임으로 미루므로 버튼 `OnClick` 방출 중에
+호출해도 방출 스택 안에서 자기 모델을 파괴하는 재진입 오류가 없다. 둘 다 `disposeOld`(기본 true)로
+이전 모델을 자동 정리한다(`RebindNextFrame`은 새 모델이 이전 모델과 같은 인스턴스면 건너뛴다).
 
 ### 재사용·재주입 시 주의
 
 - **같은 Blueprint 다회 Open**: Blueprint 자체는 안전하다(모델은 팩토리로 매번 새로 생성,
   레이아웃은 클론 적용). 단 **이 데모의 컨트롤러는 단일 인스턴스 전제** —
-  모델 팩토리가 컨트롤러 필드(gold, qty...)를 공유하므로 두 번 Open하면
-  필드가 마지막 인스턴스를 가리킨다. 다중 인스턴스가 필요하면 모델 컨텍스트를
+  패치 팩토리가 컨트롤러의 `currentModel` 필드를 지연 참조하므로 두 번 Open하면
+  그 필드가 마지막 세대의 `ShopModel`을 가리킨다. 다중 인스턴스가 필요하면 모델 컨텍스트를
   Open 단위 객체로 캡슐화할 것.
 - **모델 Dispose 소유권**: Open()/BuildModelTree()가 만든 모델은 인스턴스 GameObject
   파괴 시 자동 Dispose되지 않는다. 호출자가 모델을 보관했다가
@@ -109,9 +121,10 @@ private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
 | 파일 | 역할 |
 |---|---|
 | `ComponentShowcase.unity` | 셸 씬 |
-| `Scripts/ShopDemoController.cs` | 설계도(디자인) + 모델(기능) + 상호작용 |
+| `Scripts/ShopDemoController.cs` | 생명주기 + 설계도(디자인) + 뷰 연결 |
+| `Scripts/ShopModel.cs` | 반응형 상태 + 상점 로직(기능) — 한곳에 모음 |
 | `Scripts/ShopCells.cs` | 스크롤러 셀 VM 정적 팩토리 — 타 프로젝트 복사용 표준 패턴 |
 | `Scripts/ShopCellKeys.cs` | 셀 키 const 모음 |
-| `Prefabs/` | 틀 + 부품 프리팹 8종, 셀 프리팹 3종 |
+| `Prefabs/` | 틀(`ShopFrame`) + 셀 프리팹 3종(`ItemCell`/`HeaderCell`/`BannerCell`) |
 | `ShopCellCatalog.asset` | 스크롤러 셀 키→프리팹 카탈로그 |
-| `ItemSectionOption.asset` 등 | 스크롤러 섹션 레이아웃 설정 |
+| `ItemSectionOption.asset` · `BannerSectionOption.asset` | 스크롤러 섹션 레이아웃 설정 |
