@@ -36,7 +36,7 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────
         static void Case1_Label(SindyComponent sindy)
         {
-            var nameModel = Models.Label("신디");
+            var nameModel = Models.Empty().AddTextFeature("신디");
             sindy.Bind(nameModel);
 
             // 값 변경 → UI 자동 반영
@@ -49,7 +49,7 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────
         static void Case2_ClickButton(SindyComponent sindy)
         {
-            var attackModel = Models.Button();
+            var attackModel = Models.Empty().AddButtonFeature();
             sindy.Bind(attackModel);
 
             attackModel.Feature<ButtonFeature>().OnClick.Subscribe(_ => Debug.Log("Attack!"));
@@ -63,7 +63,7 @@ namespace Sindy.Test
         // ─────────────────────────────────────────────────────────
         static void Case3_HoldButton(SindyComponent sindy)
         {
-            var attackModel = Models.Button(allowHold: true);
+            var attackModel = Models.Empty().AddButtonFeature(allowHold: true);
             sindy.Bind(attackModel);
 
             attackModel.Feature<ButtonFeature>().OnClick.Subscribe(_ => Debug.Log("클릭"));
@@ -106,8 +106,8 @@ namespace Sindy.Test
         static void Case5_ShopPopup(SindyComponent shopView)
         {
             var shop = new ViewModel();
-            shop["title"] = Models.Label("상점");
-            shop["gold"] = Models.Label(new FormatNumberPropModel<long>(12345));   // "12,345" 자동 포맷
+            shop["title"] = Models.Empty().AddTextFeature("상점");
+            shop["gold"] = Models.Empty().AddTextFeature(new FormatNumberPropModel<long>(12345));   // "12,345" 자동 포맷
             shop["buy"] = new ViewModel()
                 .With(new TextFeature("구매"))
                 .With(new ButtonFeature())

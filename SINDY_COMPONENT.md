@@ -132,13 +132,15 @@ vm.Feature<InteractableFeature>().Interactable.Value = false;
 단순 값(`new TextFeature("신디")`)과 **외부 모델 주입**(`new TextFeature(new TimerModel(60f))`).
 `TimerModel`·`FormatNumberPropModel` 등 `PropModel<string>` 파생 자가 갱신 모델을 그대로 재사용할 수 있습니다.
 
-### Models 팩토리
+### Models — Feature 조합과 합성 팩토리
 
-자주 쓰는 조합은 `Models` 정적 팩토리로 축약합니다.
+단일 Feature는 `Models.Empty()`에 `AddXxxFeature`를 조합해 **어떤 Feature가 붙는지 호출부에 드러나도록** 만듭니다.
+(`AddTextFeature`/`AddImageFeature`/`AddGaugeFeature`/`AddToggleFeature`/`AddButtonFeature`, 그 외는 `.With(new XxxFeature())`.)
+여러 자식으로 이뤄진 합성 트리는 `Notice` 같은 팩토리로 한 번에 만듭니다.
 
 ```csharp
-sindy.Bind(Models.Label("신디"));
-sindy.Bind(Models.Button(allowHold: true));
+sindy.Bind(Models.Empty().AddTextFeature("신디"));
+sindy.Bind(Models.Empty().AddButtonFeature(allowHold: true));
 
 var notice = Models.Notice("알림", "정말 삭제할까요?");   // 키: title/content/confirm/cancel
 notice["confirm"].Feature<ButtonFeature>().OnClick.Subscribe(_ => Delete());
@@ -156,8 +158,8 @@ Feature는 "한 오브젝트의 능력" 축, ViewModel 자식은 "UI 트리 구�
 
 ```csharp
 var shop = new ViewModel();
-shop["title"] = Models.Label("상점");
-shop["gold"]  = Models.Label(new FormatNumberPropModel<long>(12345));
+shop["title"] = Models.Empty().AddTextFeature("상점");
+shop["gold"]  = Models.Empty().AddTextFeature(new FormatNumberPropModel<long>(12345));
 shop["buy"]   = new ViewModel().With(new TextFeature("구매")).With(new ButtonFeature());
 
 shopView.Bind(shop);
@@ -201,7 +203,7 @@ ComponentBlueprint
     .Create("popup_frame").WithModel(() => BuildPopupModel())
     .Patch("header", Card).WithModel(() => BuildHeaderModel())
     .Patch("footer", "container_part").Layout(Direction.Horizontal, spacing: 8)
-    .Patch("footer.confirm", "button_part").WithModel(() => Models.Button())
+    .Patch("footer.confirm", "button_part").WithModel(() => Models.Empty().AddButtonFeature())
     .Open(layer: 1);
 ```
 
@@ -267,12 +269,12 @@ var bp = ComponentBlueprint.Create("popup_frame").WithModel(BuildModel)
 bp.Patch("content.icon", "icon_part").WithModel(() => Icon(d));          // 공통
 if (d.Kind == PopupKind.Describe)                                        // 설명형
 {
-    bp.Patch("content.desc", "label_part").WithModel(() => Models.Label(d.Desc));
+    bp.Patch("content.desc", "label_part").WithModel(() => Models.Empty().AddTextFeature(d.Desc));
     bp.Patch("content.detail", SindyKit.ButtonLabel).WithModel(() => DetailButton(d));
 }
 else                                                                     // 사용형
 {
-    bp.Patch("content.effect", "label_part").WithModel(() => Models.Label(d.Effect));
+    bp.Patch("content.effect", "label_part").WithModel(() => Models.Empty().AddTextFeature(d.Effect));
     bp.Patch("content.use", SindyKit.ButtonLabel).WithModel(() => UseButton(d));
     bp.Patch("content.remove", SindyKit.ButtonLabel).WithModel(() => RemoveButton(d));
 }
@@ -282,7 +284,7 @@ else                                                                     // 사�
 선언 순서대로 자식을 추가한다(전제: 컨테이너를 먼저 패치). 아이템별로 프리팹/서브 블루프린트를 고를 수 있다.
 
 ```csharp
-bp.PatchEach("content", d.Effects, "label_part", e => Models.Label(e));            // 단일 프리팹
+bp.PatchEach("content", d.Effects, "label_part", e => Models.Empty().AddTextFeature(e));            // 단일 프리팹
 bp.PatchEach("content", d.Rows, r => r.PrefabKey, r => r.BuildModel());            // 이질 유닛
 ```
 

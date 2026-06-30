@@ -62,7 +62,7 @@ private ComponentBlueprint BuildBlueprint() => ComponentBlueprint
         .Padding(top: 12, right: 32, bottom: 16, left: 32)
         .WithModel(() => new ViewModel())
     .Patch("detail.info", PartKeys.Container).WithModel(() => new ViewModel())
-    .Patch("detail.info.name", PartKeys.Label).WithModel(() => Models.Label(currentModel.ItemName))
+    .Patch("detail.info.name", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature(currentModel.ItemName))
     ...
 ```
 

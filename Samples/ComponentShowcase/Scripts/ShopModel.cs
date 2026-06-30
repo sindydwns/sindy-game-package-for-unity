@@ -98,11 +98,11 @@ namespace Sindy.Samples.ComponentShowcase
             // 하이브리드 키 — 틀(ShopFrame)에 이미 있는 허브에 모델만 주입된다.
             Title = new PropModel<string>("상점");
             gold = new FormatNumberPropModel<long>(startGold, v => $"{v:n0} G");
-            vm["title"] = Models.Label(Title);
-            vm["gold"] = Models.Label(gold);
+            vm["title"] = Models.Empty().AddTextFeature(Title);
+            vm["gold"] = Models.Empty().AddTextFeature(gold);
             vm["list"] = BuildScroller();
             logText = new PropModel<string>("");
-            vm["log"] = Models.Label(logText);
+            vm["log"] = Models.Empty().AddTextFeature(logText);
 
             // 상세 패널 상태 — 뷰는 전부 Blueprint가 조립한다 (BuildDetailPanel).
             itemFrame = new PropModel<Sprite>();

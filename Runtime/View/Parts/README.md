@@ -57,13 +57,13 @@ Runtime/View/Parts/
 ```csharp
 // 카드 한 장 — 디자인은 SindyKit이, 내용은 모델이 책임진다
 ComponentBlueprint.Create(SindyKit.Card)
-    .Patch("icon", PartKeys.Icon).WithModel(() => Models.Icon(itemSprite))
-    .Patch("label", PartKeys.Label).WithModel(() => Models.Label("파이어볼"))
+    .Patch("icon", PartKeys.Icon).WithModel(() => Models.Empty().AddImageFeature(itemSprite))
+    .Patch("label", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature("파이어볼"))
     .Open();
 
 // 팝업 — 제목 크기는 모델에서 지정(Models.Label의 fontSize 인자)
 ComponentBlueprint.Create(SindyKit.Dialog)
-    .Patch("title", PartKeys.Label).WithModel(() => Models.Label("삭제할까요?", 48))
+    .Patch("title", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature("삭제할까요?", 48))
     .Open();
 ```
 
@@ -79,6 +79,6 @@ ComponentBlueprint.Create(SindyKit.Dialog)
 
 ## 한계·주의
 
-- `Popup`/`Card`의 제목·라벨 폰트 크기는 기본 36입니다. 제목을 키우려면 모델에서 `Models.Label("제목", 48)`처럼 크기를 지정하거나, 큰 폰트 `label` Variant를 별도 키로 등록하세요.
+- `Popup`/`Card`의 제목·라벨 폰트 크기는 기본 36입니다. 제목을 키우려면 모델에서 `Models.Empty().AddTextFeature("제목", 48)`처럼 크기를 지정하거나, 큰 폰트 `label` Variant를 별도 키로 등록하세요.
 - `LabeledRow`/`ToggleRow`의 라벨은 `Flexible(1)`로 남는 가로폭을 채웁니다. 더 복잡한 다자식 행(여러 칼럼 등)은 SindyKit 대신 원자 부품을 직접 조합하세요.
 - 부품 인스턴스의 GameObject 이름은 **패치 키가 아니라 프리팹 이름**(`label` 등)입니다. 코드에서 자식을 찾을 때는 `hub.TryGetView("키", out var child)`로 키 기준 조회를 쓰세요.

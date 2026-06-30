@@ -45,9 +45,9 @@ namespace Sindy.Samples.ComponentShowcase
         public static ViewModel Item(ShopItemData data, Action<ShopItemData> onSelect)
         {
             var cell = new ViewModel().With(new ButtonFeature());
-            cell["icon"] = Models.Icon(data.icon);
-            cell["name"] = Models.Label(data.name);
-            cell["price"] = Models.Label(new FormatNumberPropModel<long>(data.price, v => $"{v:n0}G"));
+            cell["icon"] = Models.Empty().AddImageFeature(data.icon);
+            cell["name"] = Models.Empty().AddTextFeature(data.name);
+            cell["price"] = Models.Empty().AddTextFeature(new FormatNumberPropModel<long>(data.price, v => $"{v:n0}G"));
             cell["iconTile"] = new ViewModel().With(new ColorFeature(Tier(data.level).color));
 
             cell.Feature<ButtonFeature>().OnClick.Subscribe(_ => onSelect?.Invoke(data));
@@ -63,9 +63,9 @@ namespace Sindy.Samples.ComponentShowcase
         }
 
         /// <summary>섹션 헤더 셀. TextFeature 하나면 충분하다.</summary>
-        public static ViewModel Header(string title) => Models.Label(title);
+        public static ViewModel Header(string title) => Models.Empty().AddTextFeature(title);
 
         /// <summary>이벤트 배너 셀. 키 등록 없이 Section.ContentPrefab으로 직접 지정하는 일회성 셀.</summary>
-        public static ViewModel Banner(string message) => Models.Label(message);
+        public static ViewModel Banner(string message) => Models.Empty().AddTextFeature(message);
     }
 }

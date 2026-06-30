@@ -12,7 +12,7 @@ namespace Sindy.View
     /// 사용 예:
     ///   ComponentBlueprint.Create(SindyKit.Card)
     ///       .Patch("icon", PartKeys.Icon).WithModel(() => new ViewModel().With(new ImageFeature(sprite)))
-    ///       .Patch("label", PartKeys.Label).WithModel(() => Models.Label("신디"))
+    ///       .Patch("label", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature("신디"))
     ///       .Open();
     /// </summary>
     public static class SindyKit
@@ -46,7 +46,7 @@ namespace Sindy.View
 
         /// <summary>
         /// 패널 + 제목 + 내용 컨테이너 + 버튼 행.
-        /// 제목 크기를 키우려면 모델에서 지정: Patch("title", PartKeys.Label).WithModel(() => Models.Label("제목", 48)).
+        /// 제목 크기를 키우려면 모델에서 지정: Patch("title", PartKeys.Label).WithModel(() => Models.Empty().AddTextFeature("제목", 48)).
         /// </summary>
         public static readonly ComponentBlueprint Popup = ComponentBlueprint
             .Create(PartKeys.Panel)

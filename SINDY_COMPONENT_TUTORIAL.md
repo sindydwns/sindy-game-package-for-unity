@@ -44,7 +44,7 @@ public class PlayerHud : MonoBehaviour
 
     void Start()
     {
-        nameModel = Models.Label("신디");
+        nameModel = Models.Empty().AddTextFeature("신디");
         nameHub.Bind(nameModel);                              // 구독 시작, 즉시 "신디" 표시
 
         nameModel.Feature<TextFeature>().Text.Value = "Citrine";  // 이 한 줄로 UI 자동 갱신
@@ -58,7 +58,7 @@ public class PlayerHud : MonoBehaviour
 }
 ```
 
-**핵심:** `Models.Label("신디")` = `new ViewModel().With(new TextFeature("신디"))`의 축약.
+**핵심:** `Models.Empty().AddTextFeature("신디")`는 `new ViewModel().With(new TextFeature("신디"))`와 같다 — 어떤 Feature가 붙는지 호출부에 드러난다.
 Feature의 `PropModel` 값 변경 → 구독자에게 자동 전파.
 
 ---
@@ -79,7 +79,7 @@ private ViewModel attackModel;
 
 void Start()
 {
-    attackModel = Models.Button();
+    attackModel = Models.Empty().AddButtonFeature();
     attackHub.Bind(attackModel);
 
     attackModel.Feature<ButtonFeature>().OnClick.Subscribe(_ => Attack());
@@ -96,7 +96,7 @@ void Start()
 클릭과 홀드는 같은 포인터 제스처 공간을 공유하므로 별도 Feature가 아니라 **ButtonFeature의 옵션**이다. 홀드 업그레이드는 모델 한 줄:
 
 ```csharp
-var attackModel = Models.Button(allowHold: true);    // 이게 전부
+var attackModel = Models.Empty().AddButtonFeature(allowHold: true);    // 이게 전부
 attackHub.Bind(attackModel);
 
 attackModel.Feature<ButtonFeature>().OnClick.Subscribe(_ => Attack());
@@ -161,10 +161,10 @@ skill.Feature<ButtonFeature>().OnClick.Subscribe(_ =>
 
 ```csharp
 var shop = new ViewModel();
-shop["title"]  = Models.Label("상점");
-shop["gold"]   = Models.Label(new FormatNumberPropModel<long>(12345));   // "12,345" 자동 포맷
+shop["title"]  = Models.Empty().AddTextFeature("상점");
+shop["gold"]   = Models.Empty().AddTextFeature(new FormatNumberPropModel<long>(12345));   // "12,345" 자동 포맷
 shop["buy"]    = new ViewModel().With(new TextFeature("구매")).With(new ButtonFeature());
-shop["hp.bar"] = Models.Gauge(0.7f);                                     // "." 으로 중첩 경로 지원
+shop["hp.bar"] = Models.Empty().AddGaugeFeature(0.7f);                                     // "." 으로 중첩 경로 지원
 
 shopView.Bind(shop);   // views 리스트 순회하며 shop[키]를 각 허브에 자동 Bind + SetParent
 ```
@@ -292,10 +292,10 @@ var confirmPopup = ComponentBlueprint
         .Layout(Direction.Vertical, spacing: 12) // 디자인은 체인에
         .Padding(16)
     .WithModel(() => BuildPopupModel())          // 기능(모델)은 팩토리로
-    .Patch("title", "label_part").WithModel(() => Models.Label("확인"))
+    .Patch("title", "label_part").WithModel(() => Models.Empty().AddTextFeature("확인"))
     .Patch("buttons", "container_part").Layout(Direction.Horizontal, spacing: 8)
-    .Patch("buttons.ok", "button_part").WithModel(() => Models.Button())
-    .Patch("buttons.cancel", "button_part").WithModel(() => Models.Button());
+    .Patch("buttons.ok", "button_part").WithModel(() => Models.Empty().AddButtonFeature())
+    .Patch("buttons.cancel", "button_part").WithModel(() => Models.Empty().AddButtonFeature());
 
 // 실행 — 이 순간 프리팹들이 인스턴스화·부착·바인딩된다
 var popup = confirmPopup.Open(layer: 1);
