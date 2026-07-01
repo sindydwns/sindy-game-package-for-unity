@@ -106,6 +106,8 @@ sindy.Bind(vm);
 vm.Feature<InteractableFeature>().Interactable.Value = false;
 ```
 
+> ⚠️ **Feature 인스턴스는 여러 ViewModel에서 공유하지 마세요.** `With(feature)`는 Feature를 해당 ViewModel의 Dispose 체인에 무조건 등록합니다(`feature.AddTo(this)`). 같은 인스턴스를 두 ViewModel에 넣으면, 먼저 Dispose되는 쪽이 공유 Feature를 함께 해제해 다른 ViewModel이 죽은 Feature를 붙들게 됩니다. 또한 Feature 내부의 `ReactiveProperty` 상태가 공유되어 한쪽의 값 변경이 다른 쪽에도 전파됩니다. **ViewModel마다 Feature를 새로 생성하세요** — 반복 생성이 부담되면 `Models`/`ComponentBlueprint`의 팩토리(`Func<IViewModel>`) 패턴을 사용합니다.
+
 ### 내장 Feature ↔ FeatureView 쌍
 
 | Feature (모델 측) | FeatureView (뷰 측) | 제어 대상 |
