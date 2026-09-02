@@ -40,6 +40,11 @@ namespace Sindy.View
     ///     모델 팩토리/레이아웃은 이전 선언에서 승계한다 (파생 Blueprint의 부분 재정의).
     ///   - 형제 순서 = 같은 깊이에서의 패치 선언 순서.
     ///   - PatchEach(path, items, ...): 컬렉션을 컨테이너 키 아래 자식으로 펼쳐 연속 추가한다.
+    ///
+    /// 배치와 수명:
+    ///   - Layout/Padding/Align/Size/Flexible는 자식 배치(LayoutGroup), Anchor/Inset은 노드 자신의 배치(RectTransform 앵커).
+    ///     루트에 .Anchor(AnchorPreset.Center, 600, 400)처럼 선언하면 화면 어디에 어떤 크기로 놓일지가 설계도에 남는다.
+    ///   - 닫기는 instance.Close() / CloseNextFrame() — 구독 해제 → Bind(null) → 모델 Dispose → Destroy 순서를 고정한다.
     /// </summary>
     public class ComponentBlueprint
     {
@@ -53,9 +58,11 @@ namespace Sindy.View
         private PatchInstruction pendingPatch;
         private PatchInstruction lastFlushedPatch;
         private LayoutFeature rootLayout;
+        private AnchorFeature rootAnchor;
 
         internal string PrefabName => prefabName;
         internal LayoutFeature RootLayout => rootLayout;
+        internal AnchorFeature RootAnchor => rootAnchor;
         internal Func<IViewModel> RootModelFactory => rootModelFactory;
         internal IReadOnlyList<PatchInstruction> PatchEntries => patches;
 
@@ -66,6 +73,7 @@ namespace Sindy.View
             public readonly ComponentBlueprint Blueprint;
             public Func<IViewModel> ModelFactory;
             public LayoutFeature Layout;
+            public AnchorFeature Anchor;
 
             /// <summary>
             /// 이 패치 모델을 부모 모델의 Dispose 체인에 연결할지 여부. 기본 true.
@@ -289,6 +297,47 @@ namespace Sindy.View
             return rootLayout ??= new LayoutFeature();
         }
 
+        // ── 앵커 (노드 자신의 배치) ────────────────────────────────────────────
+
+        /// <summary>
+        /// 노드 자신이 부모 안 어디에 놓일지를 프리셋으로 지정한다 — 주로 루트에 쓴다
+        /// (중앙 다이얼로그 = Center, 바텀시트 = BottomStretch, 전체 페이지 = Stretch).
+        /// 점 고정 축의 크기는 <paramref name="width"/>/<paramref name="height"/>로 주고, -1이면 프리팹 크기를 유지한다.
+        /// 부모에 LayoutGroup이 있는 노드에는 무효다(LayoutGroup이 덮어씀) — 그 경우 Size/Flexible을 쓴다.
+        /// </summary>
+        public ComponentBlueprint Anchor(AnchorPreset preset, float width = -1, float height = -1)
+        {
+            GetOrCreateCurrentAnchor().Anchor(preset, width, height);
+            return this;
+        }
+
+        /// <summary>정규화 좌표(0~1)로 앵커 사각형을 직접 지정한다 — 예: Anchor(new Vector2(0.06f, 0.22f), new Vector2(0.94f, 0.78f)).</summary>
+        public ComponentBlueprint Anchor(Vector2 anchorMin, Vector2 anchorMax)
+        {
+            GetOrCreateCurrentAnchor().Anchor(anchorMin, anchorMax);
+            return this;
+        }
+
+        /// <summary>가장자리 여백을 지정한다 (사방 동일). 늘림 축은 양 끝을 줄이고, 점 고정 축은 붙은 변에서 안쪽으로 민다.</summary>
+        public ComponentBlueprint Inset(float all)
+            => Inset(all, all, all, all);
+
+        /// <summary>가장자리 여백을 지정한다. 늘림 축은 양 끝을 줄이고, 점 고정 축은 붙은 변에서 안쪽으로 민다.</summary>
+        public ComponentBlueprint Inset(float top = 0, float right = 0, float bottom = 0, float left = 0)
+        {
+            GetOrCreateCurrentAnchor().Inset(top, right, bottom, left);
+            return this;
+        }
+
+        private AnchorFeature GetOrCreateCurrentAnchor()
+        {
+            if (pendingPatch != null)
+                return pendingPatch.Anchor ??= new AnchorFeature();
+            if (lastFlushedPatch != null)
+                return lastFlushedPatch.Anchor ??= new AnchorFeature();
+            return rootAnchor ??= new AnchorFeature();
+        }
+
         // ── 실행 ───────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -311,6 +360,7 @@ namespace Sindy.View
             var instance = ComponentManager.Open(preset);
 
             EnsureLayoutView(instance, rootLayout ?? baseBlueprint?.RootLayout);
+            EnsureAnchorView(instance, rootAnchor ?? baseBlueprint?.RootAnchor);
 
             if (rootModel is ViewModel rootVM && patches.Count > 0)
                 AssembleViews(instance, rootVM, patches);
@@ -354,15 +404,11 @@ namespace Sindy.View
             var old = instance != null ? instance.CurrentModel : null;
             FrameDispatcher.NextFrame(() =>
             {
+                // 닫기 순서(구독 해제 → Bind(null) → 모델 Dispose → Destroy)는 Close가 고정한다.
                 if (instance != null)
-                {
-                    instance.Bind(null);
-                    UnityEngine.Object.Destroy(instance.gameObject);
-                }
-                if (disposeOld)
-                {
+                    instance.Close(disposeOld);
+                else if (disposeOld)
                     (old as IDisposable)?.Dispose();
-                }
                 onOpened?.Invoke(Open(layer));
             });
         }
@@ -376,22 +422,30 @@ namespace Sindy.View
             {
                 var rootLayoutTemplate = rootLayout ?? baseBlueprint?.RootLayout;
                 if (rootLayoutTemplate != null)
-                    ApplyBlueprintLayout(viewModel, rootLayoutTemplate, "(root)", prefabName);
+                    ApplyBlueprintFeature(viewModel, rootLayoutTemplate.Clone(), "(root)", prefabName);
+                var rootAnchorTemplate = rootAnchor ?? baseBlueprint?.RootAnchor;
+                if (rootAnchorTemplate != null)
+                    ApplyBlueprintFeature(viewModel, rootAnchorTemplate.Clone(), "(root)", prefabName);
 
                 foreach (var patch in patches)
                 {
                     // 모델 팩토리가 없는 패치(구조 전용 부품)는 빈 ViewModel로 자리를 만든다 —
                     // 뷰 조립과 Dispose 체인이 모델 트리와 1:1로 유지되도록.
                     var patchModel = patch.ModelFactory?.Invoke() ?? new ViewModel();
-                    if (patch.Layout != null)
+                    if (patch.Layout != null || patch.Anchor != null)
                     {
                         if (patchModel is ViewModel patchVM)
-                            ApplyBlueprintLayout(patchVM, patch.Layout, patch.Path, prefabName);
+                        {
+                            if (patch.Layout != null)
+                                ApplyBlueprintFeature(patchVM, patch.Layout.Clone(), patch.Path, prefabName);
+                            if (patch.Anchor != null)
+                                ApplyBlueprintFeature(patchVM, patch.Anchor.Clone(), patch.Path, prefabName);
+                        }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                         else
                             Debug.LogWarning(
                                 $"ComponentBlueprint('{prefabName}'): 패치 '{patch.Path}'의 모델이 ViewModel이 아니어서 " +
-                                $"Layout/Padding/Size 지정이 무시됩니다. ({patchModel.GetType().Name})");
+                                $"Layout/Padding/Size/Anchor 지정이 무시됩니다. ({patchModel.GetType().Name})");
 #endif
                     }
                     viewModel.AddChild(patch.Path, patchModel, patch.DisposeWithParent);
@@ -409,19 +463,20 @@ namespace Sindy.View
         }
 
         /// <summary>
-        /// Blueprint의 LayoutFeature 클론을 모델에 부착한다.
-        /// 모델 팩토리가 이미 LayoutFeature를 넣어둔 경우 Blueprint가 덮어쓰므로 경고한다 —
+        /// Blueprint의 디자인 Feature(Layout/Anchor) 클론을 모델에 부착한다.
+        /// 모델 팩토리가 이미 같은 Feature를 넣어둔 경우 Blueprint가 덮어쓰므로 경고한다 —
         /// 디자인은 Blueprint 체인에, 기능은 모델에 두는 분리 원칙 위반의 가시화.
         /// </summary>
-        private static void ApplyBlueprintLayout(ViewModel target, LayoutFeature template, string path, string prefabName)
+        private static void ApplyBlueprintFeature<TFeature>(ViewModel target, TFeature clone, string path, string prefabName)
+            where TFeature : ModelFeature
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (target.Feature<LayoutFeature>() != null)
+            if (target.Feature<TFeature>() != null)
                 Debug.LogWarning(
-                    $"ComponentBlueprint('{prefabName}'): '{path}' 모델에 이미 LayoutFeature가 있어 " +
-                    $"Blueprint의 레이아웃이 이를 덮어씁니다. 레이아웃 선언을 한 곳으로 모으세요.");
+                    $"ComponentBlueprint('{prefabName}'): '{path}' 모델에 이미 {typeof(TFeature).Name}가 있어 " +
+                    $"Blueprint의 선언이 이를 덮어씁니다. 디자인 선언을 한 곳으로 모으세요.");
 #endif
-            target.With(template.Clone());
+            target.With(clone);
         }
 
         // ── 뷰 조립 ────────────────────────────────────────────────────────────
@@ -441,12 +496,15 @@ namespace Sindy.View
                 // Blueprint를 패치로 사용한 경우, 체인에서 레이아웃을 따로 지정하지 않았다면
                 // 해당 Blueprint의 루트 레이아웃이 패치 노드의 레이아웃이 된다.
                 var patch = raw;
-                if (patch.Blueprint != null && patch.Layout == null && patch.Blueprint.RootLayout != null)
+                var inheritLayout = patch.Blueprint != null && patch.Layout == null && patch.Blueprint.RootLayout != null;
+                var inheritAnchor = patch.Blueprint != null && patch.Anchor == null && patch.Blueprint.RootAnchor != null;
+                if (inheritLayout || inheritAnchor)
                 {
                     patch = new PatchInstruction(raw.Path, raw.Blueprint)
                     {
                         ModelFactory = raw.ModelFactory,
-                        Layout = raw.Blueprint.RootLayout,
+                        Layout = inheritLayout ? raw.Blueprint.RootLayout : raw.Layout,
+                        Anchor = inheritAnchor ? raw.Blueprint.RootAnchor : raw.Anchor,
                         DisposeWithParent = raw.DisposeWithParent,
                     };
                 }
@@ -459,6 +517,7 @@ namespace Sindy.View
                         : new PatchInstruction(patch.Path, patch.PrefabName);
                     merged.ModelFactory = patch.ModelFactory ?? prev.ModelFactory;
                     merged.Layout = patch.Layout ?? prev.Layout;
+                    merged.Anchor = patch.Anchor ?? prev.Anchor;
                     // DisposeWithParent는 모델 팩토리에 딸린 속성이므로 '채택된 팩토리'를 따라가야 한다.
                     //
                     // 위에서 ModelFactory는 null이면 이전 것을 승계한다(?? prev). 하지만 DisposeWithParent는
@@ -539,6 +598,7 @@ namespace Sindy.View
                         $"ComponentBlueprint: 재사용할 뷰 '{token}'가 없습니다. " +
                         $"새로 생성하려면 Patch(\"{patch.Path}\", prefab)을 사용하세요. (path: {patch.Path})");
                 EnsureLayoutView(existing, patch.Layout);
+                EnsureAnchorView(existing, patch.Anchor);
                 if (childModel != null)
                     existing.Bind(childModel).SetParent(parent);
                 return;
@@ -558,6 +618,7 @@ namespace Sindy.View
             var child = UnityEngine.Object.Instantiate(prefab, parent.transform, false);
             child.name = $"{token} ({prefab.name})";
             EnsureLayoutView(child, patch.Layout);
+            EnsureAnchorView(child, patch.Anchor);
 
             parent.AddView(token, child);
             if (childModel != null)
@@ -572,6 +633,13 @@ namespace Sindy.View
         {
             if (layout != null && view.GetComponent<LayoutFeatureView>() == null)
                 view.gameObject.AddComponent<LayoutFeatureView>();
+        }
+
+        /// <summary>패치가 앵커를 선언했으면 대상 뷰에 AnchorFeatureView를 보장한다(없으면 부착).</summary>
+        private static void EnsureAnchorView(SindyComponent view, AnchorFeature anchor)
+        {
+            if (anchor != null && view.GetComponent<AnchorFeatureView>() == null)
+                view.gameObject.AddComponent<AnchorFeatureView>();
         }
 
         // ── Blueprint 전개 ─────────────────────────────────────────────────────
@@ -607,6 +675,7 @@ namespace Sindy.View
                     ? new PatchInstruction(fullPath, entry.Blueprint)
                     : new PatchInstruction(fullPath, entry.PrefabName);
                 pi.Layout = entry.Layout;
+                pi.Anchor = entry.Anchor;
                 pi.ModelFactory = entry.ModelFactory;
                 pi.DisposeWithParent = entry.DisposeWithParent;
                 yield return pi;

@@ -11,5 +11,6 @@ namespace Sindy.Test
         [Test] public void SimpleFeatures() { using var t = new TestSimpleFeatures(); t.Run(); }
         [Test] public void ScreenFeature() { using var t = new TestScreenFeature(); t.Run(); }
         [Test] public void LayoutFeature() { using var t = new TestLayoutFeature(); t.Run(); }
+        [Test] public void AnchorFeature() { using var t = new TestAnchorFeature(); t.Run(); }
     }
 }

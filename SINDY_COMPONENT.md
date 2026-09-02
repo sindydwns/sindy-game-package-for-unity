@@ -123,6 +123,7 @@ vm.Feature<InteractableFeature>().Interactable.Value = false;
 | `ListFeature` | `ListFeatureView` | 비가상화 아이템 리스트 |
 | `VisibilityFeature` | `VisibilityFeatureView` | GameObject.SetActive |
 | `LayoutFeature` | `LayoutFeatureView` | RectTransform 레이아웃 (LayoutGroup/LayoutElement) — 보통 ComponentBlueprint 체인으로 선언 (아래 "프리팹 조합" 참조) |
+| `AnchorFeature` | `AnchorFeatureView` | RectTransform 앵커·피벗·크기·인셋 (노드 자신의 배치) — 보통 ComponentBlueprint 체인의 `Anchor/Inset`으로 루트에 선언 |
 | `InteractableFeature` | `InteractableFeatureView` | CanvasGroup interactable/blocksRaycasts/alpha |
 | `HighlightFeature` | `HighlightFeatureView` | 하이라이트 오브젝트 표시 |
 | `RaycastBlockFeature` | `RaycastBlockFeatureView` | CanvasGroup.blocksRaycasts |
@@ -201,12 +202,16 @@ static readonly ComponentBlueprint Card = ComponentBlueprint
     .Patch("title", "label_part");
 
 // 조합 + 실행 — 중간 경로(footer)는 자식보다 먼저 명시적으로 패치한다
-ComponentBlueprint
+var popup = ComponentBlueprint
     .Create("popup_frame").WithModel(() => BuildPopupModel())
+        .Anchor(AnchorPreset.Center, width: 600, height: 400)   // 루트가 화면 어디에 어떤 크기로 놓일지
     .Patch("header", Card).WithModel(() => BuildHeaderModel())
     .Patch("footer", "container_part").Layout(Direction.Horizontal, spacing: 8)
     .Patch("footer.confirm", "button_part").WithModel(() => Models.Empty().AddButtonFeature())
     .Open(layer: 1);
+
+// 닫기 — 구독 해제 → Bind(null) → 모델 Dispose → Destroy 를 한 줄로 (버튼 클릭 중이면 CloseNextFrame)
+popup.CloseNextFrame();
 ```
 
 ### 디자인/기능 분리 원칙
@@ -214,7 +219,7 @@ ComponentBlueprint
 코드만으로 UI를 제어하면 기능 코드와 디자인 코드가 섞이기 쉽습니다.
 이를 막는 것이 LayoutFeature와 Blueprint의 존재 이유입니다.
 
-- **디자인**(배치 방향·간격·여백·크기)은 **Blueprint 체인**에 선언한다 — `Layout/Padding/Align/Size`.
+- **디자인**(배치 방향·간격·여백·크기·앵커)은 **Blueprint 체인**에 선언한다 — `Layout/Padding/Align/Size/Flexible`(자식 배치), `Anchor/Inset`(노드 자신의 배치).
 - **기능**(모델 상태·구독·로직)은 모델 구성 함수에 둔다 — Feature 조합과 reactive 구독.
 
 ```csharp
@@ -228,9 +233,34 @@ ComponentBlueprint.Create("panel")
 vm["rows"] = new ViewModel().With(new LayoutFeature().Layout(Direction.Vertical, 14));
 ```
 
-디자인 값의 거처 기준: **구조적 플로우**(행/열 배치, 간격)는 Blueprint(코드)에,
-**화면 변형별 절대 좌표·앵커**는 뷰의 `ResponsiveLayoutFeatureView`(씬 직렬화)에 둡니다.
+디자인 값의 거처 기준: **구조적 플로우**(행/열 배치, 간격)와 **루트 배치 유형**(중앙 다이얼로그·바텀시트·전체 페이지)은
+Blueprint(코드)에, **화면 변형별 절대 좌표·앵커**는 뷰의 `ResponsiveLayoutFeatureView`(씬 직렬화)에 둡니다.
 모델은 variant 키만 압니다 (반응형 레이아웃 섹션 참조).
+
+### 루트 배치 — Anchor / Inset
+
+`Layout/Padding/Align/Size/Flexible`는 **자식을 어떻게 늘어놓을지**(LayoutGroup)만 다룹니다.
+루트가 **화면 어디에 어떤 크기로 놓일지**(RectTransform 앵커)는 `Anchor/Inset`으로 선언합니다 —
+호출부가 `Open()` 직후 `anchorMin/anchorMax`를 손으로 고칠 필요가 없습니다.
+
+```csharp
+ComponentBlueprint.Create("panel").Anchor(AnchorPreset.Center, width: 600, height: 400)   // 중앙 다이얼로그
+ComponentBlueprint.Create("panel").Anchor(AnchorPreset.BottomStretch, height: 320)         // 바텀시트
+    .Inset(left: 16, right: 16, bottom: 24)                                                //   좌우 여백, 바닥에서 띄움
+ComponentBlueprint.Create("panel").Anchor(AnchorPreset.Stretch)                            // 전체 페이지
+ComponentBlueprint.Create("panel").Anchor(new Vector2(0.06f, 0.22f), new Vector2(0.94f, 0.78f)) // 정규화 사각형 직접 지정
+```
+
+| API | 의미 |
+|---|---|
+| `Anchor(AnchorPreset, width = -1, height = -1)` | uGUI 앵커 프리셋 격자와 같은 이름(`Stretch`, `Center`, `TopStretch/BottomStretch/LeftStretch/RightStretch`, `HorizontalStretch/VerticalStretch`, `TopLeft`… `BottomRight`). 점 고정 축의 크기는 `width/height`, -1이면 프리팹 크기 유지. 늘림 축에서는 무시. |
+| `Anchor(Vector2 min, Vector2 max)` | 정규화 좌표(0~1) 사각형. 두 축 모두 늘림, 피벗은 사각형 중심, 오프셋 0. |
+| `Inset(all)` / `Inset(top, right, bottom, left)` | 가장자리 여백. 늘림 축은 양 끝을 줄이고, 점 고정 축은 붙은 변에서 안쪽으로 민다. `Anchor` 없이 단독 사용 시 프리팹 앵커를 유지한 채 여백만 반영. |
+
+`Anchor/Inset`은 `Layout`과 같은 파이프라인을 탑니다 — 모델에 `AnchorFeature`가 붙고 `AnchorFeatureView`가 자동 부착되어
+바인딩 시 적용됩니다. 그래서 `BuildModelTree()` 재주입, 파생 Blueprint 승계, 서브 Blueprint의 루트 앵커 → 패치 노드 승계가
+`Layout`과 동일하게 동작합니다. 패치 노드에도 선언할 수 있지만, **부모에 LayoutGroup이 있으면 무효**입니다
+(LayoutGroup이 매 프레임 덮어씀 — Dev 빌드 경고). 그 경우 `Size/Flexible`로 크기를 정합니다.
 
 ### 조립 규칙 (Open) — 호출 형태가 의도를 결정한다
 
@@ -297,8 +327,9 @@ bp.PatchEach("content", d.Rows, r => r.PrefabKey, r => r.BuildModel());         
 | 바뀌는 것 | 처방 | 방법 |
 |---|---|---|
 | 값 | **상태 변경** | 기존 모델의 PropModel 값만 변경 — 재바인딩 불필요 (기본 사용법) |
-| 구조·디자인 | **재-Open** | `blueprint.ReopenNextFrame(instance)` — 파괴 → 모델 Dispose → 설계도 재실행 |
+| 구조·디자인 | **재-Open** | `blueprint.ReopenNextFrame(instance)` — 닫기(Close) → 설계도 재실행 |
 | 내용 전체 (구조 동일) | **모델 재주입** | `instance.RebindNextFrame(blueprint.BuildModelTree())` — 새 트리를 기존 인스턴스에 Bind |
+| 수명 종료 | **닫기** | `instance.CloseNextFrame()` — 구독 해제 → Bind(null) → 모델 Dispose → Destroy |
 
 ```csharp
 // 모델 재주입 — 풀링된 패널에 새 내용을 통째로 주입
@@ -307,11 +338,15 @@ instance.RebindNextFrame(fresh, onRebound: () => { /* Bind 이후 후처리 */ }
 
 // 재-Open — 기존 인스턴스 파괴 후 설계도 재실행
 blueprint.ReopenNextFrame(instance, onOpened: newInstance => { /* 새 인스턴스 후처리 */ });
+
+// 닫기 — 호출부 구독은 Disposables에 담아두면 Close가 가장 먼저 해제한다
+var popup = blueprint.Open(layer: 1);
+model.Confirm.Subscribe(_ => popup.CloseNextFrame()).AddTo(popup.Disposables);
 ```
 
-`RebindNextFrame`/`ReopenNextFrame`은 교체·파괴를 **다음 프레임**(`FrameDispatcher`)에 수행하므로
+`RebindNextFrame`/`ReopenNextFrame`/`CloseNextFrame`은 교체·파괴를 **다음 프레임**(`FrameDispatcher`)에 수행하므로
 버튼 `OnClick` 방출 도중 호출해도 방출 중인 모델 트리를 자기 자신이 파괴하는 재진입 오류가 없다.
-둘 다 `disposeOld` 인자(기본 `true`)로 이전 모델을 자동 Dispose하며, 모델을 다른 뷰와 공유·재사용한다면
+셋 다 `disposeOld`/`disposeModel` 인자(기본 `true`)로 이전 모델을 자동 Dispose하며, 모델을 다른 뷰와 공유·재사용한다면
 `false`로 두고 호출부가 수명을 직접 관리한다. 단 `RebindNextFrame`은 새 모델이 이전 모델과
 같은 인스턴스면 Dispose를 건너뛴다. 방출 스택 밖에서 즉시 처리해도 되는 경우엔
 `instance.Bind(fresh)` / `instance.Bind(null)`를 직접 호출하고 이전 모델을 손수 `Dispose()`해도 된다.
@@ -321,7 +356,7 @@ blueprint.ReopenNextFrame(instance, onOpened: newInstance => { /* 새 인스턴�
 
 주의: 재바인딩은 **구조를 바꾸지 못한다** (부품 인스턴스화는 Open()에서만 — 새 키는 무시,
 빠진 키는 경고 후 빈 상태). 같은 모델 인스턴스 재Bind는 same-instance 스킵되므로 `Reload()` 사용.
-Open()이 만든 모델은 인스턴스 파괴 시 자동 Dispose되지 않는다 — 모델 소유자가 정리할 것.
+Open()이 만든 모델은 인스턴스를 그냥 `Destroy`하면 Dispose되지 않는다 — `Close()`로 닫거나 모델 소유자가 정리할 것.
 
 패치 모델의 수명은 기본적으로 루트(부모) 모델의 Dispose 체인에 연결됩니다(루트를 Dispose하면 함께 해제).
 다른 곳과 공유하는 모델을 패치로 꽂을 때는 `WithModel(factory, disposeWithParent: false)`로 연쇄 해제에서
@@ -345,9 +380,10 @@ LayoutGroup은 제거됩니다. 따라서 셀 풀링·재바인딩에서 이전 
 
 | 상황 | 경고 |
 |---|---|
-| 패치 모델이 ViewModel이 아닌데 Layout/Size 지정 | 레이아웃 무시 경고 |
+| 패치 모델이 ViewModel이 아닌데 Layout/Size/Anchor 지정 | 디자인 무시 경고 |
 | 루트 모델이 ViewModel이 아닌데 패치 존재 | 패치 무시 경고 |
-| 모델에 이미 LayoutFeature가 있는데 Blueprint 레이아웃 지정 | 덮어쓰기 경고 (분리 원칙 위반 가시화) |
+| 모델에 이미 LayoutFeature/AnchorFeature가 있는데 Blueprint에서 지정 | 덮어쓰기 경고 (분리 원칙 위반 가시화) |
+| 부모에 LayoutGroup이 있는 노드에 Anchor/Inset 지정 | 무효 경고 (LayoutGroup이 덮어씀) |
 
 ---
 
@@ -367,12 +403,25 @@ hub.OnDestroy()
 외부 코드에서 정리할 때의 순서:
 
 ```csharp
-hub.Bind(null);    // 1. FeatureView 구독 해제
-model.Dispose();   // 2. 모델 내부 구독 해제 (EveryUpdate, CombineLatest 등)
+subscription.Dispose();   // 0. 호출부 구독 해제 (모델을 참조하는 구독이 죽은 모델에 쓰지 않도록)
+hub.Bind(null);           // 1. FeatureView 구독 해제
+model.Dispose();          // 2. 모델 내부 구독 해제 (EveryUpdate, CombineLatest 등)
+Destroy(hub.gameObject);  // 3. GameObject 파괴
 ```
 
 순서가 중요합니다. 역순이면 이미 Disposed된 Observable에 값이 흐를 수 있습니다.
 허브가 파괴되면 1번은 자동 수행되지만, 모델 Dispose는 모델 소유자(Controller)의 책임입니다.
+
+이 네 단계를 화면마다 손으로 반복하면 하나쯤 어긋나기 쉬우므로 **`hub.Close()`가 순서를 고정**합니다:
+
+```csharp
+hub.Close();                        // 0→1→2→3 을 한 줄로. 이미 닫힌 인스턴스에 다시 호출해도 안전(멱등)
+hub.Close(disposeModel: false);     // 모델을 공유·재사용한다면 2단계만 건너뜀
+hub.CloseNextFrame();               // 버튼 OnClick 등 방출 도중에는 다음 프레임에 (재진입 오류 방지)
+
+// 0단계에 포함시킬 호출부 구독은 Disposables에 담아둔다 — Close/파괴 시 가장 먼저 해제된다
+model.Confirm.Subscribe(_ => hub.CloseNextFrame()).AddTo(hub.Disposables);
+```
 
 ---
 

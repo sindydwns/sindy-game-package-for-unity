@@ -64,8 +64,9 @@ namespace Sindy.Samples.ComponentShowcase
 
         private void OnDestroy()
         {
-            // 순서 중요: 1) FeatureView 구독 해제 → 2) 모델 내부 구독 해제
-            if (shopInstance != null) shopInstance.Bind(null);
+            // 닫기 순서(구독 해제 → Bind(null) → 모델 Dispose → Destroy)는 Close가 고정한다.
+            // 바인딩된 모델은 ShopModel의 Root라 ShopModel.Dispose()가 정리하므로 disposeModel: false.
+            if (shopInstance != null) shopInstance.Close(disposeModel: false);
             currentModel?.Dispose();
         }
 

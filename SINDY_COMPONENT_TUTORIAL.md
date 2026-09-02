@@ -264,6 +264,9 @@ model.Dispose();    // 2. 모델 내부 구독 해제 (EveryUpdate 등)
 역순이면 Disposed된 Observable에 값이 흘러 예외가 날 수 있습니다.
 허브가 파괴되면 1번은 자동 수행되지만, 모델 Dispose는 모델 소유자(Controller)의 책임입니다.
 
+화면을 통째로 닫을 때는 `hub.Close()`가 이 순서(호출부 구독 해제 → Bind(null) → 모델 Dispose → Destroy)를 한 줄로 고정합니다.
+버튼 클릭 중이라면 `hub.CloseNextFrame()`. 호출부 구독은 `.AddTo(hub.Disposables)`에 담아두면 Close가 가장 먼저 해제합니다.
+
 **흔한 실수 Top 5:**
 
 | 실수 | 증상 | 해법 |
@@ -289,6 +292,7 @@ Blueprint는 한 걸음 더 나아가, 카탈로그에 등록한 부품 프리�
 // 설계도 선언 — 아직 아무것도 생성되지 않는다
 var confirmPopup = ComponentBlueprint
     .Create("popup_frame")                       // 루트 프리팹 (SindyComponent)
+        .Anchor(AnchorPreset.Center, 520, 320)   // 루트 배치: 화면 중앙 520×320 (바텀시트는 BottomStretch)
         .Layout(Direction.Vertical, spacing: 12) // 디자인은 체인에
         .Padding(16)
     .WithModel(() => BuildPopupModel())          // 기능(모델)은 팩토리로
@@ -299,6 +303,9 @@ var confirmPopup = ComponentBlueprint
 
 // 실행 — 이 순간 프리팹들이 인스턴스화·부착·바인딩된다
 var popup = confirmPopup.Open(layer: 1);
+
+// 닫기 — 버튼 클릭 중이므로 다음 프레임에. 구독은 popup.Disposables에 담아 Close가 먼저 해제하게 한다
+okButton.OnClick.Subscribe(_ => popup.CloseNextFrame()).AddTo(popup.Disposables);
 ```
 
 핵심 규칙:
@@ -306,8 +313,9 @@ var popup = confirmPopup.Open(layer: 1);
 - 모델은 항상 **팩토리**(`() => ...`)로 — Open마다 새 인스턴스가 생겨 상태 공유 사고가 없습니다.
 - 호출 형태가 의도를 정합니다: `Patch(path, prefab)`는 새로 생성, `Patch(path)`는 기존 인스턴스 재사용(모델만 주입).
   중간 경로는 먼저 패치해 둬야 하며, 미등록 경로는 자동 생성하지 않고 예외입니다.
-- 디자인(`Layout/Padding/Align/Size`)은 Blueprint 체인에, 기능은 모델 팩토리에 —
+- 디자인(`Layout/Padding/Align/Size`는 자식 배치, `Anchor/Inset`은 루트 자신의 배치)은 Blueprint 체인에, 기능은 모델 팩토리에 —
   모델 안에서 `new LayoutFeature()`를 쓰면 Dev 빌드 경고가 알려줍니다.
+- 닫기는 `popup.Close()`/`CloseNextFrame()` 한 줄 — 구독 해제 → Bind(null) → 모델 Dispose → Destroy 순서를 대신 지켜줍니다.
 
 상세 규칙은 SINDY_COMPONENT.md §프리팹 조합 참조.
 

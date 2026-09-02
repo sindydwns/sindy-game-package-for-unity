@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using R3;
+using Sindy.Common;
 using UnityEngine;
 
 namespace Sindy.View
@@ -19,6 +20,8 @@ namespace Sindy.View
     /// - 필드 초기화이므로 Awake 실행 여부와 무관하게 비활성 상태에서도 Bind가 동작한다.
     /// - 같은 인스턴스 재바인딩은 방출되지 않는다(same-instance 스킵). 강제 재초기화는 <see cref="Reload"/>.
     /// - <see cref="SetParent"/>로 부모에 연결하면 부모 재바인딩/파괴 시 자식이 연쇄적으로 Bind(null)된다.
+    /// - 수명 종료는 <see cref="Close"/>/<see cref="CloseNextFrame"/> — 호출부 구독 해제 → Bind(null) → 모델 Dispose → Destroy
+    ///   순서를 한 줄로 고정한다. 호출부 구독은 <see cref="Disposables"/>에 담아두면 Close가 가장 먼저 해제한다.
     /// </summary>
     public class SindyComponent : MonoBehaviour
     {
@@ -27,6 +30,14 @@ namespace Sindy.View
         [SerializeField] private List<ViewBehaviour> views;
 
         private IDisposable modelSubscription;
+        private readonly List<IDisposable> disposables = new();
+        private bool closed;
+
+        /// <summary>
+        /// 호출부 구독 보관함. <c>model.Confirm.Subscribe(...).AddTo(instance.Disposables)</c>처럼 담아두면
+        /// <see cref="Close"/>(또는 파괴) 시 모델 Dispose보다 먼저 일괄 해제된다 — 죽은 모델에 쓰는 구독이 남지 않는다.
+        /// </summary>
+        public ICollection<IDisposable> Disposables => disposables;
 
         /// <summary>모델 스트림 (읽기 전용). FeatureView가 구독한다.</summary>
         public ReadOnlyReactiveProperty<IViewModel> Model => model;
@@ -141,6 +152,46 @@ namespace Sindy.View
         }
 
         /// <summary>
+        /// 이 컴포넌트의 수명을 즉시 종료합니다 — 순서 고정:
+        /// 1) <see cref="Disposables"/> 해제 → 2) Bind(null)(자식 연쇄 해제 포함) → 3) 모델 Dispose(<paramref name="disposeModel"/>) → 4) GameObject 파괴.
+        /// 이 순서를 어기면 R3 구독 누수나 파괴된 뷰에 쓰기가 생기므로 호출부가 네 단계를 손으로 반복하지 않도록 한 줄로 묶었다.
+        ///
+        /// 버튼 OnClick 등 모델의 방출 도중에는 이 메서드 대신 <see cref="CloseNextFrame"/>를 쓰세요 —
+        /// 방출 중인 모델 트리를 자기 자신이 Dispose하는 재진입 오류를 피하기 위해서입니다.
+        /// 이미 닫혔거나 파괴된 인스턴스에 다시 호출해도 아무 일도 일어나지 않습니다.
+        /// </summary>
+        /// <param name="disposeModel">바인딩돼 있던 모델을 Dispose할지 여부. 기본 true. 모델을 다른 뷰와 공유한다면 false.</param>
+        public void Close(bool disposeModel = true)
+        {
+            if (closed || this == null) return;
+            closed = true;
+
+            disposables.DisposeAllClear();
+
+            var old = model.Value;
+            Bind(null);
+            if (disposeModel)
+                (old as IDisposable)?.Dispose();
+
+            Destroy(gameObject);
+        }
+
+        /// <summary>
+        /// 다음 프레임에 <see cref="Close"/>를 실행합니다. 버튼 OnClick 방출 도중 호출해도 안전합니다 —
+        /// 정리·파괴는 방출 스택을 벗어난 뒤(<see cref="FrameDispatcher"/>) 실행됩니다.
+        /// </summary>
+        /// <param name="disposeModel">바인딩돼 있던 모델을 Dispose할지 여부. 기본 true.</param>
+        /// <param name="onClosed">닫기 완료 후 실행할 후처리(선택).</param>
+        public void CloseNextFrame(bool disposeModel = true, Action onClosed = null)
+        {
+            FrameDispatcher.NextFrame(() =>
+            {
+                Close(disposeModel);
+                onClosed?.Invoke();
+            });
+        }
+
+        /// <summary>
         /// 현재 모델을 강제로 다시 방출하여 모든 FeatureView를 재초기화합니다.
         /// 모델 인스턴스는 같지만 내부 상태가 크게 바뀌어 전체 재구성이 필요한 경우에 사용합니다.
         /// </summary>
@@ -156,6 +207,8 @@ namespace Sindy.View
 
         protected virtual void OnDestroy()
         {
+            closed = true;
+            disposables.DisposeAllClear();
             modelSubscription?.Dispose();
             modelSubscription = null;
 
