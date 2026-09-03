@@ -14,6 +14,9 @@ namespace Sindy.Test
             tests.Add(new TestInventoryMoveTo());
             tests.Add(new TestInventorySetOps());
             tests.Add(new TestInventorySerialize());
+            tests.Add(new TestInventoryCore());
+            tests.Add(new TestInventoryFeatures());
+            tests.Add(new TestInventoryStores());
 
             tests.ForEach(test => test.Run());
         }

@@ -63,7 +63,11 @@ R3 + UnityWebRequest 기반 서버 통신입니다. `ApiModel<TReq, TRes>`가 �
 
 ### Inventory 시스템
 
-`Entity`(ScriptableObject) + `Inventory`(컨테이너)로 아이템을 관리합니다. Add/Remove/Set/Move 등 CRUD 연산과 함께 R3 기반 변경 이벤트를 제공합니다. `Contains`, `Intersect`, `Subtract` 집합 연산으로 재료 충분 여부 같은 게임 로직을 간결하게 표현할 수 있습니다.
+저장(`IInventoryStore`)·런타임(`Inventory<TKey>`)·관심사(`IInventoryFeature`)를 분리한 제네릭 인벤토리입니다. 키는 문자열 id든 `Entity`든 자유롭고, 무게·슬롯 수(`CapacityFeature`)·허용 키(`FilterFeature`)·이벤트 발행(`HookFeature`)을 `.With()`로 합성합니다. 게이트 거부는 예외가 아닌 `false` + 이유 문자열, `TryMove`는 양쪽 게이트를 통과할 때만 원자적으로 이동하며, 키별 `CountProp`/`Changes` 스트림은 저장소를 `Rebind`해도 구독이 유지됩니다. 서버 원장 같은 프로젝트 고유 관심사는 `InventoryFeature<TKey>`를 상속해 밖에서 꽂습니다.
+
+구형 `Entity` + `Inventory`(ScriptableObject 기반 컨테이너, `Contains`/`Intersect`/`Subtract` 집합 연산)는 그대로 유지되며, `SerializedListStore`로 새 코어에 감쌀 수 있습니다.
+
+→ [상세 문서](./INVENTORY.md)
 
 ### ScriptableObject 변수
 
@@ -92,6 +96,7 @@ s.FindGameObject("Fill").SetColor("m_Color", Color.green);
 | [Runtime/View/Parts/README.md](./Runtime/View/Parts/README.md) | 기본 부품 키트 — 원자 부품 9종·SindyKit Blueprint·Variant 스타일·카탈로그 연결 |
 | [FEATURE_VIEW_SCENARIO.md](./FEATURE_VIEW_SCENARIO.md) | FeatureView 전환 설계 결정 기록(Decision Log)·마이그레이션 대응표 — 보존용 |
 | [HTTP.md](./HTTP.md) | HTTP 모듈 — ApiModel, Retry/Timeout/OfflineCache 합성, 토큰 자동 갱신, 페이지네이션 |
+| [INVENTORY.md](./INVENTORY.md) | Inventory 모듈 — `Inventory<TKey>` 코어, Store/Feature 계약, Capacity/Filter/Hook 합성, 구형 API 대응표 |
 | [REDDOT.md](./REDDOT.md) | RedDot 트리 집계 시스템, 경로 선언, RedDotFeature/RedDotFeatureView 연결 방법 |
 | [EDITOR_TOOLKIT.md](./EDITOR_TOOLKIT.md) | SindyEdit 전체 API 레퍼런스 — 메서드 목록, ComponentScope, HTTP IPC |
 | [SINDY_EDIT.md](./SINDY_EDIT.md) | 씬·프리팹·SO 편집 단계별 튜토리얼 — 생성·탐색·삭제·참조 연결까지 |
