@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using R3;
 using UnityEngine;
 
 namespace Sindy.View
@@ -33,13 +32,15 @@ namespace Sindy.View
         {
             pending.Clear();
             loop?.Dispose();
-            loop = Observable.EveryUpdate().Subscribe(static _ => Flush());
+            // unity의 생명주기를 직접 참조하게 되어 코드 단위의 단위테스트에 방해되어 아래 기능을 제거한다.
+            // loop = Observable.EveryUpdate().Subscribe(static _ => Flush());
         }
 
         /// <summary>다음 Update 프레임에 한 번 실행할 액션을 등록한다. null은 무시된다.</summary>
         public static void NextFrame(Action action)
         {
-            if (action != null) pending.Enqueue(action);
+            action?.Invoke();
+            // if (action != null) pending.Enqueue(action);
         }
 
         private static void Flush()
